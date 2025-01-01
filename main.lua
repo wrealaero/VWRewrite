@@ -61,7 +61,7 @@ local function finishLoading()
 				end
 			end
 			pcall(function()
-				local uipallet = vape.Libraries.uipallet
+				local uipallet = vape.libraries.uipallet
 				local hue, saturation, value = Color3.toHSV(uipallet.Main)
 				shared.vape.ObjectsThatCanBeSaved["Gui ColorSliderColor"] = {Api = {Hue = vape.GUIColor.Hue, Sat = vape.GUIColor.Sat, Value = vape.GUIColor}}
 			end)
@@ -143,7 +143,7 @@ local gui = readfile('vape/profiles/gui.txt')
 if not isfolder('vape/assets/'..gui) then
 	makefolder('vape/assets/'..gui)
 end
-local VWFunctions = pload('Libraries/VoidwareFunctions.lua', true, true)
+local VWFunctions = pload('libraries/VoidwareFunctions.lua', true, true)
 VWFunctions.GlobaliseObject("VoidwareFunctions", VWFunctions)
 VWFunctions.GlobaliseObject("VWFunctions", VWFunctions)
 
