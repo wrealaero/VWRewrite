@@ -161,11 +161,11 @@ local function install_profiles(num)
     end
     task.wait(2)
     if (not isfolder(baseDirectory..'Libraries')) then makefolder(baseDirectory..'Libraries') end
-    if num == 1 then writefile(baseDirectory..'Libraries/profilesinstalled4.txt', "true") end 
+    if num == 1 then writefile(baseDirectory..'libraries/profilesinstalled5.txt', "true") end 
 end
 local function are_installed_1()
     if not isfolder(baseDirectory..'profiles') then makefolder(baseDirectory..'profiles') end
-    if isfile(baseDirectory..'Libraries/profilesinstalled4.txt') then return true else return false end
+    if isfile(baseDirectory..'libraries/profilesinstalled5.txt') then return true else return false end
 end
 if not are_installed_1() then install_profiles(1) end
 local function vapeGithubRequest(scripturl, isImportant)
