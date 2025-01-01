@@ -83,10 +83,10 @@ local function finishLoading()
 					if isfile('vape/NewMainScript.lua') then
 						loadstring(readfile("vape/NewMainScript.lua"))()
 					else
-						loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/vapevoidware/main/NewMainScript.lua", true))()
+						loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWRewrite/main/NewMainScript.lua", true))()
 					end
 				else
-					loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/vapevoidware/main/NewMainScript.lua", true))()
+					loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWRewrite/main/NewMainScript.lua", true))()
 				end
 			]]
 			if shared.VapeDeveloper then
