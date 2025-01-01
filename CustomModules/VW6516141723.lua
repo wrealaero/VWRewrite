@@ -1,2 +1,0 @@
---- Auto made file for 6516141723
--- Doors lobby
