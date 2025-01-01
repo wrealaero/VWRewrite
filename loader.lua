@@ -32,7 +32,7 @@ end
 
 if not shared.VapeDeveloper then
 	local _, subbed = pcall(function()
-		return game:HttpGet('https://github.com/VapeVoidware/VoidwareBakup')
+		return game:HttpGet('https://github.com/VapeVoidware/VWRewrite')
 	end)
 	local commit = subbed:find('currentOid')
 	commit = commit and subbed:sub(commit + 13, commit + 52) or nil
@@ -140,7 +140,7 @@ local function install_profiles(num)
     task.spawn(function()
         local res1
         if num == 1 then
-            res1 = "https://api.github.com/repos/"..repoOwner.."/contents/Profiles"
+            res1 = "https://api.github.com/repos/"..repoOwner.."/contents/Rewrite"
         end
         res = game:HttpGet(res1, true)
         if res ~= '404: Not Found' then 
@@ -159,6 +159,7 @@ local function install_profiles(num)
         downloadVapeProfile(name..guiprofiles[i])
         task.wait()
     end
+    task.wait(2)
     if (not isfolder(baseDirectory..'Libraries')) then makefolder(baseDirectory..'Libraries') end
     if num == 1 then writefile(baseDirectory..'Libraries/profilesinstalled4.txt', "true") end 
 end
@@ -176,8 +177,8 @@ local function vapeGithubRequest(scripturl, isImportant)
         end
     end
     local suc, res
-    local url = (scripturl == "MainScript.lua" or scripturl == "GuiLibrary.lua") and shared.RiseMode and "https://raw.githubusercontent.com/VapeVoidware/VWRise/" or "https://raw.githubusercontent.com/VapeVoidware/VoidwareBakup/"
-    suc, res = pcall(function() return game:HttpGet(url..readfile('vape/profiles/commit.txt').."/"..scripturl, true) end)
+    local url = (scripturl == "MainScript.lua" or scripturl == "GuiLibrary.lua") and shared.RiseMode and "https://raw.githubusercontent.com/VapeVoidware/VWRise/" or "https://raw.githubusercontent.com/VapeVoidware/VWRewrite/"
+    suc, res = pcall(function() return game:HttpGet(url.."main/"..scripturl, true) end)
     if not suc or res == "404: Not Found" then
         if isImportant then
             game:GetService("Players").LocalPlayer:Kick("Failed to connect to github : "..baseDirectory..scripturl.." : "..res)

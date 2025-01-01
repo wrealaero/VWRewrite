@@ -140,7 +140,7 @@ local function install_profiles(num)
     task.spawn(function()
         local res1
         if num == 1 then
-            res1 = "https://api.github.com/repos/"..repoOwner.."/contents/Profiles"
+            res1 = "https://api.github.com/repos/"..repoOwner.."/contents/Rewrite"
         end
         res = game:HttpGet(res1, true)
         if res ~= '404: Not Found' then 
@@ -159,6 +159,7 @@ local function install_profiles(num)
         downloadVapeProfile(name..guiprofiles[i])
         task.wait()
     end
+    task.wait(2)
     if (not isfolder(baseDirectory..'Libraries')) then makefolder(baseDirectory..'Libraries') end
     if num == 1 then writefile(baseDirectory..'Libraries/profilesinstalled4.txt', "true") end 
 end

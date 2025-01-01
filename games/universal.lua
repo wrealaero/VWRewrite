@@ -491,7 +491,7 @@ run(function()
 
 		if self.localprio > 0 and not self.said[plr.Name] and msg == 'helloimusinginhaler' and plr ~= lplr then
 			self.said[plr.Name] = true
-			notif('Vape', plr.Name..' is using vape!', 60)
+			warningNotification('Vape', plr.Name..' is using vape!', 60)
 			self.customtags[plr.Name] = {{
 				text = 'VAPE USER',
 				color = Color3.new(1, 1, 0)
