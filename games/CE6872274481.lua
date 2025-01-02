@@ -8219,40 +8219,6 @@ run(function()
 	AutoKitTrinity.Object.Visible = (store.equippedKit == "angel")
 end)
 
-run(function()
-	local alreadyreportedlist = {}
-	local AutoReportV2 = {Enabled = false}
-	local AutoReportV2Notify = {Enabled = false}
-	AutoReportV2 = vape.Categories.Utility:CreateModule({
-		Name = "AutoReportV2",
-		Function = function(callback)
-			if callback then
-				task.spawn(function()
-					repeat
-						task.wait()
-						for i,v in pairs(playersService:GetPlayers()) do
-							if v ~= lplr and alreadyreportedlist[v] == nil and v:GetAttribute("PlayerConnected") and whitelist:get(v) == 0 then
-								task.wait(1)
-								alreadyreportedlist[v] = true
-								bedwars.Client:Get(bedwars.ReportRemote):InvokeServer(v.UserId)
-								store.statistics.reported = store.statistics.reported + 1
-								if AutoReportV2Notify.Enabled then
-									warningNotification("AutoReportV2", "Reported "..v.Name, 15)
-								end
-							end
-						end
-					until (not AutoReportV2.Enabled)
-				end)
-			end
-		end,
-		HoverText = "dv mald"
-	})
-	AutoReportV2Notify = AutoReportV2:CreateToggle({
-		Name = "Notify",
-		Function = function() end
-	})
-end)
-
 local sendmessage = function() end
 sendmessage = function(text)
 	local function createBypassMessage(message)
