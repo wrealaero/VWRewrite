@@ -206,9 +206,9 @@ local function pload(fileName, isImportant, required)
             end
         else
             task.spawn(function()
-                repeat task.wait() until shared.vape
+                repeat task.wait() until errorNotification
                 if not string.find(res, "404: Not Found") then 
-					shared.vape:CreateNotification('Failure loading: '..baseDirectory..tostring(fileName), tostring(debug.traceback(err)), 30, 'alert')
+					errorNotification('Failure loading: '..baseDirectory..tostring(fileName), tostring(debug.traceback(err)), 30, 'alert')
                 end
             end)
         end
