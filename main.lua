@@ -155,12 +155,15 @@ getgenv().GuiLibrary = vape
 shared.GuiLibrary = vape
 
 getgenv().InfoNotification = function(title, msg, dur)
+	warn('info', tostring(title), tostring(msg), tostring(dur))
 	vape:CreateNotification(title, msg, dur)
 end
 getgenv().warningNotification = function(title, msg, dur)
+	warn('warn', tostring(title), tostring(msg), tostring(dur))
 	vape:CreateNotification(title, msg, dur, 'warning')
 end
 getgenv().errorNotification = function(title, msg, dur)
+	warn("error", tostring(title), tostring(msg), tostring(dur))
 	vape:CreateNotification(title, msg, dur, 'alert')
 end
 pcall(function()

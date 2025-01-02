@@ -31,6 +31,15 @@ local cloneref = cloneref or function(obj)
 	return obj
 end
 
+local function run(func)
+	task.spawn(function()
+		local suc, err = pcall(function()
+			return func()
+		end)
+		if (not suc) then errorNotification("universal.lua error", debug.traceback(tostring(err)), 10) end
+	end)
+end
+
 local playersService = cloneref(game:GetService('Players'))
 local replicatedStorage = cloneref(game:GetService('ReplicatedStorage'))
 local runService = cloneref(game:GetService('RunService'))
