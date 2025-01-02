@@ -3627,7 +3627,7 @@ run(function()
                         else
                             local color = vape.GUIColor
                             v.Color = Color3.fromHSV(color.Hue, color.Sat, color.Value)
-							TexturePacksV2:Clean(runService.RenderStepped:Connect(function()
+							TexturePacksV2:Clean(runService.Heartbeat:Connect(function()
 								if TexturePacksV2_GUI_Elements.GuiSync.Enabled and TexturePacksV2.Enabled then
                                     local color = vape.GUIColor
                                     v.Color = Color3.fromHSV(color.Hue, color.Sat, color.Value)

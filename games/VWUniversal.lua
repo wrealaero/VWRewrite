@@ -412,7 +412,7 @@ run(function() local CharacterOutline = {}
 							else
 								local color = vape.GUIColor
 								outline.OutlineColor = Color3.fromHSV(color.Hue, color.Sat, color.Value)
-								CharacterOutline:Clean(runservice.RenderStepped:Connect(function()
+								CharacterOutline:Clean(runservice.Heartbeat:Connect(function()
 									if CharacterOutline.Enabled then
 										color = vape.GUIColor
 										outline.OutlineColor = Color3.fromHSV(color.Hue, color.Sat, color.Value)

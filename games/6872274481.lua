@@ -423,9 +423,9 @@ local function updateVelocity(force)
 		if newState then
 			if entitylib.isAlive then
 				for _, v in entitylib.character.Character:GetDescendants() do
-					--modifyVelocity(v)
+					modifyVelocity(v)
 				end
-				--frictionConnection = entitylib.character.Character.DescendantAdded:Connect(modifyVelocity)
+				frictionConnection = entitylib.character.Character.DescendantAdded:Connect(modifyVelocity)
 			end
 		else
 			for i, v in oldfrict do
