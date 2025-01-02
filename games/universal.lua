@@ -863,7 +863,7 @@ run(function()
 		table.clear(whitelist)
 	end)--]]
 end)
-shared.vapewhitelist = whitelist
+shared.vapewhitelist = table.clone(whitelist)
 entitylib.start()
 shared.vapeentity = entitylib
 run(function()
