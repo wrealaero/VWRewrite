@@ -4755,6 +4755,7 @@ run(function()
 	local Mode
 	local Profile
 	local Users
+	local Clans
 	local blacklistedclans = {'gg', 'gg2', 'DV', 'DV2'}
 	local blacklisteduserids = {1502104539, 3826146717, 4531785383, 1049767300, 4926350670, 653085195, 184655415, 2752307430, 5087196317, 5744061325, 1536265275}
 	local joined = {}
@@ -4856,8 +4857,8 @@ run(function()
 			if not plr:GetAttribute('ClanTag') then
 				plr:GetAttributeChangedSignal('ClanTag'):Wait()
 			end
-	
-			if table.find(blacklistedclans, plr:GetAttribute('ClanTag')) and vape.Loaded then
+			
+			if table.find(table.find(Clans.ListEnabled, plr:GetAttribute('ClanTag'))) and vape.Loaded then
 				connection:Disconnect()
 				staffFunction(plr, 'blacklisted_clan_'..plr:GetAttribute('ClanTag'):lower())
 			end
@@ -4897,7 +4898,10 @@ run(function()
 		Name = 'Users',
 		Placeholder = 'player (userid)'
 	})
-	
+	Clans = StaffDetector:CreateTextList({
+		Name = 'Clans',
+		Placeholder = 'clan name (ex: gg)'
+	})
 	task.spawn(function()
 		repeat task.wait(1) until vape.Loaded or vape.Loaded == nil
 		if vape.Loaded and not StaffDetector.Enabled then
