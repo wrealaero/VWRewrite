@@ -5359,7 +5359,7 @@ function mainapi:Load(skipgui, profile)
 				local object = self.Categories[i]
 				if not object then continue end
 				if object.Options and v.Options then
-					self:LoadOptions(object, v.Options)
+					task.spawn(function() self:LoadOptions(object, v.Options) end)
 					task.wait(shared.LoadSlowmode or 0.03)
 				end
 				if v.Enabled then
