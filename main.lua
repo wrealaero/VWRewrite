@@ -21,6 +21,7 @@ local loadstring = function(...)
 	end
 	return res
 end
+if hookfunction == nil then getgenv().hookfunction = function() end end
 local queue_on_teleport = queue_on_teleport or function() end
 local isfile = isfile or function(file)
 	local suc, res = pcall(function()
