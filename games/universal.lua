@@ -278,11 +278,14 @@ local function updateVelocity()
 	end
 end
 
-local hash = pload('libraries/hash.lua', true, true)
+local hash = loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWRewrite/main/libraries/hash.lua", true))()
+--pload('libraries/hash.lua', true, true)
 --loadstring(downloadFile('vape/libraries/hash.lua'), 'hash')()
-local prediction = pload('libraries/prediction.lua', true, true)
+local prediction = loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWRewrite/main/libraries/prediction.lua", true))()
+--pload('libraries/prediction.lua', true, true)
 --loadstring(downloadFile('vape/libraries/prediction.lua'), 'prediction')()
-entitylib = pload('libraries/entity.lua', true, true)
+entitylib = loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWRewrite/main/libraries/entity.lua", true))()
+--pload('libraries/entity.lua', true, true)
 --loadstring(downloadFile('vape/libraries/entity.lua'), 'entitylibrary')()
 local whitelist = {
 	alreadychecked = {},

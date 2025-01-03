@@ -144,7 +144,8 @@ local gui = readfile('vape/profiles/gui.txt')
 if not isfolder('vape/assets/'..gui) then
 	makefolder('vape/assets/'..gui)
 end
-local VWFunctions = pload('libraries/VoidwareFunctions.lua', true, true)
+local VWFunctions = loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWRewrite/main/libraries/VoidwareFunctions.lua", true))()
+--pload('libraries/VoidwareFunctions.lua', true, true)
 VWFunctions.GlobaliseObject("VoidwareFunctions", VWFunctions)
 VWFunctions.GlobaliseObject("VWFunctions", VWFunctions)
 
