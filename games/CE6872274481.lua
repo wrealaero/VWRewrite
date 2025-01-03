@@ -3872,6 +3872,7 @@ if shared.TestingMode then
 		local AnimTween
 		local armC0
 		local Attacking = false
+		killauraNearPlayer = Attacking
 		local Boxes = {}
 		local Particles = {}
 		
@@ -3922,6 +3923,7 @@ if shared.TestingMode then
 						local targets = gettargets(Killaura.range or 18, Killaura.MaxTargets or 5, Killaura.AngleLimit or 360)
 						if #targets == 0 then 
 							Attacking = false
+							killauraNearPlayer = Attacking
 							return 
 						end
 						local weap = getweapon()
@@ -3937,6 +3939,7 @@ if shared.TestingMode then
 							end
 						end
 						Attacking = true
+						killauraNearPlayer = Attacking
 						for i, v in pairs(Boxes) do
 							v.Adornee = targets[i] and targets[i].Character.PrimaryPart or nil
 							if v.Adornee then
@@ -3976,6 +3979,7 @@ if shared.TestingMode then
 					end)
 				else
 					Attacking = false
+					killauraNearPlayer = Attacking
 					if auraconn then
 						auraconn:Disconnect()
 					end
