@@ -761,7 +761,7 @@ run(function()
 		CannonLaunch = debug.getconstants(Knit.Controllers.CannonHandController.launchSelf),
 		ConsumeItem = debug.getconstants(debug.getproto(Knit.Controllers.ConsumeController.onEnable, 1)),
 		ConsumeSoul = debug.getconstants(Knit.Controllers.GrimReaperController.consumeSoul),
-		ConsumeTreeOrb = debug.getconstants(debug.getproto(debug.getproto(Knit.Controllers.BigmanController.KnitStart, 1), 2)),
+		--ConsumeTreeOrb = debug.getconstants(debug.getproto(debug.getproto(Knit.Controllers.BigmanController.KnitStart, 1), 2)),
 		DepositPinata = debug.getconstants(debug.getproto(debug.getproto(Knit.Controllers.PiggyBankController.KnitStart, 2), 5)),
 		DragonBreath = debug.getconstants(debug.getproto(Knit.Controllers.VoidDragonController.KnitStart, 4)),
 		DragonEndFly = debug.getconstants(debug.getproto(Knit.Controllers.VoidDragonController.flapWings, 1)),
