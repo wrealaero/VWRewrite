@@ -1505,64 +1505,6 @@ run(function()
 	})
 end)
 
-run(function()
-	local guifonts = {};
-	local guifontwhite = {};
-	local guifontcustom = {};
-	local guifont = {Value = 'Gotham'};
-	local toggledtasks = {};
-	guifonts = vape.Categories.Utility:CreateModule({
-		Name = 'GUIFonts',
-		HoverText = 'Change the fonts of the GUI',
-		Function = function(calling)
-			if calling then
-				if not shared.VapeFullyLoaded then 
-					repeat task.wait() until shared.VapeFullyLoaded
-				end
-				for i,v in next, GuiLibrary.ObjectsThatCanBeSaved do 
-					if v.Type == 'OptionsButton' then 
-						v.Object.ButtonText.Font = guifont.Value;
-						if guifontwhite.Enabled then 
-							table.insert(toggledtasks, task.spawn(function()
-								repeat 
-									if v.Api.Enabled and guifontwhite.Enabled then 
-										v.Object.ButtonText.TextColor3 = Color3.fromRGB(255, 255, 255);
-									end
-									task.wait()
-								until false
-							end));
-						end
-					end
-				end
-			else 
-				for i,v in toggledtasks do 
-					pcall(task.cancel, v);
-				end
-				table.clear(toggledtasks);	
-			end
-		end
-	})
-	guifont = guifonts:CreateDropdown({
-		Name = 'Font',
-		List = GetEnumItems('Font'),
-		Function = function()
-			if guifonts.Enabled then 
-				guifonts.ToggleButton()
-				guifonts.ToggleButton()
-			end
-		end
-	})
-	guifontwhite = guifonts:CreateToggle({
-		Name = 'White Text',
-		Function = function()
-			if guifonts.Enabled then 
-				guifonts.ToggleButton()
-				guifonts.ToggleButton()
-			end
-		end
-	})
-end)
-
 run(function() 
 	local AestheticLighting = {}
 	AestheticLighting = vape.Categories.Utility:CreateModule({
