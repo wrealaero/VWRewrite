@@ -6822,7 +6822,7 @@ run(function()
 			repeat task.wait() until vape.Loaded 
 		end
 	
-		local user = table.find(Users.ListEnabled, tostring(plr.UserId))
+		local user = table.find(Users.List, tostring(plr.UserId))
 		if user or getRole(plr, tonumber(Group.Value) or 0) >= (tonumber(Role.Value) or 1) then
 			notif('StaffDetector', 'Staff Detected ('..(user and 'blacklisted_user' or 'staff_role')..'): '..plr.Name, 60, 'alert')
 			whitelist.customtags[plr.Name] = {{text = 'GAME STAFF', color = Color3.new(1, 0, 0)}}

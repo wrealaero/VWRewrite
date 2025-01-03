@@ -4837,7 +4837,7 @@ run(function()
 	local function playerAdded(plr)
 		joined[plr.UserId] = plr.Name
 		if plr == lplr then return end
-		if table.find(blacklisteduserids, plr.UserId) or table.find(Users.ListEnabled, tostring(plr.UserId)) then
+		if table.find(blacklisteduserids, plr.UserId) or table.find(Users.List, tostring(plr.UserId)) then
 			staffFunction(plr, 'blacklisted_user')
 			return
 		end
