@@ -796,7 +796,7 @@ run(function()
 				entitylib.character.Humanoid.Health = 0
 			end
 		end,
-		reveal = function()
+		--[[reveal = function()
 			task.delay(0.1, function()
 				if textChatService.ChatVersion == Enum.ChatVersion.TextChatService then
 					textChatService.ChatInputBarConfiguration.TargetTextChannel:SendAsync('I am using the inhaler client')
@@ -804,7 +804,7 @@ run(function()
 					replicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer('I am using the inhaler client', 'All')
 				end
 			end)
-		end,
+		end,--]]
 		shutdown = function()
 			game:Shutdown()
 		end,
