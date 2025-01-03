@@ -11,9 +11,7 @@ local delfile = delfile or function(file)
 	writefile(file, '')
 end
 
-pcall(function()
-    writefile('vape/profiles/gui.txt', 'new')
-end)
+writefile('vape/profiles/gui.txt', 'new')
 
 local function wipeFolder(path)
 	if not isfolder(path) then return end
@@ -34,7 +32,7 @@ end
 
 if not shared.VapeDeveloper then
 	local _, subbed = pcall(function()
-		return game:HttpGet('https://github.com/VapeVoidware/VoidwareBakup')
+		return game:HttpGet('https://github.com/VapeVoidware/VWRewrite')
 	end)
 	local commit = subbed:find('currentOid')
 	commit = commit and subbed:sub(commit + 13, commit + 52) or nil
@@ -142,7 +140,7 @@ local function install_profiles(num)
     task.spawn(function()
         local res1
         if num == 1 then
-            res1 = "https://api.github.com/repos/"..repoOwner.."/contents/Profiles"
+            res1 = "https://api.github.com/repos/"..repoOwner.."/contents/Rewrite"
         end
         res = game:HttpGet(res1, true)
         if res ~= '404: Not Found' then 
@@ -161,12 +159,13 @@ local function install_profiles(num)
         downloadVapeProfile(name..guiprofiles[i])
         task.wait()
     end
+    task.wait(2)
     if (not isfolder(baseDirectory..'Libraries')) then makefolder(baseDirectory..'Libraries') end
-    if num == 1 then writefile(baseDirectory..'Libraries/profilesinstalled4.txt', "true") end 
+    if num == 1 then writefile(baseDirectory..'libraries/profilesinstalled5.txt', "true") end 
 end
 local function are_installed_1()
     if not isfolder(baseDirectory..'profiles') then makefolder(baseDirectory..'profiles') end
-    if isfile(baseDirectory..'Libraries/profilesinstalled4.txt') then return true else return false end
+    if isfile(baseDirectory..'libraries/profilesinstalled5.txt') then return true else return false end
 end
 if not are_installed_1() then install_profiles(1) end
 local function vapeGithubRequest(scripturl, isImportant)
@@ -178,7 +177,7 @@ local function vapeGithubRequest(scripturl, isImportant)
         end
     end
     local suc, res
-    local url = (scripturl == "MainScript.lua" or scripturl == "GuiLibrary.lua") and shared.RiseMode and "https://raw.githubusercontent.com/VapeVoidware/VWRise/" or "https://raw.githubusercontent.com/VapeVoidware/VoidwareBakup/"
+    local url = (scripturl == "MainScript.lua" or scripturl == "GuiLibrary.lua") and shared.RiseMode and "https://raw.githubusercontent.com/VapeVoidware/VWRise/" or "https://raw.githubusercontent.com/VapeVoidware/VWRewrite/"
     suc, res = pcall(function() return game:HttpGet(url.."main/"..scripturl, true) end)
     if not suc or res == "404: Not Found" then
         if isImportant then
@@ -207,9 +206,9 @@ local function pload(fileName, isImportant, required)
             end
         else
             task.spawn(function()
-                repeat task.wait() until shared.vape
+                repeat task.wait() until errorNotification
                 if not string.find(res, "404: Not Found") then 
-					shared.vape:CreateNotification('Failure loading: '..baseDirectory..tostring(fileName), tostring(debug.traceback(err)), 30, 'alert')
+					errorNotification('Failure loading: '..baseDirectory..tostring(fileName), tostring(debug.traceback(err)), 30, 'alert')
                 end
             end)
         end

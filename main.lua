@@ -137,9 +137,7 @@ local function finishLoading()
 end
 
 if not isfile('vape/profiles/gui.txt') then
-	pcall(function()	
-		writefile('vape/profiles/gui.txt', 'new')
-	end)
+	writefile('vape/profiles/gui.txt', 'new')
 end
 local gui = readfile('vape/profiles/gui.txt')
 
