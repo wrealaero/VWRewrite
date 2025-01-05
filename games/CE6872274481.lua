@@ -4940,7 +4940,7 @@ run(function()
 							end
 						else
 							if not SpiderPart then
-								SpiderPart = Instance.new("TrussPart")
+								SpiderPart = Instance.new("TrussPart", gameCamera)
 								if (not SpiderPart) then return end
 								SpiderPart.Size = Vector3.new(2, 2, 2)
 								SpiderPart.Transparency = 1
