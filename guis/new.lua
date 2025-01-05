@@ -2639,6 +2639,7 @@ function mainapi:CreateGUI()
 		label.Parent = bind
 
 		function optionapi:SetBind(tab)
+			if tab == nil then return end
 			mainapi.Keybind = #tab <= 0 and mainapi.Keybind or table.clone(tab)
 			self.Bind = mainapi.Keybind
 			if mainapi.VapeButton then
