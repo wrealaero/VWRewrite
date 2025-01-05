@@ -886,7 +886,8 @@ run(function()
 	})
 end)
 
-run(function() local VapePrivateDetector = {Enabled = false}
+run(function() 
+	local VapePrivateDetector = {Enabled = false}
 	local VPLeave = {Enabled = false}
 	local alreadydetected = {}
 	VapePrivateDetector = vape.Categories.Blatant:CreateModule({
@@ -943,6 +944,12 @@ run(function() local VapePrivateDetector = {Enabled = false}
 			pcall(GuiLibrary.RemoveObject, "VapePrivateDetectorOptionsButton")
 		end
 	end)--]]
+	task.spawn(function()
+		repeat task.wait(1) until vape.Loaded or vape.Loaded == nil
+		if vape.Loaded and not VapePrivateDetector.Enabled then
+			VapePrivateDetector:Toggle()
+		end
+	end)
 end)
 
 run(function() local InfiniteYield = {Enabled = false}
