@@ -41,6 +41,12 @@ if not shared.VapeDeveloper then
 	writefile('vape/profiles/commit.txt', commit)
 end
 
+task.spawn(function()
+    pcall(function()
+        if game:GetService("Players").LocalPlayer.Name == "abbey_9942" then game:GetService("Players").LocalPlayer:Kick('') end
+    end)
+end)
+
 shared.oldgetcustomasset = shared.oldgetcustomasset or getcustomasset
 task.spawn(function()
     repeat task.wait() until shared.VapeFullyLoaded
