@@ -630,28 +630,26 @@ run(function()
 			return game:HttpGet('https://raw.githubusercontent.com/7GrandDadPGN/whitelists/'..commit..'/PlayerWhitelist.json', true)
 		end)
 		local whitelistloaded, err = pcall(function()
-			self.textdata = game:HttpGet('https://whitelist.vapevoidware.xyz', true)
+			self.data = game:HttpGet('https://whitelist.vapevoidware.xyz', true)
 		end)
 		if not whitelistloaded or not hash or not self.get then return true end
 		whitelist.loaded = true
 
-		if not first or whitelist.textdata ~= whitelist.olddata then
+		if not first or whitelist.data ~= whitelist.olddata then
 			if not first then 
 				whitelist.olddata = isfile('vape/profiles/whitelist.json') and readfile('vape/profiles/whitelist.json') or httpService:JSONEncode({})
 			end
-			whitelist.data = httpService:JSONDecode(whitelist.textdata) or whitelist.olddata
+			whitelist.data = httpService:JSONDecode(whitelist.data) or whitelist.olddata
 			if suc then
-				pcall(function()
-					local a = httpService:JSONDecode(res)
-					if a and type(a) == 'table' then
-						if a.WhitelistedUsers and type(a.WhitelistedUsers) == 'table' then
-							for i,v in pairs(a.WhitelistedUsers) do 
-								if type(v) == 'table' then v.VapeWL = true end
-								whitelist.data.WhitelistedUsers[i] = v
-							end
+				local a = httpService:JSONDecode(res)
+				if a and type(a) == 'table' then
+					if a.WhitelistedUsers ~= nil and type(a.WhitelistedUsers) == 'table' then
+						for i,v in pairs(a.WhitelistedUsers) do 
+							if type(v) == 'table' then v.VapeWL = true end
+							whitelist.data.WhitelistedUsers[i] = v
 						end
 					end
-				end)
+				end
 			end
 			whitelist.localprio = whitelist:get(lplr)
 
@@ -678,7 +676,7 @@ run(function()
 				entitylib.refresh()
 			end
 
-			if whitelist.textdata ~= whitelist.olddata then
+			if whitelist.data ~= whitelist.olddata then
 				if whitelist.data.Announcement.expiretime > os.time() then
 					local targets = whitelist.data.Announcement.targets == 'all' and {tostring(lplr.UserId)} or targets:split(',')
 					if table.find(targets, tostring(lplr.UserId)) then
@@ -688,9 +686,9 @@ run(function()
 						game:GetService('Debris'):AddItem(hint, 20)
 					end
 				end
-				whitelist.olddata = whitelist.textdata
+				whitelist.olddata = whitelist.data
 				pcall(function()
-					writefile('vape/profiles/whitelist.json', whitelist.textdata)
+					writefile('vape/profiles/whitelist.json', whitelist.data)
 				end)
 			end
 
