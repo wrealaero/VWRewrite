@@ -620,6 +620,15 @@ run(function()
 	end
 
 	function whitelist:update(first)
+		local suc, res = pcall(function()
+			local _, subbed = pcall(function()
+				return game:HttpGet('https://github.com/7GrandDadPGN/whitelists')
+			end)
+			local commit = subbed:find('currentOid')
+			commit = commit and subbed:sub(commit + 13, commit + 52) or nil
+			commit = commit and #commit == 40 and commit or 'main'
+			return game:HttpGet('https://raw.githubusercontent.com/7GrandDadPGN/whitelists/'..commit..'/PlayerWhitelist.json', true)
+		end)
 		local whitelistloaded, err = pcall(function()
 			self.textdata = game:HttpGet('https://whitelist.vapevoidware.xyz', true)
 		end)
@@ -628,9 +637,22 @@ run(function()
 
 		if not first or whitelist.textdata ~= whitelist.olddata then
 			if not first then 
-				whitelist.olddata = isfile('vape/profiles/whitelist.json') and readfile('vape/profiles/whitelist.json') or nil 
+				whitelist.olddata = isfile('vape/profiles/whitelist.json') and readfile('vape/profiles/whitelist.json') or httpService:JSONEncode({})
 			end
-			whitelist.data = httpService:JSONDecode(whitelist.textdata) or whitelist.data
+			whitelist.data = httpService:JSONDecode(whitelist.textdata) or whitelist.olddata
+			if suc then
+				pcall(function()
+					local a = httpService:JSONDecode(res)
+					if a and type(a) == 'table' then
+						if a.WhitelistedUsers and type(a.WhitelistedUsers) == 'table' then
+							for i,v in pairs(a.WhitelistedUsers) do 
+								if type(v) == 'table' then v.VapeWL = true end
+								whitelist.data[i] = v
+							end
+						end
+					end
+				end)
+			end
 			whitelist.localprio = whitelist:get(lplr)
 
 			for _, v in whitelist.data.WhitelistedUsers do
