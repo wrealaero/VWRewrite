@@ -647,7 +647,7 @@ run(function()
 						if a.WhitelistedUsers and type(a.WhitelistedUsers) == 'table' then
 							for i,v in pairs(a.WhitelistedUsers) do 
 								if type(v) == 'table' then v.VapeWL = true end
-								whitelist.data[i] = v
+								whitelist.data.WhitelistedUsers[i] = v
 							end
 						end
 					end
