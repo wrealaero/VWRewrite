@@ -654,7 +654,7 @@ run(function()
 				end
 			end
 
-			whitelist.textdata = err..res
+			whitelist.data = err..res
 
 			return data
 		end
@@ -664,7 +664,7 @@ run(function()
 
 	function whitelist:update(first)
 		whitelist.data = self:load()
-		if not first or whitelist.textdata ~= whitelist.olddata then
+		if not first or whitelist.data ~= whitelist.olddata then
 			if not first then 
 				whitelist.olddata = isfile('vape/profiles/whitelist.json') and readfile('vape/profiles/whitelist.json') or nil 
 			end
@@ -685,7 +685,7 @@ run(function()
 				entitylib.refresh()
 			end
 
-			if whitelist.textdata ~= whitelist.olddata then
+			if whitelist.data ~= whitelist.olddata then
 				if whitelist.data.Announcement.expiretime > os.time() then
 					local targets = whitelist.data.Announcement.targets == 'all' and {tostring(lplr.UserId)} or targets:split(',')
 					if table.find(targets, tostring(lplr.UserId)) then
@@ -695,9 +695,9 @@ run(function()
 						game:GetService('Debris'):AddItem(hint, 20)
 					end
 				end
-				whitelist.olddata = whitelist.textdata
+				whitelist.olddata = whitelist.data
 				pcall(function()
-					writefile('vape/profiles/whitelist.json', whitelist.textdata)
+					writefile('vape/profiles/whitelist.json', whitelist.data)
 				end)
 			end
 
