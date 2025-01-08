@@ -5604,7 +5604,8 @@ run(function()
 	
 				return buyTool(store.tools.sword, swords, currencytable)
 			end or nil
-		end
+		end,
+		Default = true
 	})
 	Armor = AutoBuy:CreateToggle({
 		Name = 'Buy Armor',
