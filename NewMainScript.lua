@@ -67,7 +67,17 @@ local debugChecks = {
         "getproto"
     }
 }
-if identifyexecutor and type(identifyexecutor) == "function" and tostring(identifyexecutor()):lower() == "appleware" then CheatEngineMode = true end
+local function checkExecutor()
+    if identifyexecutor ~= nil and type(identifyexecutor) == "function" then
+        local suc, res = pcall(function()
+            return identifyexecutor()
+        end)   
+        if suc then
+            if string.find(string.lower(tostring(res)), "appleware") or string.find(string.lower(tostring(res)), "delta") or string.find(string.lower(tostring(res)), 'cryptic') then CheatEngineMode = true end
+        end
+    end
+end
+task.spawn(function() pcall(checkExecutor) end)
 local function checkDebug()
     if not getgenv().debug then 
         CheatEngineMode = true 
