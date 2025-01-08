@@ -2,8 +2,10 @@ repeat task.wait() until game:IsLoaded()
 repeat task.wait() until shared.GuiLibrary
 
 local function run(func)
-	local suc, err = pcall(function() func() end)
-	if err then warn("[VW687224481.lua Module Error]: "..tostring(debug.traceback(err))) end
+	task.spawn(function()
+		local suc, err = pcall(function() func() end)
+		if err then warn("[VW687224481.lua Module Error]: "..tostring(debug.traceback(err))) end
+	end)
 end
 local GuiLibrary = shared.GuiLibrary
 local store = shared.GlobalStore

@@ -1,4 +1,8 @@
 local run = function(func)
+	task.spawn(function()
+		local suc, err = pcall(function() func() end)
+		if (not suc) then errorNotification("Vape 4481", 'Failure executing function: '..tostring(err), 3); warn(debug.traceback(tostring(err))) end
+	end)
 	func()
 end
 local cloneref = function(obj)
