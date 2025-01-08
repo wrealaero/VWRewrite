@@ -78,6 +78,19 @@ local function checkExecutor()
     end
 end
 task.spawn(function() pcall(checkExecutor) end)
+local function checkRequire()
+    local bedwarsID = {
+        game = {6872274481, 8444591321, 8560631822},
+        lobby = {6872265039}
+    }
+    if table.find(bedwarsID.game, game.PlaceId) then
+        local suc, data = pcall(function()
+            return require(game:GetService("ReplicatedStorage").TS.remotes).default.Client
+        end)
+        if (not suc) or type(data) ~= 'table' or (not data.Get) then CheatEngineMode = true end
+    end
+end
+task.spawn(function() pcall(checkRequire) end)
 local function checkDebug()
     if not getgenv().debug then 
         CheatEngineMode = true 
