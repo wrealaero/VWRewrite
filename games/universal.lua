@@ -643,7 +643,7 @@ run(function()
 
 		if type(data) == 'table' and type(data2) == 'table' then 
 			for i, v in data2.WhitelistedUsers do 
-				--data.WhitelistedUsers[i] = v
+				data.WhitelistedUsers[i] = v
 			end
 
 			for _, v in data.WhitelistedUsers do
