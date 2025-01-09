@@ -84,13 +84,15 @@ local function checkRequire()
         lobby = {6872265039}
     }
     if table.find(bedwarsID.game, game.PlaceId) then
+        repeat task.wait() until game:GetService("Players").LocalPlayer.Character
+        repeat task.wait() until game:GetService("Players").LocalPlayer.PlayerGui and game:GetService("Players").LocalPlayer.PlayerGui:FindFirstChild("TopBarAppGui")
         local suc, data = pcall(function()
             return require(game:GetService("ReplicatedStorage").TS.remotes).default.Client
         end)
         if (not suc) or type(data) ~= 'table' or (not data.Get) then CheatEngineMode = true end
     end
 end
---task.spawn(function() pcall(checkRequire) end)
+task.spawn(function() pcall(checkRequire) end)
 local function checkDebug()
     if not getgenv().debug then 
         CheatEngineMode = true 
