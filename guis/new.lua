@@ -5875,11 +5875,7 @@ general:CreateButton({
 			delfile('vape/profiles/'..mainapi.Profile..mainapi.Place..'.txt')
 		end
 		shared.vapereload = true
-		if shared.VapeDeveloper then
-			loadstring(readfile('vape/loader.lua'), 'loader')()
-		else
-			loadstring(game:HttpGet('https://raw.githubusercontent.com/7GrandDadPGN/VapeV4ForRoblox/'..readfile('vape/profiles/commit.txt')..'/loader.lua', true))()
-		end
+		pload('NewMainScript.lua', true)
 	end,
 	Tooltip = 'This will set your profile to the default settings of Vape'
 })
@@ -5894,11 +5890,7 @@ general:CreateButton({
 	Name = 'Reinject',
 	Function = function()
 		shared.vapereload = true
-		if shared.VapeDeveloper then
-			loadstring(readfile('vape/loader.lua'), 'loader')()
-		else
-			loadstring(game:HttpGet('https://raw.githubusercontent.com/7GrandDadPGN/VapeV4ForRoblox/'..readfile('vape/profiles/commit.txt')..'/loader.lua', true))()
-		end
+		pload('NewMainScript.lua', true)
 	end,
 	Tooltip = 'Reloads vape for debugging purposes'
 })
