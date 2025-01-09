@@ -92,7 +92,8 @@ local function checkRequire()
         if (not suc) or type(data) ~= 'table' or (not data.Get) then CheatEngineMode = true end
     end
 end
-task.spawn(function() pcall(checkRequire) end)
+--task.spawn(function() pcall(checkRequire) end)
+pcall(checkRequire)
 local function checkDebug()
     if not getgenv().debug then 
         CheatEngineMode = true 
