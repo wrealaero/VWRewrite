@@ -48,6 +48,12 @@ local function cprint(tbl)
 	end
 end
 VoidwareFunctions.GlobaliseObject("cprint", cprint)
+
+local function removeTags(str)
+	str = str:gsub('<br%s*/>', '\n')
+	return (str:gsub('<[^<>]->', ''))
+end
+
 local vapeEvents = setmetatable({}, {
 	__index = function(self, index)
 		self[index] = Instance.new("BindableEvent")
