@@ -5429,7 +5429,17 @@ function mainapi:Load(skipgui, profile)
 			local object = self.Modules[i]
 			if not object then continue end
 			if object.Options and v.Options then
-				self:LoadOptions(object, v.Options)
+				local suc, err = pcall(function()
+					self:LoadOptions(object, v.Options)
+				end)
+				if (not suc) then
+					task.spawn(function()
+						repeat task.wait() until errorNotification ~= nil and type(errorNotification) == "function" 
+						pcall(function()
+							errorNotification("Voidware", "Failure loading "..tostring(v).." Error: "..tostring(err), 5)
+						end)
+					end)
+				end
 			end
 			if v.Enabled ~= object.Enabled then
 				if skipgui then
