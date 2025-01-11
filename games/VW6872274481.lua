@@ -3567,6 +3567,7 @@ run(function()
 		end
 	}
 
+	if (not TexturePacks.Enabled) then toolFunction = function() end end
 	con = game:GetService("Workspace"):WaitForChild("Camera").Viewmodel.ChildAdded:Connect(toolFunction)
 
 	local function refresh()
