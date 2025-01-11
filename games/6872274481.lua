@@ -3345,86 +3345,120 @@ run(function()
 end)
 	
 run(function()
-	local KitESP
+	local KitESP = {Enabled = false}
 	local Background
-	local Color = {}
-	local Reference = {}
-	local Folder = Instance.new('Folder')
-	Folder.Parent = vape.gui
-	
-	local ESPKits = {
-		alchemist = {'alchemist_ingedients', 'wild_flower'},
-		beekeeper = {'bee', 'bee'},
-		bigman = {'treeOrb', 'natures_essence_1'},
-		ghost_catcher = {'ghost', 'ghost_orb'},
-		metal_detector = {'hidden-metal', 'iron'},
-		sheep_herder = {'SheepModel', 'purple_hay_bale'},
-		sorcerer = {'alchemy_crystal', 'wild_flower'},
-		star_collector = {'stars', 'crit_star'}
-	}
-	
-	local function Added(v, icon)
-		local billboard = Instance.new('BillboardGui')
-		billboard.Parent = Folder
+	local Color
+	local espobjs = {}
+	local espfold = Instance.new("Folder")
+	espfold.Parent = vape.gui
+
+	local function espadd(v, icon)
+		local billboard = Instance.new("BillboardGui")
+		billboard.Parent = espfold
 		billboard.Name = icon
 		billboard.StudsOffsetWorldSpace = Vector3.new(0, 3, 0)
 		billboard.Size = UDim2.fromOffset(36, 36)
 		billboard.AlwaysOnTop = true
-		billboard.ClipsDescendants = false
 		billboard.Adornee = v
-		local blur = addBlur(billboard)
-		blur.Visible = Background.Enabled
-		local image = Instance.new('ImageLabel')
-		image.Size = UDim2.fromOffset(36, 36)
-		image.Position = UDim2.fromScale(0.5, 0.5)
-		image.AnchorPoint = Vector2.new(0.5, 0.5)
-		image.BackgroundColor3 = Color3.fromHSV(Color.Hue, Color.Sat, Color.Value)
-		image.BackgroundTransparency = 1 - (Background.Enabled and Color.Opacity or 0)
+		local image = Instance.new("ImageLabel")
 		image.BorderSizePixel = 0
 		image.Image = bedwars.getIcon({itemType = icon}, true)
+		image.BackgroundColor3 = Color3.fromHSV(Color.Hue, Color.Sat, Color.Value)
+		image.BackgroundTransparency = 1 - (Background.Enabled and Color.Opacity or 0)
+		image.Size = UDim2.fromOffset(36, 36)
+		image.AnchorPoint = Vector2.new(0.5, 0.5)
 		image.Parent = billboard
-		local uicorner = Instance.new('UICorner')
+		local uicorner = Instance.new("UICorner")
 		uicorner.CornerRadius = UDim.new(0, 4)
 		uicorner.Parent = image
-		Reference[v] = billboard
+		espobjs[v] = billboard
 	end
-	
-	local function addKit(tag, icon)
-		KitESP:Clean(collectionService:GetInstanceAddedSignal(tag):Connect(function(v)
-			Added(v.PrimaryPart, icon)
-		end))
-		KitESP:Clean(collectionService:GetInstanceRemovedSignal(tag):Connect(function(v)
-			if Reference[v.PrimaryPart] then
-				Reference[v.PrimaryPart]:Destroy()
-				Reference[v.PrimaryPart] = nil
+
+	local function addKit(tag, icon, custom)
+		if (not custom) then
+			KitESP:Clean(collectionService:GetInstanceAddedSignal(tag):Connect(function(v)
+				espadd(v.PrimaryPart, icon)
+			end))
+			KitESP:Clean(collectionService:GetInstanceRemovedSignal(tag):Connect(function(v)
+				if espobjs[v.PrimaryPart] then
+					espobjs[v.PrimaryPart]:Destroy()
+					espobjs[v.PrimaryPart] = nil
+				end
+			end))
+			for i,v in pairs(collectionService:GetTagged(tag)) do
+				espadd(v.PrimaryPart, icon)
 			end
-		end))
-		for _, v in collectionService:GetTagged(tag) do
-			Added(v.PrimaryPart, icon)
+		else
+			local function check(v)
+				if v.Name == tag and v.ClassName == "Model" then
+					espadd(v.PrimaryPart, icon)
+				end
+			end
+			KitESP:Clean(game.Workspace.ChildAdded:Connect(check))
+			KitESP:Clean(game.Workspace.ChildRemoved:Connect(function(v)
+				pcall(function()
+					if espobjs[v.PrimaryPart] then
+						espobjs[v.PrimaryPart]:Destroy()
+						espobjs[v.PrimaryPart] = nil
+					end
+				end)
+			end))
+			for i,v in pairs(game.Workspace:GetChildren()) do
+				check(v)
+			end
 		end
 	end
-	
+
+	local esptbl = {
+		["metal_detector"] = {
+			{"hidden-metal", "iron"}
+		},
+		["beekeeper"] = {
+			{"bee", "bee"}
+		},
+		["bigman"] = {
+			{"treeOrb", "natures_essence_1"}
+		},
+		["alchemist"] = {
+			{"Thorns", "thorns", true},
+			{"Mushrooms", "mushrooms", true},
+			{"Flower", "wild_flower", true}
+		},
+		["star_collector"] = {
+			{"CritStar", "crit_star", true},
+			{"VitalityStar", "vitality_star", true}
+		},
+		["spirit_gardener"] = {
+			{"SpiritGardenerEnergy", "spirit", true}
+		}
+	}
+
 	KitESP = vape.Categories.Render:CreateModule({
-		Name = 'KitESP',
+		Name = "KitESP",
 		Function = function(callback)
 			if callback then
-				repeat task.wait() until store.equippedKit ~= '' or (not KitESP.Enabled)
-				local kit = KitESP.Enabled and ESPKits[store.equippedKit] or nil
-				if kit then
-					addKit(kit[1], kit[2])
-				end
+				task.spawn(function()
+					repeat task.wait() until store.equippedKit ~= ""
+					if KitESP.Enabled then
+						local p1 = esptbl[store.equippedKit]
+						if (not p1) then return end
+						for i,v in pairs(p1) do 
+							addKit(unpack(v))
+						end
+					end
+				end)
 			else
-				Folder:ClearAllChildren()
-				table.clear(Reference)
+				espfold:ClearAllChildren()
+				table.clear(espobjs)
 			end
-		end,
-		Tooltip = 'ESP for certain kit related objects'
+		end
 	})
+	
 	Background = KitESP:CreateToggle({
 		Name = 'Background',
 		Function = function(callback)
-			if Color.Object then Color.Object.Visible = callback end
-			for _, v in Reference do
+			if Color and Color.Object then Color.Object.Visible = callback end
+			for _, v in espobjs do
 				v.ImageLabel.BackgroundTransparency = 1 - (callback and Color.Opacity or 0)
 				v.Blur.Visible = callback
 			end
@@ -3436,7 +3470,7 @@ run(function()
 		DefaultValue = 0,
 		DefaultOpacity = 0.5,
 		Function = function(hue, sat, val, opacity)
-			for _, v in Reference do
+			for _, v in espobjs do
 				v.ImageLabel.BackgroundColor3 = Color3.fromHSV(hue, sat, val)
 				v.ImageLabel.BackgroundTransparency = 1 - opacity
 			end

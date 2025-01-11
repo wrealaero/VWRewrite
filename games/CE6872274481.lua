@@ -5700,24 +5700,26 @@ end)
 
 run(function()
 	local KitESP = {Enabled = false}
+	local Background
+	local Color
 	local espobjs = {}
 	local espfold = Instance.new("Folder")
-	espfold.Parent = GuiLibrary.MainGui
+	espfold.Parent = vape.gui
 
 	local function espadd(v, icon)
 		local billboard = Instance.new("BillboardGui")
 		billboard.Parent = espfold
-		billboard.Name = "iron"
-		billboard.StudsOffsetWorldSpace = Vector3.new(0, 3, 1.5)
-		billboard.Size = UDim2.new(0, 32, 0, 32)
+		billboard.Name = icon
+		billboard.StudsOffsetWorldSpace = Vector3.new(0, 3, 0)
+		billboard.Size = UDim2.fromOffset(36, 36)
 		billboard.AlwaysOnTop = true
 		billboard.Adornee = v
 		local image = Instance.new("ImageLabel")
-		image.BackgroundTransparency = 0.5
 		image.BorderSizePixel = 0
 		image.Image = bedwars.getIcon({itemType = icon}, true)
-		image.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-		image.Size = UDim2.new(0, 32, 0, 32)
+		image.BackgroundColor3 = Color3.fromHSV(Color.Hue, Color.Sat, Color.Value)
+		image.BackgroundTransparency = 1 - (Background.Enabled and Color.Opacity or 0)
+		image.Size = UDim2.fromOffset(36, 36)
 		image.AnchorPoint = Vector2.new(0.5, 0.5)
 		image.Parent = billboard
 		local uicorner = Instance.new("UICorner")
@@ -5761,6 +5763,30 @@ run(function()
 		end
 	end
 
+	local esptbl = {
+		["metal_detector"] = {
+			{"hidden-metal", "iron"}
+		},
+		["beekeeper"] = {
+			{"bee", "bee"}
+		},
+		["bigman"] = {
+			{"treeOrb", "natures_essence_1"}
+		},
+		["alchemist"] = {
+			{"Thorns", "thorns", true},
+			{"Mushrooms", "mushrooms", true},
+			{"Flower", "wild_flower", true}
+		},
+		["star_collector"] = {
+			{"CritStar", "crit_star", true},
+			{"VitalityStar", "vitality_star", true}
+		},
+		["spirit_gardener"] = {
+			{"SpiritGardenerEnergy", "spirit", true}
+		}
+	}
+
 	KitESP = vape.Categories.Render:CreateModule({
 		Name = "KitESP",
 		Function = function(callback)
@@ -5768,19 +5794,10 @@ run(function()
 				task.spawn(function()
 					repeat task.wait() until store.equippedKit ~= ""
 					if KitESP.Enabled then
-						if store.equippedKit == "metal_detector" then
-							addKit("hidden-metal", "iron")
-						elseif store.equippedKit == "beekeeper" then
-							addKit("bee", "bee")
-						elseif store.equippedKit == "bigman" then
-							addKit("treeOrb", "natures_essence_1")
-						elseif store.equippedKit == "alchemist" then
-							addKit("Thorns", "thorns", true)
-							addKit("Mushrooms", "mushrooms", true)
-							addKit("Flower", "wild_flower", true)
-						elseif store.equippedKit == "star_collector" then
-							addKit("CritStar", "crit_star", true)
-							addKit("VitalityStar", "vitality_star", true)
+						local p1 = esptbl[store.equippedKit]
+						if (not p1) then return end
+						for i,v in pairs(p1) do 
+							addKit(unpack(v))
 						end
 					end
 				end)
@@ -5789,6 +5806,30 @@ run(function()
 				table.clear(espobjs)
 			end
 		end
+	})
+	
+	Background = KitESP:CreateToggle({
+		Name = 'Background',
+		Function = function(callback)
+			if Color and Color.Object then Color.Object.Visible = callback end
+			for _, v in espobjs do
+				v.ImageLabel.BackgroundTransparency = 1 - (callback and Color.Opacity or 0)
+				v.Blur.Visible = callback
+			end
+		end,
+		Default = true
+	})
+	Color = KitESP:CreateColorSlider({
+		Name = 'Background Color',
+		DefaultValue = 0,
+		DefaultOpacity = 0.5,
+		Function = function(hue, sat, val, opacity)
+			for _, v in espobjs do
+				v.ImageLabel.BackgroundColor3 = Color3.fromHSV(hue, sat, val)
+				v.ImageLabel.BackgroundTransparency = 1 - opacity
+			end
+		end,
+		Darker = true
 	})
 end)
 
