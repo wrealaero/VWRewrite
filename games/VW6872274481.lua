@@ -3568,7 +3568,6 @@ run(function()
 	}
 
 	if (not TexturePacks.Enabled) then toolFunction = function() end end
-	con = game:GetService("Workspace"):WaitForChild("Camera").Viewmodel.ChildAdded:Connect(toolFunction)
 
 	local function refresh()
 		pcall(function() con:Disconnect() end)
@@ -3592,7 +3591,7 @@ run(function()
 	for i,v in pairs(packfunctions) do table.insert(list, tostring(i)) end
 	packselected = TexturePacks:CreateDropdown({
 		["Name"] = "Pack",
-		["Function"] = function() packfunctions[packselected["Value"]](); refresh() end,
+		["Function"] = function() if TexturePacks.Enabled then packfunctions[packselected["Value"]](); refresh() end end,
 		["List"] = list
 	})
 end)
