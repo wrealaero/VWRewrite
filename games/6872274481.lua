@@ -2183,6 +2183,8 @@ run(function()
 	local Targets
 	local Sort
 	local Range
+	local RangeCircle
+	local RangeCirclePart
 	local UpdateRate
 	local AngleSlider
 	local MaxTargets
@@ -2299,6 +2301,13 @@ run(function()
 				end
 
 				repeat
+					local TweenService = game:GetService("TweenService")
+					pcall(function()
+						if entitylib.isAlive and entitylib.character.HumanoidRootPart then
+							TweenService:Create(RangeCirclePart, TweenInfo.new(0.2, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {Position = entitylib.character.HumanoidRootPart.Position - Vector3.new(0, entitylib.character.Humanoid.HipHeight, 0)}):Play()
+						end
+					end)
+					
 					local attacked, sword, meta = {}, getAttackData()
 					Attacking = false
 					store.KillauraTarget = nil
@@ -2395,6 +2404,8 @@ run(function()
 						entitylib.character.RootPart.CFrame = CFrame.lookAt(entitylib.character.RootPart.Position, Vector3.new(vec.X, entitylib.character.RootPart.Position.Y, vec.Z))
 					end
 
+					pcall(function() if RangeCirclePart ~= nil then RangeCirclePart.Parent = gameCamera end end)
+
 					task.wait(#attacked > 0 and #attacked * 0.02 or 1 / UpdateRate.Value)
 				until not Killaura.Enabled
 			else
@@ -2419,6 +2430,7 @@ run(function()
 					})
 					AnimTween:Play()
 				end
+				if RangeCirclePart ~= nil then RangeCirclePart:Destroy() end
 			end
 		end,
 		Tooltip = 'Attack players around you\nwithout aiming at them.'
@@ -2440,6 +2452,49 @@ run(function()
 		Default = 18,
 		Suffix = function(val)
 			return val == 1 and 'stud' or 'studs'
+		end
+	})
+	RangeCircle = Killaura:CreateToggle({
+		Name = "Range Visualiser",
+		Function = function(call)
+			if call then
+				local suc, err = pcall(function()
+					if (not shared.CheatEngineMode) then
+						RangeCirclePart = Instance.new("MeshPart")
+						RangeCirclePart.MeshId = "rbxassetid://3726303797"
+						if shared.RiseMode and GuiLibrary.GUICoreColor and GuiLibrary.GUICoreColorChanged then
+							RangeCirclePart.Color = GuiLibrary.GUICoreColor
+							GuiLibrary.GUICoreColorChanged.Event:Connect(function()
+								RangeCirclePart.Color = GuiLibrary.GUICoreColor
+							end)
+						else
+							RangeCirclePart.Color = Color3.fromHSV(BoxColor["Hue"], BoxColor["Sat"], BoxColor.Value)
+						end
+						RangeCirclePart.CanCollide = false
+						RangeCirclePart.Anchored = true
+						RangeCirclePart.Material = Enum.Material.Neon
+						RangeCirclePart.Size = Vector3.new(Range.Value * 0.7, 0.01, Range.Value * 0.7)
+						if Killaura.Enabled then
+							RangeCirclePart.Parent = gameCamera
+						end
+						--bedwars.QueryUtil:setQueryIgnored(RangeCirclePart, true)
+					end
+				end)
+				if (not suc) then
+					pcall(function()
+						if RangeCirclePart then
+							RangeCirclePart:Destroy()
+							RangeCirclePart = nil
+						end
+						InfoNotification("Killaura - Range Visualiser Circle", "There was an error creating the circle. Disabling...", 2)
+					end)
+				end
+			else
+				if RangeCirclePart then
+					RangeCirclePart:Destroy()
+					RangeCirclePart = nil
+				end
+			end
 		end
 	})
 	AngleSlider = Killaura:CreateSlider({
@@ -2495,7 +2550,12 @@ run(function()
 		Name = 'Attack Color',
 		Darker = true,
 		DefaultOpacity = 0.5,
-		Visible = false
+		Visible = false,
+		Function = function(hue, sat, val)
+			if Killaura.Enabled and RangeCirclePart ~= nil then
+				RangeCirclePart.Color = Color3.fromHSV(hue, sat, val)
+			end
+		end
 	})
 	Killaura:CreateToggle({
 		Name = 'Target particles',
