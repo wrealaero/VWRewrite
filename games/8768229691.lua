@@ -1,8 +1,8 @@
-local run = function(func) 
-	func() 
+local run = function(func)
+	func()
 end
-local cloneref = cloneref or function(obj) 
-	return obj 
+local cloneref = cloneref or function(obj)
+	return obj
 end
 local vapeEvents = setmetatable({}, {
 	__index = function(self, index)
@@ -20,7 +20,7 @@ local coreGui = cloneref(game:GetService('CoreGui'))
 local tweenService = cloneref(game:GetService('TweenService'))
 local runService = cloneref(game:GetService('RunService'))
 
-local gameCamera = game.Workspace.CurrentCamera
+local gameCamera = workspace.CurrentCamera
 local lplr = playersService.LocalPlayer
 local assetfunction = getcustomasset
 
@@ -52,41 +52,41 @@ local function collection(tags, module, customadd, customremove)
 
 	for _, tag in tags do
 		table.insert(connections, collectionService:GetInstanceAddedSignal(tag):Connect(function(v)
-			if customadd then 
-				customadd(objs, v, tag) 
-				return 
+			if customadd then
+				customadd(objs, v, tag)
+				return
 			end
 			table.insert(objs, v)
 		end))
 		table.insert(connections, collectionService:GetInstanceRemovedSignal(tag):Connect(function(v)
-			if customremove then 
-				customremove(objs, v, tag) 
-				return 
+			if customremove then
+				customremove(objs, v, tag)
+				return
 			end
 			v = table.find(objs, v)
-			if v then 
-				table.remove(objs, v) 
+			if v then
+				table.remove(objs, v)
 			end
 		end))
 
 		for _, v in collectionService:GetTagged(tag) do
-			if customadd then 
-				customadd(objs, v, tag) 
-				continue 
+			if customadd then
+				customadd(objs, v, tag)
+				continue
 			end
 			table.insert(objs, v)
 		end
 	end
 
 	local cleanFunc = function(self)
-		for _, v in connections do 
-			v:Disconnect() 
+		for _, v in connections do
+			v:Disconnect()
 		end
 		table.clear(connections)
 		table.clear(objs)
 		table.clear(self)
 	end
-	if module then 
+	if module then
 		module:Clean(cleanFunc)
 	end
 	return objs, cleanFunc
@@ -139,8 +139,8 @@ local function isTarget(plr)
 	return table.find(vape.Categories.Targets.ListEnabled, plr.Name) and true
 end
 
-local function notif(...) 
-	return vape:CreateNotification(...) 
+local function notif(...)
+	return vape:CreateNotification(...)
 end
 
 local function parsePositions(v, func)
@@ -169,15 +169,15 @@ end
 
 run(function()
 	entitylib.addPlayer = function(plr)
-		if plr.Character then 
-			entitylib.refreshEntity(plr.Character, plr) 
+		if plr.Character then
+			entitylib.refreshEntity(plr.Character, plr)
 		end
 		entitylib.PlayerConnections[plr] = {
-			plr.CharacterAdded:Connect(function(char) 
-				entitylib.refreshEntity(char, plr) 
+			plr.CharacterAdded:Connect(function(char)
+				entitylib.refreshEntity(char, plr)
 			end),
-			plr.CharacterRemoving:Connect(function(char) 
-				entitylib.removeEntity(char, plr == lplr) 
+			plr.CharacterRemoving:Connect(function(char)
+				entitylib.removeEntity(char, plr == lplr)
 			end),
 			plr:GetAttributeChangedSignal('TeamId'):Connect(function()
 				for i, v in entitylib.List do
@@ -199,7 +199,7 @@ run(function()
 		if not char then return end
 		entitylib.EntityThreads[char] = task.spawn(function()
 			local hum = waitForChildOfType(char, 'Humanoid', 10)
-			local humrootpart = hum and waitForChildOfType(hum, 'RootPart', game.Workspace.StreamingEnabled and 9e9 or 10, true)
+			local humrootpart = hum and waitForChildOfType(hum, 'RootPart', workspace.StreamingEnabled and 9e9 or 10, true)
 			local head = char:WaitForChild('Head', 10) or humrootpart
 
 			if hum and humrootpart then
@@ -282,7 +282,7 @@ run(function()
 
 	local function searchFunction(name, i2, v2)
 		for i3, v3 in debug.getconstants(v2) do
-			if tostring(v3):find('-') == 9 then 
+			if tostring(v3):find('-') == 9 then
 				remotes[(rawget(remotes, i2) and name..':' or '')..i2] = v3
 			end
 		end
@@ -320,17 +320,17 @@ run(function()
 	})
 
 	local kills = sessioninfo:AddItem('Kills')
-	local eggs = sessioninfo:AddItem('Eggs')	
+	local eggs = sessioninfo:AddItem('Eggs')
 	local wins = sessioninfo:AddItem('Wins')
 	local games = sessioninfo:AddItem('Games')
 
-	task.delay(1, function() 
-		games:Increment() 
+	task.delay(1, function()
+		games:Increment()
 	end)
 
 	local function updateStore(newStore, oldStore)
-		if newStore.GameCurrency ~= oldStore.GameCurrency then 
-			vapeEvents.CurrencyChange:Fire(table.clone(newStore.GameCurrency.Quantities)) 
+		if newStore.GameCurrency ~= oldStore.GameCurrency then
+			vapeEvents.CurrencyChange:Fire(table.clone(newStore.GameCurrency.Quantities))
 		end
 
 		if newStore.ActiveSlot ~= oldStore.ActiveSlot then
@@ -345,15 +345,15 @@ run(function()
 			store.tools.sword = getSword()
 			store.tools.pickaxe = getPickaxe()
 			vapeEvents.InventoryAmountChanged:Fire()
-		end 
+		end
 
 		if oldStore.Profile and oldStore.Profile.WasTeleporting and newStore.Profile.Stats ~= oldStore.Profile.Stats then
-			if newStore.Profile.Stats.Kills ~= oldStore.Profile.Stats.Kills and oldStore.Profile.Stats.Kills then 
-				kills:Increment() 
+			if newStore.Profile.Stats.Kills ~= oldStore.Profile.Stats.Kills and oldStore.Profile.Stats.Kills then
+				kills:Increment()
 			end
 
-			if newStore.Profile.Stats.Wins ~= oldStore.Profile.Stats.Wins and oldStore.Profile.Stats.Wins then 
-				wins:Increment() 
+			if newStore.Profile.Stats.Wins ~= oldStore.Profile.Stats.Wins and oldStore.Profile.Stats.Wins then
+				wins:Increment()
 			end
 		end
 	end
@@ -370,25 +370,25 @@ run(function()
 		until vape.Loaded == nil
 	end)
 
-	vape:Clean(game.Workspace.BlockContainer.DescendantAdded:Connect(function(v)
-		parsePositions(v, function(pos) 
-			store.blocks[pos] = v 
+	vape:Clean(workspace.BlockContainer.DescendantAdded:Connect(function(v)
+		parsePositions(v, function(pos)
+			store.blocks[pos] = v
 		end)
 	end))
-	vape:Clean(game.Workspace.BlockContainer.DescendantRemoving:Connect(function(v)
-		parsePositions(v, function(pos) 
-			store.blocks[pos] = nil 
+	vape:Clean(workspace.BlockContainer.DescendantRemoving:Connect(function(v)
+		parsePositions(v, function(pos)
+			store.blocks[pos] = nil
 		end)
 	end))
-	for _, v in game.Workspace.BlockContainer:GetDescendants() do
-		parsePositions(v, function(pos) 
-			store.blocks[pos] = v 
+	for _, v in workspace.BlockContainer:GetDescendants() do
+		parsePositions(v, function(pos)
+			store.blocks[pos] = v
 		end)
 	end
 
 	vape:Clean(function()
-		for _, v in vapeEvents do 
-			v:Destroy() 
+		for _, v in vapeEvents do
+			v:Destroy()
 		end
 		table.clear(ControllerTable)
 		table.clear(RemoteTable)
@@ -487,11 +487,20 @@ run(function()
 				old = skywars.SprintingController.disableSprinting
 				skywars.SprintingController.disableSprinting = function(tab, ...)
 					local originalCall = old(tab, ...)
-					skywars.SprintingController:enableSprinting(tab)
+					if not tab.canSprint then
+						task.spawn(function()
+							repeat task.wait(0.1) until tab.canSprint or not Sprint.Enabled
+							if Sprint.Enabled then
+								skywars.SprintingController:enableSprinting(tab)
+							end
+						end)
+					else
+						skywars.SprintingController:enableSprinting(tab)
+					end
 					return originalCall
 				end
-				Sprint:Clean(entitylib.Events.LocalAdded:Connect(function() 
-					skywars.SprintingController:disableSprinting() 
+				Sprint:Clean(entitylib.Events.LocalAdded:Connect(function()
+					skywars.SprintingController:disableSprinting()
 				end))
 				skywars.SprintingController:disableSprinting()
 			else
@@ -604,7 +613,7 @@ run(function()
 					part.CanCollide = Mode.Value == 'Collide'
 					part.Anchored = true
 					part.CanQuery = false
-					part.Parent = game.Workspace
+					part.Parent = workspace
 					AntiFall:Clean(part)
 					AntiFall:Clean(part.Touched:Connect(function(touchedpart)
 						if touchedpart.Parent == lplr.Character and entitylib.isAlive and debounce < tick() then
@@ -746,8 +755,8 @@ run(function()
 								end
 							end
 	
-							if not started then 
-								task.wait(1 / 60) 
+							if not started then
+								task.wait(1 / 60)
 							end
 						until (not Killaura.Enabled) or (not Animation.Enabled)
 					end)
@@ -778,10 +787,10 @@ run(function()
 								table.insert(attacked, v)
 								targetinfo.Targets[v] = tick() + 1
 	
-								if not Swing.Enabled then 
-									skywars.MeleeController:playAnimation(lplr.Character, tool) 
+								if not Swing.Enabled then
+									skywars.MeleeController:playAnimation(lplr.Character, tool)
 								end
-								
+	
 								if not switched then
 									switched = true
 									skywars.Remotes[remotes.updateActiveItem]:fire(tool.Name)
@@ -791,12 +800,15 @@ run(function()
 							end
 						end
 	
-						if switched then 
-							skywars.Remotes[remotes.updateActiveItem](store.hand.Name) 
+						if switched then
+							skywars.Remotes[remotes.updateActiveItem](store.hand.Name)
 						end
 					end
 	
 					Attacking = #attacked > 0
+					if Attacking and vape.ThreadFix then
+						setthreadidentity(8)
+					end
 	
 					for i, v in Boxes do
 						v.Adornee = attacked[i] and attacked[i].RootPart or nil
@@ -814,11 +826,11 @@ run(function()
 					task.wait(0.05)
 				until not Killaura.Enabled
 			else
-				for i, v in Boxes do 
-					v.Adornee = nil 
+				for i, v in Boxes do
+					v.Adornee = nil
 				end
-				for i, v in Particles do 
-					v.Parent = nil 
+				for i, v in Particles do
+					v.Parent = nil
 				end
 				if armC0 and ViewmodelMotor then
 					AnimTween = tweenService:Create(ViewmodelMotor, TweenInfo.new(AnimationTween.Enabled and 0.001 or 0.3, Enum.EasingStyle.Exponential), {
@@ -836,8 +848,8 @@ run(function()
 		Min = 1,
 		Max = 18,
 		Default = 18,
-		Suffix = function(val) 
-			return val == 1 and 'stud' or 'studs' 
+		Suffix = function(val)
+			return val == 1 and 'stud' or 'studs'
 		end
 	})
 	AngleCheck = Killaura:CreateSlider({
@@ -870,7 +882,7 @@ run(function()
 					Boxes[i] = box
 				end
 			else
-				for i, v in Boxes do 
+				for i, v in Boxes do
 					v:Destroy()
 				end
 				table.clear(Boxes)
@@ -911,15 +923,15 @@ run(function()
 					particles.Drag = 16
 					particles.ShapePartial = 1
 					particles.Color = ColorSequence.new({
-						ColorSequenceKeypoint.new(0, Color3.fromHSV(ParticleColor1.Hue, ParticleColor1.Sat, ParticleColor1.Value)), 
+						ColorSequenceKeypoint.new(0, Color3.fromHSV(ParticleColor1.Hue, ParticleColor1.Sat, ParticleColor1.Value)),
 						ColorSequenceKeypoint.new(1, Color3.fromHSV(ParticleColor2.Hue, ParticleColor2.Sat, ParticleColor2.Value))
 					})
 					particles.Parent = part
 					Particles[i] = part
 				end
 			else
-				for _, v in Particles do 
-					v:Destroy() 
+				for _, v in Particles do
+					v:Destroy()
 				end
 				table.clear(Particles)
 			end
@@ -941,7 +953,7 @@ run(function()
 		Function = function(hue, sat, val)
 			for _, v in Particles do
 				v.ParticleEmitter.Color = ColorSequence.new({
-					ColorSequenceKeypoint.new(0, Color3.fromHSV(hue, sat, val)), 
+					ColorSequenceKeypoint.new(0, Color3.fromHSV(hue, sat, val)),
 					ColorSequenceKeypoint.new(1, Color3.fromHSV(ParticleColor2.Hue, ParticleColor2.Sat, ParticleColor2.Value))
 				})
 			end
@@ -954,7 +966,7 @@ run(function()
 		Function = function(hue, sat, val)
 			for _, v in Particles do
 				v.ParticleEmitter.Color = ColorSequence.new({
-					ColorSequenceKeypoint.new(0, Color3.fromHSV(ParticleColor1.Hue, ParticleColor1.Sat, ParticleColor1.Value)), 
+					ColorSequenceKeypoint.new(0, Color3.fromHSV(ParticleColor1.Hue, ParticleColor1.Sat, ParticleColor1.Value)),
 					ColorSequenceKeypoint.new(1, Color3.fromHSV(hue, sat, val))
 				})
 			end
@@ -989,8 +1001,8 @@ run(function()
 		end
 	})
 	local animnames = {}
-	for i in anims do 
-		table.insert(animnames, i) 
+	for i in anims do
+		table.insert(animnames, i)
 	end
 	AnimationMode = Killaura:CreateDropdown({
 		Name = 'Animation Mode',
@@ -1032,7 +1044,7 @@ run(function()
 						local hum = entitylib.character.Humanoid
 						if (entitylib.character.GroundPosition.Y - entitylib.character.RootPart.Position.Y) > 10 then
 							rayCheck.FilterDescendantsInstances = {lplr.Character, gameCamera}
-							local ray = game.Workspace:Raycast(entitylib.character.RootPart.Position, Vector3.new(0, -(entitylib.character.HipHeight + 10), 0), rayCheck)
+							local ray = workspace:Raycast(entitylib.character.RootPart.Position, Vector3.new(0, -(entitylib.character.HipHeight + 10), 0), rayCheck)
 							if not ray then
 								hum:ChangeState(Enum.HumanoidStateType.Ragdoll)
 								task.wait(0.1)
@@ -1105,7 +1117,7 @@ run(function()
 				rayCheck.FilterDescendantsInstances = {plr.Character, gameCamera}
 				rayCheck.CollisionGroup = plr[TargetPart.Value].CollisionGroup
 				local offsetpos = entitylib.character.RootPart.CFrame * skywars.FireOrigin
-				local calc = prediction.SolveTrajectory(offsetpos.Position, 200, math.abs(skywars.Gravity), plr[TargetPart.Value].Position, plr[TargetPart.Value].Velocity, game.Workspace.Gravity, plr.HipHeight, nil, rayCheck)
+				local calc = prediction.SolveTrajectory(offsetpos.Position, 200, math.abs(skywars.Gravity), plr[TargetPart.Value].Position, plr[TargetPart.Value].Velocity, workspace.Gravity, plr.HipHeight, nil, rayCheck)
 				
 				if calc then
 					targetinfo.Targets[plr] = tick() + 1
@@ -1187,7 +1199,7 @@ run(function()
 							if (FireDelays[item] or 0) < tick() then
 								rayCheck.FilterDescendantsInstances = {ent.Character, gameCamera}
 								rayCheck.CollisionGroup = ent.RootPart.CollisionGroup
-								local calc = prediction.SolveTrajectory(offsetpos.Position, 200, math.abs(skywars.Gravity), ent.RootPart.Position, ent.RootPart.Velocity, game.Workspace.Gravity, ent.HipHeight, nil, rayCheck)
+								local calc = prediction.SolveTrajectory(offsetpos.Position, 200, math.abs(skywars.Gravity), ent.RootPart.Position, ent.RootPart.Velocity, workspace.Gravity, ent.HipHeight, nil, rayCheck)
 								
 								if calc then
 									targetinfo.Targets[ent] = tick() + 1
@@ -1579,7 +1591,7 @@ run(function()
 			part.Transparency = 1
 			part.Anchored = true
 			part.CanCollide = false
-			part.Parent = game.Workspace
+			part.Parent = workspace
 			BreakerPart = part
 	
 			BreakerUI = skywars.Roact.mount(create('BillboardGui', {
@@ -1600,7 +1612,7 @@ run(function()
 						Size = UDim2.new(1, 89, 1, 52),
 						Position = UDim2.fromOffset(-48, -31),
 						BackgroundTransparency = 1,
-						Image = getcustomasset('vape/assets/new/blur.png'),
+						Image = getcustomasset('newvape/assets/new/blur.png'),
 						ScaleType = Enum.ScaleType.Slice,
 						SliceCenter = Rect.new(52, 31, 261, 502)
 					}),
