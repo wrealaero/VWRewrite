@@ -1179,6 +1179,7 @@ function bedwars.StoreController:updateStore()
 		task.spawn(function() pcall(function() self:updateZephyrOrb() end) end)
 	end
 end
+pcall(function() bedwars.StoreController:updateStore() end)
 
 for i, v in pairs({"MatchEndEvent", "EntityDeathEvent", "EntityDamageEvent", "BedwarsBedBreak", "BalloonPopped", "AngelProgress"}) do
 	bedwars.Client:WaitFor(v):andThen(function(connection)
@@ -1204,9 +1205,9 @@ local AutoLeave = {Enabled = false}
 
 task.spawn(function()
 	repeat
-		task.spawn(function() bedwars.StoreController:updateStore() end)
 		task.wait(0.2)
-	until (not shared.VapeExecuted)
+		pcall(function() bedwars.StoreController:updateStore() end)
+	until (not shared.vape)
 end)
 
 table.insert(vapeConnections, game.Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
