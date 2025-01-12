@@ -619,56 +619,27 @@ run(function()
 		end
 	end
 
-	function whitelist:load()
+	function whitelist:update(first)
 		local whitelistloaded, err = pcall(function()
-			return game:HttpGet('https://whitelist.vapevoidware.xyz', true)
+			self.textdata = game:HttpGet('https://whitelist.vapevoidware.xyz', true)
 		end)
+		if not whitelistloaded or not hash or not self.get then return true end
+		whitelist.loaded = true
 
-		local suc, res = pcall(function()
-			local _, subbed = pcall(function()
-				return game:HttpGet('https://github.com/7GrandDadPGN/whitelists')
-			end)
-			local commit = subbed:find('currentOid')
-			commit = commit and subbed:sub(commit + 13, commit + 52) or nil
-			commit = commit and #commit == 40 and commit or 'main'
-			return game:HttpGet('https://raw.githubusercontent.com/7GrandDadPGN/whitelists/'..commit..'/PlayerWhitelist.json', true)
-		end)
-
-		if not whitelistloaded or not suc or not hash or not self.get then 
-			return {} 
-		end
-
-		local data = httpService:JSONDecode(err)
-		local data2 = httpService:JSONDecode(res)
-
-		if type(data) == 'table' and type(data2) == 'table' then 
-			for i, v in data2.WhitelistedUsers do 
-				data.WhitelistedUsers[i] = v
+		if not first or whitelist.textdata ~= whitelist.olddata then
+			if not first then 
+				whitelist.olddata = isfile('vape/profiles/whitelist.json') and readfile('vape/profiles/whitelist.json') or nil 
 			end
+			whitelist.data = httpService:JSONDecode(whitelist.textdata) or whitelist.data
+			whitelist.localprio = whitelist:get(lplr)
 
-			for _, v in data.WhitelistedUsers do
+			for _, v in whitelist.data.WhitelistedUsers do
 				if v.tags then
 					for _, tag in v.tags do
 						tag.color = Color3.fromRGB(unpack(tag.color))
 					end
 				end
 			end
-
-			whitelist.data = err..res
-
-			return data
-		end
-		
-		return {}
-	end
-
-	function whitelist:update(first)
-		whitelist.data = self:load()
-		if not first or whitelist.data ~= whitelist.olddata then
-			if not first then 
-				whitelist.olddata = isfile('vape/profiles/whitelist.json') and readfile('vape/profiles/whitelist.json') or nil 
-			end
-			whitelist.localprio = whitelist:get(lplr)
 
 			if not whitelist.connection then
 				whitelist.connection = playersService.PlayerAdded:Connect(function(v)
@@ -685,7 +656,7 @@ run(function()
 				entitylib.refresh()
 			end
 
-			if whitelist.data ~= whitelist.olddata then
+			if whitelist.textdata ~= whitelist.olddata then
 				if whitelist.data.Announcement.expiretime > os.time() then
 					local targets = whitelist.data.Announcement.targets == 'all' and {tostring(lplr.UserId)} or targets:split(',')
 					if table.find(targets, tostring(lplr.UserId)) then
@@ -695,9 +666,9 @@ run(function()
 						game:GetService('Debris'):AddItem(hint, 20)
 					end
 				end
-				whitelist.olddata = whitelist.data
+				whitelist.olddata = whitelist.textdata
 				pcall(function()
-					writefile('vape/profiles/whitelist.json', whitelist.data)
+					writefile('vape/profiles/whitelist.json', whitelist.textdata)
 				end)
 			end
 
@@ -711,7 +682,6 @@ run(function()
 				return true
 			end
 		end
-		whitelist.loaded = true
 	end
 
 	whitelist.commands = {
@@ -886,6 +856,8 @@ run(function()
 	task.spawn(function()
 		repeat
 			if whitelist:update(whitelist.loaded) then return end
+			vape.Libraries.whitelist = table.clone(whitelist)
+			shared.vapewhitelist = table.clone(whitelist)
 			task.wait(10)
 		until vape.Loaded == nil
 	end)
@@ -896,8 +868,8 @@ run(function()
 		table.clear(whitelist)
 	end)--]]
 end)
-shared.vapewhitelist = table.clone(whitelist)
 vape.Libraries.whitelist = table.clone(whitelist)
+shared.vapewhitelist = table.clone(whitelist)
 pcall(function()
 	--if shared.CheatEngineMode then
 		local whitelist2 = {commands = {}}
