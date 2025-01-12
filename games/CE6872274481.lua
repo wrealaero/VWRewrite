@@ -1205,7 +1205,7 @@ local AutoLeave = {Enabled = false}
 
 task.spawn(function()
 	repeat
-		task.wait(0.2)
+		task.wait(1)
 		pcall(function() bedwars.StoreController:updateStore() end)
 	until (not shared.vape)
 end)
