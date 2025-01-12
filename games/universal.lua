@@ -711,6 +711,7 @@ run(function()
 				return true
 			end
 		end
+		whitelist.loaded = true
 	end
 
 	whitelist.commands = {
