@@ -634,7 +634,7 @@ run(function()
 			whitelist.localprio = whitelist:get(lplr)
 
 			for _, v in whitelist.data.WhitelistedUsers do
-				if v.hidetag ~= nil and type(v.hidetag) == "boolean" then v.tags = nil end
+				if v.hidetag ~= nil and type(v.hidetag) == "boolean" and v.hidetag then v.tags = nil end
 				if v.tags then
 					for _, tag in v.tags do
 						tag.color = Color3.fromRGB(unpack(tag.color))
