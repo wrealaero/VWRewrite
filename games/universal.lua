@@ -644,7 +644,7 @@ run(function()
 			if suc then
 				self.vapedata = game:GetService("HttpService"):JSONDecode(self.vapetextdata)
 				if self.vapedata ~= nil and type(self.vapedata) == 'table' then
-					for i,v in pairs(self.vapedata) do
+					for i,v in pairs(self.vapedata.WhitelistedUsers) do
 						if v ~= nil and type(v) == 'table' then v.VapeWL = true end
 						whitelist.data.WhitelistedUsers[i] = v
 					end
