@@ -620,17 +620,36 @@ run(function()
 	end
 
 	function whitelist:update(first)
+		self.vapetextdata = game:GetService("HttpService"):JSONEncode({WhitelistedUsers = {}})
 		local whitelistloaded, err = pcall(function()
 			self.textdata = game:HttpGet('https://whitelist.vapevoidware.xyz', true)
+		end)
+		local suc, res = pcall(function()
+			local _, subbed = pcall(function()
+				return game:HttpGet('https://github.com/7GrandDadPGN/whitelists')
+			end)
+			local commit = subbed:find('currentOid')
+			commit = commit and subbed:sub(commit + 13, commit + 52) or nil
+			commit = commit and #commit == 40 and commit or 'main'
+			self.vapetextdata = game:HttpGet('https://raw.githubusercontent.com/7GrandDadPGN/whitelists/'..commit..'/PlayerWhitelist.json', true)
 		end)
 		if not whitelistloaded or not hash or not self.get then return true end
 		whitelist.loaded = true
 
-		if not first or whitelist.textdata ~= whitelist.olddata then
+		if not first or whitelist.textdata ~= whitelist.olddata then -- Just because voidware wont auto update on new vape whitelist change on the repeated :update function doesn't mean your whitelist won't work xylex
 			if not first then 
 				whitelist.olddata = isfile('vape/profiles/whitelist.json') and readfile('vape/profiles/whitelist.json') or nil 
 			end
 			whitelist.data = httpService:JSONDecode(whitelist.textdata) or whitelist.data
+			if suc then
+				self.vapedata = game:GetService("HttpService"):JSONDecode(self.vapetextdata)
+				if self.vapedata ~= nil and type(self.vapedata) == 'table' then
+					for i,v in pairs(self.vapedata) do
+						if v ~= nil and type(v) == 'table' then v.VapeWL = true end
+						whitelist.data.WhitelistedUsers[i] = v
+					end
+				end
+			end
 			whitelist.localprio = whitelist:get(lplr)
 
 			for _, v in whitelist.data.WhitelistedUsers do
