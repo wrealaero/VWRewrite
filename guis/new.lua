@@ -4385,7 +4385,18 @@ function mainapi:CreateCategoryList(categorysettings)
 	cursedpadding.BackgroundTransparency = 1
 	cursedpadding.Parent = children
 	categorysettings.Function = categorysettings.Function or function() end
-	categorysettings.Function = function() return pcall(function() categorysettings.Function() end) end
+	categorysettings.Function = function() 
+		local suc, err = pcall(function() categorysettings.Function() end); 
+		if (not suc) then
+			task.spawn(function()
+				pcall(function()
+					repeat task.wait() until errorNotification
+					if shared.VoidDev then errorNotification('Voidware - '..categorysettings.Name, debug.traceback(err), 10)
+				end)
+			end)
+			warn("Voidware Error - "..categorysettings.Name.." | "..debug.traceback(err))
+		end 
+	end
 
 	function categoryapi:ChangeValue(val)
 		if val then
