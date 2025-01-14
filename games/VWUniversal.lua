@@ -1745,7 +1745,7 @@ task.spawn(function()
 		local suc, err = pcall(function()
 			local function trigger(check)
 				strikes = strikes + 1
-				if strikes < 3 then return end
+				if strikes < 10 then return end
 				pcall(function()
 					local function resetExecutor()
 						pcall(function()
