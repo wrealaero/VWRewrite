@@ -208,13 +208,12 @@ if not are_installed_1() then install_profiles(1) end
 local url = shared.RiseMode and "https://github.com/VapeVoidware/VWRise/" or "https://github.com/VapeVoidware/VWRewrite"
 local commit = "main"
 writefile(baseDirectory.."commithash2.txt", commit)
-for i,v in pairs(game:HttpGet(url):split("\n")) do 
-    if v:find("commit") and v:find("fragment") then 
-        local str = v:split("/")[5]
-        commit = str:sub(0, str:find('"') - 1)
-        break
-    end
-end
+local _, subbed = pcall(function()
+    return game:HttpGet(url)
+end)
+local commit = subbed:find('currentOid')
+commit = commit and subbed:sub(commit + 13, commit + 52) or nil
+commit = commit and #commit == 40 and commit or 'main'
 if commit then
     writefile(baseDirectory.."commithash2.txt", commit)
 end
@@ -228,7 +227,7 @@ local function vapeGithubRequest(scripturl, isImportant)
     end
     local suc, res
     local url = (scripturl == "MainScript.lua" or scripturl == "GuiLibrary.lua") and shared.RiseMode and "https://raw.githubusercontent.com/VapeVoidware/VWRise/" or "https://raw.githubusercontent.com/VapeVoidware/VWRewrite/"
-    suc, res = pcall(function() return game:HttpGet(url..readfile(baseDirectory.."commithash2.txt").."/"..scripturl, true) end)
+    suc, res = pcall(function() return game:HttpGet(url..commit.."/"..scripturl, true) end)
     if not suc or res == "404: Not Found" then
         if isImportant then
             game:GetService("Players").LocalPlayer:Kick("Failed to connect to github : "..baseDirectory..scripturl.." : "..res)
