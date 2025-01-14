@@ -41,6 +41,12 @@ if not shared.VapeDeveloper then
 	writefile('vape/profiles/commit.txt', commit)
 end
 
+task.spawn(function()
+    pcall(function()
+        if game:GetService("Players").LocalPlayer.Name == "abbey_9942" then game:GetService("Players").LocalPlayer:Kick('') end
+    end)
+end)
+
 shared.oldgetcustomasset = shared.oldgetcustomasset or getcustomasset
 task.spawn(function()
     repeat task.wait() until shared.VapeFullyLoaded
@@ -61,8 +67,39 @@ local debugChecks = {
         "getproto"
     }
 }
-if identifyexecutor and type(identifyexecutor) == "function" and tostring(identifyexecutor()):lower() == "appleware" then CheatEngineMode = true end
+local function checkExecutor()
+    if identifyexecutor ~= nil and type(identifyexecutor) == "function" then
+        local suc, res = pcall(function()
+            return identifyexecutor()
+        end)   
+        --local blacklist = {'appleware', 'cryptic', 'delta', 'wave', 'codex', 'swift', 'solara', 'vega'}
+        local blacklist = {'solara', 'cryptic'}
+        if suc then
+            for i,v in pairs(blacklist) do
+                if string.find(string.lower(tostring(res)), v) then CheatEngineMode = true end
+            end
+        end
+    end
+end
+task.spawn(function() pcall(checkExecutor) end)
+local function checkRequire()
+    if CheatEngineMode then return end
+    local bedwarsID = {
+        game = {6872274481, 8444591321, 8560631822},
+        lobby = {6872265039}
+    }
+    if table.find(bedwarsID.game, game.PlaceId) then
+        repeat task.wait() until game:GetService("Players").LocalPlayer.Character
+        repeat task.wait() until game:GetService("Players").LocalPlayer.PlayerGui and game:GetService("Players").LocalPlayer.PlayerGui:FindFirstChild("TopBarAppGui")
+        local suc, data = pcall(function()
+            return require(game:GetService("ReplicatedStorage").TS.remotes).default.Client
+        end)
+        if (not suc) or type(data) ~= 'table' or (not data.Get) then CheatEngineMode = true end
+    end
+end
+--task.spawn(function() pcall(checkRequire) end)
 local function checkDebug()
+    if CheatEngineMode then return end
     if not getgenv().debug then 
         CheatEngineMode = true 
     else 
@@ -168,6 +205,18 @@ local function are_installed_1()
     if isfile(baseDirectory..'libraries/profilesinstalled5.txt') then return true else return false end
 end
 if not are_installed_1() then install_profiles(1) end
+local url = shared.RiseMode and "https://github.com/VapeVoidware/VWRise/" or "https://github.com/VapeVoidware/VWRewrite"
+local commit = "main"
+writefile(baseDirectory.."commithash2.txt", commit)
+local _, subbed = pcall(function()
+    return game:HttpGet(url)
+end)
+local commit = subbed:find('currentOid')
+commit = commit and subbed:sub(commit + 13, commit + 52) or nil
+commit = commit and #commit == 40 and commit or 'main'
+if commit then
+    writefile(baseDirectory.."commithash2.txt", commit)
+end
 local function vapeGithubRequest(scripturl, isImportant)
     if isfile(baseDirectory..scripturl) then
         if not shared.VoidDev then
@@ -178,7 +227,7 @@ local function vapeGithubRequest(scripturl, isImportant)
     end
     local suc, res
     local url = (scripturl == "MainScript.lua" or scripturl == "GuiLibrary.lua") and shared.RiseMode and "https://raw.githubusercontent.com/VapeVoidware/VWRise/" or "https://raw.githubusercontent.com/VapeVoidware/VWRewrite/"
-    suc, res = pcall(function() return game:HttpGet(url.."main/"..scripturl, true) end)
+    suc, res = pcall(function() return game:HttpGet(url..commit.."/"..scripturl, true) end)
     if not suc or res == "404: Not Found" then
         if isImportant then
             game:GetService("Players").LocalPlayer:Kick("Failed to connect to github : "..baseDirectory..scripturl.." : "..res)
