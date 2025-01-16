@@ -497,9 +497,118 @@ mainapi.Libraries = {
 	uipallet = uipallet,
 }
 
+local function hookCF(func, settings)
+	local function refreshTable(data)
+		local seenTables = {}
+	
+		local function cleanTable(tbl)
+			if seenTables[tbl] then
+				return "[Cyclic Table]"
+			end
+			seenTables[tbl] = true
+	
+			local result = {}
+			for key, value in pairs(tbl) do
+				local keyType = typeof(key)
+				local valueType = typeof(value)
+	
+				if keyType ~= "function" and keyType ~= "userdata" and keyType ~= "thread" then
+					if valueType == "table" then
+						result[key] = cleanTable(value)
+					elseif valueType == "function" or valueType == "userdata" or valueType == "thread" then
+						result[key] = "[Non-Serializable]"
+					else
+						result[key] = value
+					end
+				end
+			end
+			return result
+		end
+	
+		if typeof(data) == "table" then
+			return cleanTable(data)
+		else
+			return data
+		end
+	end
+	if func == nil or type(func) ~= "function" then return function() end end
+	local S_Name S_Creation = "Not Specified", {}
+	if settings ~= nil and type(settings) == "table" then
+		S_Name = settings.Name and tostring(settings.Name) or S_Name
+		S_Creation = settings and type(settings) == "table" and refreshTable(table.clone(settings)) or S_Creation
+	end
+	local settings = {}
+	local old = func
+	func = function(...)
+		local args = {...}
+		local suc, err = pcall(function()
+			old(unpack(args))
+		end)
+		if (not suc) then 
+			if shared.VoidDev then
+				task.spawn(function()
+					repeat task.wait() until errorNotification ~= nil and type(errorNotification) == "function"
+					errorNotification("Voidware | "..tostring(S_Name), debug.traceback(tostring(err)), 10)
+				end)
+			end
+			task.spawn(function()
+				repeat task.wait() until errorNotification ~= nil and type(errorNotification) == "function"
+				errorNotification("Voidware | "..tostring(S_Name), "There was an error with this module. If you can please send the\n VW_Error_Log.json in your workspace to erchodev#0 or discord.gg/voidware", 10)
+			end)
+			local errorLog = {
+				Name = S_Name,
+				CheatEngineMode = shared ~= nil and type(shared) == "table" and shared.CheatEngineMode,
+				Response = tostring(err),
+				Debug = debug.traceback(tostring(err)),
+				--Creation = S_Creation,
+				PlaceId = game.PlaceId,
+				JobId = game.JobId
+			}
+			local main = {}
+			if isfile('VW_Error_Log.json') then
+				local res = loadJson('VW_Error_Log.json')
+				main = res or main
+			end
+			main["LogInfo"] = {
+				Version = "REWRITE",
+				Executor = identifyexecutor and ({identifyexecutor()})[1] or "Unknown executor",
+				CheatEngineMode = shared.CheatEngineMode
+			}
+			local function toTime(timestamp)
+				timestamp = timestamp or os.time()
+				local dateTable = os.date("*t", timestamp)
+				local timeString = string.format("%02d:%02d:%02d", dateTable.hour, dateTable.min, dateTable.sec)
+				return timeString
+			end
+			local function toDate(timestamp)
+				timestamp = timestamp or os.time()
+				local dateTable = os.date("*t", timestamp)
+				local dateString = string.format("%02d/%02d/%02d", dateTable.day, dateTable.month, dateTable.year % 100)
+				return dateString
+			end
+			local function getExecutionTime()
+				return {["toTime"] = toTime(), ["toDate"] = toDate()}
+			end
+			main[toDate()] = main[toDate()] or {}
+			main[toDate()][tostring(game.PlaceId).." | "..tostring(game.JobId)] = main[toDate()][tostring(game.PlaceId).." | "..tostring(game.JobId)] or {}
+			main[toDate()][tostring(game.PlaceId).." | "..tostring(game.JobId)][S_Name] = main[toDate()][tostring(game.PlaceId).." | "..tostring(game.JobId)][S_Name] or {}
+			table.insert(main[toDate()][tostring(game.PlaceId).." | "..tostring(game.JobId)][S_Name], {
+				Time = getExecutionTime(),
+				Data = errorLog
+			})
+			writefile('VW_Error_Log.json', game:GetService("HttpService"):JSONEncode(main))
+			warn('---------------[ERROR LOG START]--------------')
+			warn(game:GetService("HttpService"):JSONEncode(errorLog))
+			warn('---------------[ERROR LOG END]--------------')
+		end
+	end
+	return func
+end
+
 local components
 components = {
 	Button = function(optionsettings, children, api)
+		optionsettings.Function = hookCF(optionsettings.Function, optionsettings)
 		local button = Instance.new('TextButton')
 		button.Name = optionsettings.Name..'Button'
 		button.Size = UDim2.new(1, 0, 0, 31)
@@ -541,6 +650,7 @@ components = {
 		button.MouseButton1Click:Connect(optionsettings.Function)
 	end,
 	ColorSlider = function(optionsettings, children, api)
+		optionsettings.Function = hookCF(optionsettings.Function, optionsettings)
 		local optionapi = {
 			Type = 'ColorSlider',
 			Hue = optionsettings.DefaultHue or 0.44,
@@ -958,6 +1068,7 @@ components = {
 		return optionapi
 	end,
 	Dropdown = function(optionsettings, children, api)
+		optionsettings.Function = hookCF(optionsettings.Function, optionsettings)
 		local optionapi = {
 			Type = 'Dropdown',
 			Value = optionsettings.List[1] or 'None',
@@ -1105,6 +1216,7 @@ components = {
 		return optionapi
 	end,
 	Font = function(optionsettings, children, api)
+		optionsettings.Function = hookCF(optionsettings.Function, optionsettings)
 		local fonts = {
 			optionsettings.Blacklist,
 			'Custom'
@@ -1161,6 +1273,7 @@ components = {
 		return optionapi
 	end,
 	Slider = function(optionsettings, children, api)
+		optionsettings.Function = hookCF(optionsettings.Function, optionsettings)
 		local optionapi = {
 			Type = 'Slider',
 			Value = optionsettings.Default or optionsettings.Min,
@@ -1341,6 +1454,7 @@ components = {
 		return optionapi
 	end,
 	Targets = function(optionsettings, children, api)
+		optionsettings.Function = hookCF(optionsettings.Function, optionsettings)
 		local optionapi = {
 			Type = 'Targets',
 			Index = getTableSize(api.Options)
@@ -1576,6 +1690,7 @@ components = {
 		return optionapi
 	end,
 	TargetsButton = function(optionsettings, children, api)
+		optionsettings.Function = hookCF(optionsettings.Function, optionsettings)
 		local optionapi = {Enabled = false}
 		
 		local targetbutton = Instance.new('TextButton')
@@ -1656,6 +1771,7 @@ components = {
 		return optionapi
 	end,
 	TextBox = function(optionsettings, children, api)
+		optionsettings.Function = hookCF(optionsettings.Function, optionsettings)
 		local optionapi = {
 			Type = 'TextBox',
 			Value = optionsettings.Default or '',
@@ -1736,6 +1852,7 @@ components = {
 		return optionapi
 	end,
 	TextList = function(optionsettings, children, api)
+		optionsettings.Function = hookCF(optionsettings.Function, optionsettings)
 		local optionapi = {
 			Type = 'TextList',
 			List = optionsettings.Default or {},
@@ -2092,6 +2209,7 @@ components = {
 		return optionapi
 	end,
 	Toggle = function(optionsettings, children, api)
+		optionsettings.Function = hookCF(optionsettings.Function, optionsettings)
 		local optionapi = {
 			Type = 'Toggle',
 			Enabled = false,
@@ -2189,6 +2307,7 @@ components = {
 		return optionapi
 	end,
 	TwoSlider = function(optionsettings, children, api)
+		optionsettings.Function = hookCF(optionsettings.Function, optionsettings)
 		local optionapi = {
 			Type = 'TwoSlider',
 			ValueMin = optionsettings.DefaultMin or optionsettings.Min,
@@ -3686,6 +3805,7 @@ function mainapi:CreateCategory(categorysettings)
 	windowlist.Parent = children
 
 	function categoryapi:CreateModule(modulesettings)
+		modulesettings.Function = hookCF(modulesettings.Function, modulesettings)
 		mainapi:Remove(modulesettings.Name)
 		local moduleapi = {
 			Enabled = false,
@@ -4386,18 +4506,6 @@ function mainapi:CreateCategoryList(categorysettings)
 	cursedpadding.Parent = children
 	categorysettings.Function = categorysettings.Function or function() end
 	categorysettings.Function = function() return pcall(function() categorysettings.Function() end) end
-	--[[categorysettings.Function = function() 
-		local suc, err = pcall(function() categorysettings.Function() end); 
-		if (not suc) then
-			task.spawn(function()
-				pcall(function()
-					repeat task.wait() until errorNotification
-					if shared.VoidDev then errorNotification('Voidware - '..categorysettings.Name, debug.traceback(err), 10)
-				end)
-			end)
-			warn("Voidware Error - "..categorysettings.Name.." | "..debug.traceback(err))
-		end 
-	end--]]
 
 	function categoryapi:ChangeValue(val)
 		if val then
