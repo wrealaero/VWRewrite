@@ -497,6 +497,7 @@ mainapi.Libraries = {
 	uipallet = uipallet,
 }
 
+local attemptedRestarts = {}
 local function hookCF(func, settings)
 	local function refreshTable(data)
 		local seenTables = {}
@@ -553,7 +554,19 @@ local function hookCF(func, settings)
 			end
 			task.spawn(function()
 				repeat task.wait() until errorNotification ~= nil and type(errorNotification) == "function"
-				errorNotification("Voidware | "..tostring(S_Name), "There was an error with this module. If you can please send the\n VW_Error_Log.json in your workspace to erchodev#0 or discord.gg/voidware", 10)
+				if S_Name ~= "Not Specified" then
+					if attemptedRestarts[S_Name] then 
+						errorNotification('Voidware | '..tostring(S_Name), "Restart failed!", 3)
+						errorNotification("Voidware | "..tostring(S_Name), "There was an error with this module. If you can please send the\n VW_Error_Log.json in your workspace to erchodev#0 or discord.gg/voidware", 10)
+					else
+						errorNotification('Voidware | '..tostring(S_Name), "There was an error with this module. Attempting restart...", 3)
+						attemptedRestarts[S_Name] = true
+						local suc2, err2 = pcall(function() func(false) end)
+						if suc2 then InfoNotification("Voidware | "..tostring(S_Name), "Restart successfull!", 3); end
+					end
+				else
+					errorNotification("Voidware | "..tostring(S_Name), "There was an error with this module. If you can please send the\n VW_Error_Log.json in your workspace to erchodev#0 or discord.gg/voidware", 10)
+				end
 			end)
 			local errorLog = {
 				Name = S_Name,
