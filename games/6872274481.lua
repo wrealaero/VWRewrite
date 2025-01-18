@@ -2252,15 +2252,18 @@ run(function()
 									return not Attacking
 								end,
 								playAnimation = function(...)
+									local args = {...}
 									if not Attacking then
-										bedwars.ViewmodelController:playAnimation(select(2, ...))
+										pcall(function()
+											bedwars.ViewmodelController:playAnimation(select(2, unpack(args)))
+										end)
 									end
 								end
 							}
 						}
 					}
-					debug.setupvalue(bedwars.SwordController.playSwordEffect, 6, fake)
-					debug.setupvalue(bedwars.ScytheController.playLocalAnimation, 3, fake)
+					--debug.setupvalue(bedwars.SwordController.playSwordEffect, 6, fake)
+					--debug.setupvalue(bedwars.ScytheController.playLocalAnimation, 3, fake)
 
 					task.spawn(function()
 						local started = false
@@ -5032,7 +5035,9 @@ run(function()
 		Function = function(callback)
 			if callback then
 				for _, v in getconnections(lplr.Idled) do
-					v:Disconnect()
+					pcall(function()
+						v:Disconnect()
+					end)
 				end
 	
 				for _, v in getconnections(runService.Heartbeat) do
