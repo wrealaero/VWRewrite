@@ -213,9 +213,7 @@ for i,v in pairs(game:HttpGet(url):split("\n")) do
         break
     end
 end
-if commit then
-    writefile(baseDirectory.."commithash2.txt", commit)
-end
+writefile(baseDirectory.."commithash2.txt", commit)
 local function vapeGithubRequest(scripturl, isImportant)
     if isfile(baseDirectory..scripturl) then
         if not shared.VoidDev then
