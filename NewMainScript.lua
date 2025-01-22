@@ -133,15 +133,13 @@ local function install_profiles(num)
     local profilesfetched
     local repoOwner = shared.RiseMode and "VapeVoidware/RiseProfiles" or "Erchobg/VoidwareProfiles"
     local function vapeGithubRequest(scripturl)
-        if not isfile(baseDirectory..scripturl) then
-            local suc, res = pcall(function() return game:HttpGet('https://raw.githubusercontent.com/'..repoOwner..'/main/'..scripturl, true) end)
-            if not isfolder(baseDirectory.."profiles") then
-                makefolder(baseDirectory..'profiles')
-            end
-            if not isfolder(baseDirectory..'ClosetProfiles') then makefolder(baseDirectory..'ClosetProfiles') end
-            writefile(baseDirectory..scripturl, res)
-            task.wait()
+        local suc, res = pcall(function() return game:HttpGet('https://raw.githubusercontent.com/'..repoOwner..'/main/'..scripturl, true) end)
+        if not isfolder(baseDirectory.."profiles") then
+            makefolder(baseDirectory..'profiles')
         end
+        if not isfolder(baseDirectory..'ClosetProfiles') then makefolder(baseDirectory..'ClosetProfiles') end
+        writefile(baseDirectory..scripturl, res)
+        task.wait()
         return print(scripturl)
     end
     local Gui1 = {
