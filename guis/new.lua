@@ -357,7 +357,7 @@ local function loadJson(path)
 	local suc, res = pcall(function()
 		return httpService:JSONDecode(readfile(path))
 	end)
-	return suc and type(res) == 'table' and res or nil
+	return suc and type(res) == 'table' and res or nil, res
 end
 
 local function makeDraggable(gui, window)
@@ -5480,10 +5480,10 @@ function mainapi:Load(skipgui, profile)
 	local savecheck = true
 
 	if isfile('vape/profiles/'..game.GameId..'.gui.txt') then
-		guidata = loadJson('vape/profiles/'..game.GameId..'.gui.txt')
+		guidata, err = loadJson('vape/profiles/'..game.GameId..'.gui.txt')
 		if not guidata then
 			guidata = {Categories = {}}
-			self:CreateNotification('Vape', 'Failed to load GUI settings.', 10, 'alert')
+			self:CreateNotification('Vape', 'Failed to load GUI settings. '..tostring(err), 10, 'alert')
 			savecheck = false
 		end
 
