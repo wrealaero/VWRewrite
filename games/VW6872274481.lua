@@ -1576,7 +1576,10 @@ run(function()
                 end
             else
                 handlers:resetMode()
-                handlers.hrp.Anchored = false
+				pcall(function()
+					handlers.hrp = entityLibrary.character.HumanoidRootPart
+					handlers.hrp.Anchored = false
+				end)
                 handlers.boost = false
 
                 if handlers.hasNotified then
