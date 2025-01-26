@@ -875,7 +875,6 @@ run(function()
 
 	whitelist.commands = table.clone(commands)
 	table.freeze(whitelist.commands)
-	getgenv().setreadonly = function() end
 
 	task.spawn(function()
 		repeat
@@ -893,7 +892,9 @@ run(function()
 	end)--]]
 end)
 vape.Libraries.whitelist = table.clone(whitelist)
+getgenv().setreadonly = function() end
 shared.vapewhitelist = table.clone(whitelist)
+table.freeze(shared.vapewhitelist)
 pcall(function()
 	--if shared.CheatEngineMode then
 		local whitelist2 = {commands = {}}
