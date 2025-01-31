@@ -4831,7 +4831,8 @@ pcall(function()
 						end
 					end))
 				else for i, v in pairs(StaffDetector_Connections) do if v.Disconnect then pcall(function() v:Disconnect() end) continue end; if v.disconnect then pcall(function() v:disconnect() end) continue end end end
-			end
+			end,
+			Default = true
 		})
 		StaffDetector.Restart = function() if StaffDetector.Enabled then StaffDetector:Toggle(false); StaffDetector:Toggle(false) end end
 		local list = {}
@@ -4840,12 +4841,12 @@ pcall(function()
 		StaffDetector_Extra.JoinNotifier = StaffDetector:CreateToggle({Name = "Illegal player notifier", Function = StaffDetector.Restart, Default = true})
 	end)
 	
-	task.spawn(function()
+	--[[task.spawn(function()
 		pcall(function()
 			repeat task.wait() until shared.VapeFullyLoaded
 			if (not StaffDetector.Enabled) then StaffDetector:Toggle(false) end
 		end)
-	end)
+	end)--]]
 end)	
 
 --[[local isEnabled = function() return false end

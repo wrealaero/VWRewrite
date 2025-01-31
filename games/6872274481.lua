@@ -4982,6 +4982,7 @@ run(function()
 				table.clear(joined)
 			end
 		end,
+		Default = true,
 		Tooltip = 'Detects people with a staff rank ingame'
 	})
 	Mode = StaffDetector:CreateDropdown({
@@ -5007,12 +5008,12 @@ run(function()
 		Name = 'Clans',
 		Placeholder = 'clan name (ex: gg)'
 	})
-	task.spawn(function()
+	--[[task.spawn(function()
 		repeat task.wait(1) until vape.Loaded or vape.Loaded == nil
 		if vape.Loaded and not StaffDetector.Enabled then
 			StaffDetector:Toggle()
 		end
-	end)
+	end)--]]
 end)
 	
 run(function()
