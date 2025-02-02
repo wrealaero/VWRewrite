@@ -1001,12 +1001,6 @@ run(function()
 			pcall(GuiLibrary.RemoveObject, "VapePrivateDetectorOptionsButton")
 		end
 	end)--]]
-	task.spawn(function()
-		repeat task.wait(1) until vape.Loaded or vape.Loaded == nil
-		if vape.Loaded and not VapePrivateDetector.Enabled then
-			VapePrivateDetector:Toggle()
-		end
-	end)
 end)
 
 run(function() local InfiniteYield = {Enabled = false}
