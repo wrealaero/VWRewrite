@@ -5484,6 +5484,9 @@ function mainapi:Load(skipgui, profile)
 		if not guidata then
 			guidata = {Categories = {}}
 			self:CreateNotification('Vape', 'Failed to load GUI settings. '..tostring(err), 10, 'alert')
+			pcall(function()
+				delfile('vape/profiles/'..game.GameId..'.gui.txt')
+			end)
 			savecheck = false
 		end
 
