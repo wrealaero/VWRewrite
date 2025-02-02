@@ -26,6 +26,8 @@ local runService = game:GetService("RunService")
 local RunService = runService
 local runservice = runService
 
+local CustomsAllowed = false
+
 local collectionService = game:GetService("CollectionService")
 shared.vapewhitelist = vape.Libraries.whitelist
 local playersService = game:GetService("Players")
@@ -601,7 +603,7 @@ end)--]]
 run(function()
 	local PlayerLevelSet = {}
 	local PlayerLevel = {Value = 100}
-	PlayerLevelSet = vape.Categories.Utility:CreateModule({
+	PlayerLevelSet = vape.Categories.Misc:CreateModule({
 		Name = 'SetPlayerLevel',
 		Tooltip = 'Sets your player level to 100 (client sided)',
 		Function = function(calling)
@@ -1526,6 +1528,7 @@ run(function()
 	PlayerTPSpeed.Object.Visible = false
 end)
 
+local GodMode = {Enabled = false}
 run(function()
     local antiDeath = {}
     local antiDeathConfig = {
@@ -1547,6 +1550,7 @@ run(function()
 
     function handlers.new()
         local self = {
+			godmode = false,
             boost = false,
             inf = false,
             notify = false,
@@ -1597,10 +1601,18 @@ run(function()
         local modeActions = {
             Infinite = function() self:enableInfiniteMode() end,
             Boost = function() self:applyBoost() end,
-            Sky = function() self:moveToSky() end
+            Sky = function() self:moveToSky() end,
+			AntiHit = function() self:enableAntiHitMode() end
         }
         modeActions[antiDeathConfig.Mode.Value]()
     end
+
+	function handlers:enableAntiHitMode()
+		if not GodMode.Enabled then
+			GodMode:Toggle(false)
+			self.godmode = true
+		end
+	end
 
     function handlers:enableInfiniteMode()
         if not vape.Modules.InfiniteFly.Enabled then
@@ -1649,7 +1661,15 @@ run(function()
             end
             self.inf = false
             self.hasNotified = false
-        end
+        elseif self.godmode then
+			if antiDeathConfig.AutoDisable.Enabled then
+                if GodMode.Enabled then
+                    GodMode:Toggle(false)
+                end
+            end
+            self.godmode = false
+            self.hasNotified = false
+		end
     end
 
     local antiDeathStatus = handlers.new()
@@ -1676,13 +1696,13 @@ run(function()
 
     antiDeathConfig.Mode = antiDeath:CreateDropdown({
         Name = 'Mode',
-        List = {'Infinite', 'Boost', 'Sky' },
-        Default = 'Infinite',
+        List = {'Infinite', 'Boost', 'Sky', 'AntiHit'},
+        Default = 'AntiHit',
         Tooltip = btext('Mode to prevent death.'),
         Function = function(val)
             antiDeathConfig.BoostMode.Object.Visible = val == 'Boost'
             antiDeathConfig.SkyPosition.Object.Visible = val == 'Sky'
-            antiDeathConfig.AutoDisable.Object.Visible = val == 'Infinite'
+            antiDeathConfig.AutoDisable.Object.Visible = (val == 'Infinite' or val == 'AntiHit')
             antiDeathConfig.Velocity.Object.Visible = false
             antiDeathConfig.CFrame.Object.Visible = false
             antiDeathConfig.TweenPower.Object.Visible = false
@@ -3802,7 +3822,6 @@ run(function()
 		if plr.Character:FindFirstChild("Humanoid").Health < 0.11 then return false end
 		return true
 	end
-	local GodMode = {Enabled = false}
 	local Slowmode = {Value = 2}
 	GodMode = vape.Categories.Blatant:CreateModule({
 		Name = "AntiHit/Godmode",
@@ -4300,7 +4319,7 @@ end)
 
 run(function()
 	local GetHost = {Enabled = false}
-	GetHost = vape.Categories.Utility:CreateModule({
+	GetHost = vape.Categories.Misc:CreateModule({
 		Name = "GetHost",
 		Tooltip = ":troll:",
 		Function = function(callback) 
@@ -4831,8 +4850,7 @@ pcall(function()
 						end
 					end))
 				else for i, v in pairs(StaffDetector_Connections) do if v.Disconnect then pcall(function() v:Disconnect() end) continue end; if v.disconnect then pcall(function() v:disconnect() end) continue end end end
-			end,
-			Default = true
+			end
 		})
 		StaffDetector.Restart = function() if StaffDetector.Enabled then StaffDetector:Toggle(false); StaffDetector:Toggle(false) end end
 		local list = {}
@@ -4841,12 +4859,12 @@ pcall(function()
 		StaffDetector_Extra.JoinNotifier = StaffDetector:CreateToggle({Name = "Illegal player notifier", Function = StaffDetector.Restart, Default = true})
 	end)
 	
-	--[[task.spawn(function()
+	task.spawn(function()
 		pcall(function()
 			repeat task.wait() until shared.VapeFullyLoaded
 			if (not StaffDetector.Enabled) then StaffDetector:Toggle(false) end
 		end)
-	end)--]]
+	end)
 end)	
 
 --[[local isEnabled = function() return false end
@@ -5535,12 +5553,12 @@ run(function()
 end)
 
 run(function()
-    local GuiLibrary = shared.GuiLibrary
+	local GuiLibrary = shared.GuiLibrary
 	local size_changer = {};
 	local size_changer_d = {};
 	local size_changer_h = {};
 	local size_changer_v = {};
-	size_changer = vape.Categories.Utility:CreateModule({
+	size_changer = vape.Categories.Misc:CreateModule({
 		Name = 'ToolSizeChanger',
 		Tooltip = 'Changes the size of the tools.',
 		Function = function(callback) 
@@ -5866,141 +5884,86 @@ run(function()
 	end
 end)
 
-run(function()
-	local ItemSpawner = {Enabled = false}
-	local spawnedItems = {}
-	local chattedConnection
-	local function getInv(plr) return plr.Character and plr.Character:FindFirstChild("InventoryFolder") and plr.Character:FindFirstChild("InventoryFolder").Value end
-	local ArmorIncluded = {Enabled = false}
-	local ProjectilesIncluded = {Enabled = false}
-	local ItemsIncluded = {Enabled = false}
-	local StrictMatch = {Enabled = false}
-	local function getRepItems()
-		local tbl = {"Armor", "Projectiles"}
-		local a = ItemsIncluded.Enabled and game:GetService("ReplicatedStorage"):FindFirstChild("Items") and game:GetService("ReplicatedStorage"):FindFirstChild("Items"):GetChildren() or {}
-		local b = ArmorIncluded.Enabled and game:GetService("ReplicatedStorage"):FindFirstChild("Assets") and game:GetService("ReplicatedStorage"):FindFirstChild("Assets"):FindFirstChild(tbl[1]) and game:GetService("ReplicatedStorage"):FindFirstChild("Assets"):FindFirstChild(tbl[1]):GetChildren() or {}
-		local c = ProjectilesIncluded.Enabled and game:GetService("ReplicatedStorage"):FindFirstChild("Assets") and game:GetService("ReplicatedStorage"):FindFirstChild("Assets"):FindFirstChild(tbl[2]) and game:GetService("ReplicatedStorage"):FindFirstChild("Assets"):FindFirstChild(tbl[2]):GetChildren() or {}
-		
-		local fullTbl = {}
-		local d = {a,b,c}
-		for i,v in pairs(d) do for i2,v2 in pairs(v) do table.insert(fullTbl, v2) end end
-		return fullTbl
-	end
-	local inv, repItems
-	local function getRepItem(name)
-		repItems = getRepItems()
-		for i,v in pairs(repItems) do if v.Name and ((StrictMatch.Enabled and v.Name == name) or ((not StrictMatch.Enabled) and string.find(v.Name, name))) then return v end end
-		return nil
-	end
-	local function getSpawnedItem(name)
-		for i,v in pairs(spawnedItems) do if v.Name and ((StrictMatch.Enabled and v.Name == name) or ((not StrictMatch.Enabled) and string.find(v.Name, name))) then return v end end
-		return nil
-	end
-	ItemSpawner = vape.Categories.Utility:CreateModule({
-		Name = "ItemSpawner (CS)",
-		Function = function(call)
-			if call then
-				task.spawn(function() repeat task.wait(0.1); inv = getInv(game:GetService("Players").LocalPlayer) until inv end)
-				task.spawn(function() repeat task.wait(0.1); repItems = getRepItems() until repItems end)
-				chattedConnection = game:GetService("Players").LocalPlayer.Chatted:Connect(function(msg)
-					local parts = string.split(msg, " ")
-					if parts[1] == "/e" then
-						if parts[2] == "spawn" then
-							inv, repItems = getInv(game:GetService("Players").LocalPlayer), getRepItems()
-							if parts[3] then
-								local item = getRepItem(parts[3])
-								if item then
-									local amount, newItem = tonumber(parts[4]) or 1, item:Clone()
-									newItem.Parent = inv
-									pcall(function() newItem:SetAttribute("Amount", amount) end)
-									pcall(function() newItem:SetAttribute("CustomSpawned", true) end)
-									pcall(function() bedwars.StoreController:updateLocalInventory() end)
-									table.insert(spawnedItems, newItem)
+if CustomsAllowed then
+	run(function()
+		local ItemSpawner = {Enabled = false}
+		local spawnedItems = {}
+		local chattedConnection
+		local function getInv(plr) return plr.Character and plr.Character:FindFirstChild("InventoryFolder") and plr.Character:FindFirstChild("InventoryFolder").Value end
+		local ArmorIncluded = {Enabled = false}
+		local ProjectilesIncluded = {Enabled = false}
+		local ItemsIncluded = {Enabled = false}
+		local StrictMatch = {Enabled = false}
+		local function getRepItems()
+			local tbl = {"Armor", "Projectiles"}
+			local a = ItemsIncluded.Enabled and game:GetService("ReplicatedStorage"):FindFirstChild("Items") and game:GetService("ReplicatedStorage"):FindFirstChild("Items"):GetChildren() or {}
+			local b = ArmorIncluded.Enabled and game:GetService("ReplicatedStorage"):FindFirstChild("Assets") and game:GetService("ReplicatedStorage"):FindFirstChild("Assets"):FindFirstChild(tbl[1]) and game:GetService("ReplicatedStorage"):FindFirstChild("Assets"):FindFirstChild(tbl[1]):GetChildren() or {}
+			local c = ProjectilesIncluded.Enabled and game:GetService("ReplicatedStorage"):FindFirstChild("Assets") and game:GetService("ReplicatedStorage"):FindFirstChild("Assets"):FindFirstChild(tbl[2]) and game:GetService("ReplicatedStorage"):FindFirstChild("Assets"):FindFirstChild(tbl[2]):GetChildren() or {}
+			
+			local fullTbl = {}
+			local d = {a,b,c}
+			for i,v in pairs(d) do for i2,v2 in pairs(v) do table.insert(fullTbl, v2) end end
+			return fullTbl
+		end
+		local inv, repItems
+		local function getRepItem(name)
+			repItems = getRepItems()
+			for i,v in pairs(repItems) do if v.Name and ((StrictMatch.Enabled and v.Name == name) or ((not StrictMatch.Enabled) and string.find(v.Name, name))) then return v end end
+			return nil
+		end
+		local function getSpawnedItem(name)
+			for i,v in pairs(spawnedItems) do if v.Name and ((StrictMatch.Enabled and v.Name == name) or ((not StrictMatch.Enabled) and string.find(v.Name, name))) then return v end end
+			return nil
+		end
+		ItemSpawner = vape.Categories.Utility:CreateModule({
+			Name = "ItemSpawner (CS)",
+			Function = function(call)
+				if call then
+					task.spawn(function() repeat task.wait(0.1); inv = getInv(game:GetService("Players").LocalPlayer) until inv end)
+					task.spawn(function() repeat task.wait(0.1); repItems = getRepItems() until repItems end)
+					chattedConnection = game:GetService("Players").LocalPlayer.Chatted:Connect(function(msg)
+						local parts = string.split(msg, " ")
+						if parts[1] == "/e" then
+							if parts[2] == "spawn" then
+								inv, repItems = getInv(game:GetService("Players").LocalPlayer), getRepItems()
+								if parts[3] then
+									local item = getRepItem(parts[3])
+									if item then
+										local amount, newItem = tonumber(parts[4]) or 1, item:Clone()
+										newItem.Parent = inv
+										pcall(function() newItem:SetAttribute("Amount", amount) end)
+										pcall(function() newItem:SetAttribute("CustomSpawned", true) end)
+										pcall(function() bedwars.StoreController:updateLocalInventory() end)
+										table.insert(spawnedItems, newItem)
+									else errorNotification("ItemSpawner", tostring(parts[3]).." is not a valid item name!", 3) end
+								end
+							elseif parts[2] == "despawn" then
+								inv, repItems = getInv(game:GetService("Players").LocalPlayer), getRepItems()
+								if parts[3] then
+									local item = getSpawnedItem(parts[3])
+									if item then 
+										table.remove(spawnedItems, table.find(spawnedItems, item))
+										pcall(function() item:Destroy() end)
+										pcall(function() bedwars.StoreController:updateLocalInventory() end)
+									end
 								else errorNotification("ItemSpawner", tostring(parts[3]).." is not a valid item name!", 3) end
 							end
-						elseif parts[2] == "despawn" then
-							inv, repItems = getInv(game:GetService("Players").LocalPlayer), getRepItems()
-							if parts[3] then
-								local item = getSpawnedItem(parts[3])
-								if item then 
-									table.remove(spawnedItems, table.find(spawnedItems, item))
-									pcall(function() item:Destroy() end)
-									pcall(function() bedwars.StoreController:updateLocalInventory() end)
-								end
-							else errorNotification("ItemSpawner", tostring(parts[3]).." is not a valid item name!", 3) end
 						end
-					end
-				end)
-			else
-				pcall(function() chattedConnection:Disconnect() end)
-				pcall(function() chattedConnection:Disconnect() end)
-				for i,v in pairs(spawnedItems) do pcall(function() v:Destroy() end) end
+					end)
+				else
+					pcall(function() chattedConnection:Disconnect() end)
+					pcall(function() chattedConnection:Disconnect() end)
+					for i,v in pairs(spawnedItems) do pcall(function() v:Destroy() end) end
+				end
 			end
-		end
-	})
-	ItemSpawner.Restart = function() if ItemSpawner.Enabled then ItemSpawner:Toggle(false); ItemSpawner:Toggle(false) end end
-	StrictMatch = ItemSpawner:CreateToggle({ Name = "StrictMatch", Function = ItemSpawner.Restart, Default = true})
-	ItemsIncluded = ItemSpawner:CreateToggle({Name = "ItemsIncluded", Function = ItemSpawner.Restart, Default = true})
-	ProjectilesIncluded = ItemSpawner:CreateToggle({Name = "ProjectilesIncluded", Function = ItemSpawner.Restart, Default = true})
-	ArmorIncluded = ItemSpawner:CreateToggle({Name = "ArmorIncluded", Function = ItemSpawner.Restart, Default = true})
-end)
-
-run(function()
-	local WeatherMods = {Enabled = false}
-	local WeatherMode = {Value = "Snow"}
-	local SnowSpread = {Value = 35}
-	local SnowRate = {Value = 28}
-	local SnowHigh = {Value = 100}
-	WeatherMods = vape.Categories.Render:CreateModule({
-		Name = 'WeatherMods',
-		Tooltip = 'Changes the weather',
-		Function = function(callback) 
-			if callback then
-				task.spawn(function()
-					local snowpart = Instance.new("Part")
-					snowpart.Size = Vector3.new(240,0.5,240)
-					snowpart.Name = "SnowParticle"
-					snowpart.Transparency = 1
-					snowpart.CanCollide = false
-					snowpart.Position = Vector3.new(0,120,286)
-					snowpart.Anchored = true
-					snowpart.Parent = game.Workspace
-					local snow = Instance.new("ParticleEmitter")
-					snow.RotSpeed = NumberRange.new(300)
-					snow.VelocitySpread = SnowSpread.Value
-					snow.Rate = SnowRate.Value
-					snow.Texture = "rbxassetid://8158344433"
-					snow.Rotation = NumberRange.new(110)
-					snow.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0,0.16939899325371,0),NumberSequenceKeypoint.new(0.23365999758244,0.62841498851776,0.37158501148224),NumberSequenceKeypoint.new(0.56209099292755,0.38797798752785,0.2771390080452),NumberSequenceKeypoint.new(0.90577298402786,0.51912599802017,0),NumberSequenceKeypoint.new(1,1,0)})
-					snow.Lifetime = NumberRange.new(8,14)
-					snow.Speed = NumberRange.new(8,18)
-					snow.EmissionDirection = Enum.NormalId.Bottom
-					snow.SpreadAngle = Vector2.new(35,35)
-					snow.Size = NumberSequence.new({NumberSequenceKeypoint.new(0,0,0),NumberSequenceKeypoint.new(0.039760299026966,1.3114800453186,0.32786899805069),NumberSequenceKeypoint.new(0.7554469704628,0.98360699415207,0.44038599729538),NumberSequenceKeypoint.new(1,0,0)})
-					snow.Parent = snowpart
-					local windsnow = Instance.new("ParticleEmitter")
-					windsnow.Acceleration = Vector3.new(0,0,1)
-					windsnow.RotSpeed = NumberRange.new(100)
-					windsnow.VelocitySpread = SnowSpread.Value
-					windsnow.Rate = SnowRate.Value
-					windsnow.Texture = "rbxassetid://8158344433"
-					windsnow.EmissionDirection = Enum.NormalId.Bottom
-					windsnow.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0,0.16939899325371,0),NumberSequenceKeypoint.new(0.23365999758244,0.62841498851776,0.37158501148224),NumberSequenceKeypoint.new(0.56209099292755,0.38797798752785,0.2771390080452),NumberSequenceKeypoint.new(0.90577298402786,0.51912599802017,0),NumberSequenceKeypoint.new(1,1,0)})
-					windsnow.Lifetime = NumberRange.new(8,14)
-					windsnow.Speed = NumberRange.new(8,18)
-					windsnow.Rotation = NumberRange.new(110)
-					windsnow.SpreadAngle = Vector2.new(35,35)
-					windsnow.Size = NumberSequence.new({NumberSequenceKeypoint.new(0,0,0),NumberSequenceKeypoint.new(0.039760299026966,1.3114800453186,0.32786899805069),NumberSequenceKeypoint.new(0.7554469704628,0.98360699415207,0.44038599729538),NumberSequenceKeypoint.new(1,0,0)})
-					windsnow.Parent = snowpart
-					repeat task.wait(); if entityLibrary.isAlive then snowpart.Position = entityLibrary.character.HumanoidRootPart.Position + Vector3.new(0,SnowHigh.Value,0) end until not shared.VapeExecuted
-				end)
-			else for _, v in next, game.Workspace:GetChildren() do if v.Name == "SnowParticle" then v:Remove() end end end
-		end
-	})
-	SnowSpread = WeatherMods:CreateSlider({Name = "Snow Spread", Min = 1, Max = 100, Function = function() end, Default = 35})
-	SnowRate = WeatherMods:CreateSlider({Name = "Snow Rate", Min = 1, Max = 100, Function = function() end, Default = 28})
-	SnowHigh = WeatherMods:CreateSlider({Name = "Snow High", Min = 1, Max = 200, Function = function() end, Default = 100})
-end)
+		})
+		ItemSpawner.Restart = function() if ItemSpawner.Enabled then ItemSpawner:Toggle(false); ItemSpawner:Toggle(false) end end
+		StrictMatch = ItemSpawner:CreateToggle({ Name = "StrictMatch", Function = ItemSpawner.Restart, Default = true})
+		ItemsIncluded = ItemSpawner:CreateToggle({Name = "ItemsIncluded", Function = ItemSpawner.Restart, Default = true})
+		ProjectilesIncluded = ItemSpawner:CreateToggle({Name = "ProjectilesIncluded", Function = ItemSpawner.Restart, Default = true})
+		ArmorIncluded = ItemSpawner:CreateToggle({Name = "ArmorIncluded", Function = ItemSpawner.Restart, Default = true})
+	end)
+end
 
 if shared.CheatEngineMode then
 	run(function()

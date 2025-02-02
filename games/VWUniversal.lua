@@ -164,6 +164,63 @@ run(function()
 	})
 end)
 
+run(function()
+	local WeatherMods = {Enabled = false}
+	local WeatherMode = {Value = "Snow"}
+	local SnowSpread = {Value = 35}
+	local SnowRate = {Value = 28}
+	local SnowHigh = {Value = 100}
+	WeatherMods = vape.Categories.Misc:CreateModule({
+		Name = 'WeatherMods',
+		Tooltip = 'Changes the weather',
+		Function = function(callback) 
+			if callback then
+				task.spawn(function()
+					local snowpart = Instance.new("Part")
+					snowpart.Size = Vector3.new(240,0.5,240)
+					snowpart.Name = "SnowParticle"
+					snowpart.Transparency = 1
+					snowpart.CanCollide = false
+					snowpart.Position = Vector3.new(0,120,286)
+					snowpart.Anchored = true
+					snowpart.Parent = game.Workspace
+					local snow = Instance.new("ParticleEmitter")
+					snow.RotSpeed = NumberRange.new(300)
+					snow.VelocitySpread = SnowSpread.Value
+					snow.Rate = SnowRate.Value
+					snow.Texture = "rbxassetid://8158344433"
+					snow.Rotation = NumberRange.new(110)
+					snow.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0,0.16939899325371,0),NumberSequenceKeypoint.new(0.23365999758244,0.62841498851776,0.37158501148224),NumberSequenceKeypoint.new(0.56209099292755,0.38797798752785,0.2771390080452),NumberSequenceKeypoint.new(0.90577298402786,0.51912599802017,0),NumberSequenceKeypoint.new(1,1,0)})
+					snow.Lifetime = NumberRange.new(8,14)
+					snow.Speed = NumberRange.new(8,18)
+					snow.EmissionDirection = Enum.NormalId.Bottom
+					snow.SpreadAngle = Vector2.new(35,35)
+					snow.Size = NumberSequence.new({NumberSequenceKeypoint.new(0,0,0),NumberSequenceKeypoint.new(0.039760299026966,1.3114800453186,0.32786899805069),NumberSequenceKeypoint.new(0.7554469704628,0.98360699415207,0.44038599729538),NumberSequenceKeypoint.new(1,0,0)})
+					snow.Parent = snowpart
+					local windsnow = Instance.new("ParticleEmitter")
+					windsnow.Acceleration = Vector3.new(0,0,1)
+					windsnow.RotSpeed = NumberRange.new(100)
+					windsnow.VelocitySpread = SnowSpread.Value
+					windsnow.Rate = SnowRate.Value
+					windsnow.Texture = "rbxassetid://8158344433"
+					windsnow.EmissionDirection = Enum.NormalId.Bottom
+					windsnow.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0,0.16939899325371,0),NumberSequenceKeypoint.new(0.23365999758244,0.62841498851776,0.37158501148224),NumberSequenceKeypoint.new(0.56209099292755,0.38797798752785,0.2771390080452),NumberSequenceKeypoint.new(0.90577298402786,0.51912599802017,0),NumberSequenceKeypoint.new(1,1,0)})
+					windsnow.Lifetime = NumberRange.new(8,14)
+					windsnow.Speed = NumberRange.new(8,18)
+					windsnow.Rotation = NumberRange.new(110)
+					windsnow.SpreadAngle = Vector2.new(35,35)
+					windsnow.Size = NumberSequence.new({NumberSequenceKeypoint.new(0,0,0),NumberSequenceKeypoint.new(0.039760299026966,1.3114800453186,0.32786899805069),NumberSequenceKeypoint.new(0.7554469704628,0.98360699415207,0.44038599729538),NumberSequenceKeypoint.new(1,0,0)})
+					windsnow.Parent = snowpart
+					repeat task.wait(); if entityLibrary.isAlive then snowpart.Position = entityLibrary.character.HumanoidRootPart.Position + Vector3.new(0,SnowHigh.Value,0) end until not shared.VapeExecuted
+				end)
+			else for _, v in next, game.Workspace:GetChildren() do if v.Name == "SnowParticle" then v:Remove() end end end
+		end
+	})
+	SnowSpread = WeatherMods:CreateSlider({Name = "Snow Spread", Min = 1, Max = 100, Function = function() end, Default = 35})
+	SnowRate = WeatherMods:CreateSlider({Name = "Snow Rate", Min = 1, Max = 100, Function = function() end, Default = 28})
+	SnowHigh = WeatherMods:CreateSlider({Name = "Snow High", Min = 1, Max = 200, Function = function() end, Default = 100})
+end)
+
 run(function() 
     local function setIconID(iconId)
         local lplr = game:GetService("Players").LocalPlayer
@@ -182,7 +239,7 @@ run(function()
     local CustomIcon = {}
     local IconID = {Value = ""}
     local defaultID = "rbxassetid://18518244636"
-    CustomIcon = vape.Categories.Utility:CreateModule({
+    CustomIcon = vape.Categories.Misc:CreateModule({
         Name = 'CustomPlayerListIcon',
         Function = function(calling)
             if calling then 
@@ -226,7 +283,7 @@ run(function() local Shader = {Enabled = false}
 		ShadowSoftness = lightingService.ShadowSoftness,
 		Ambient = lightingService.Ambient
 	}
-	Shader = vape.Categories.Utility:CreateModule({
+	Shader = vape.Categories.Misc:CreateModule({
 		Name = "RichShader",
 		HoverText = "pro shader",
 		Function = function(callback)
@@ -356,7 +413,7 @@ run(function() local chatDisable = {Enabled = false}
 	local chatVersion = function()
 		if game.Chat:GetChildren()[1] then return true else return false end
 	end
-	chatDisable = vape.Categories.Utility:CreateModule({
+	chatDisable = vape.Categories.Misc:CreateModule({
 		Name = "ChatDisable",
 		HoverText = "Disables the chat",
 		Function = function(callback)
@@ -389,7 +446,7 @@ run(function() local CharacterOutline = {}
 	local CharacterOutlineColor = newcolor()
 	local GuiSync = {Enabled = false}
 	local outline = Instance.new('Highlight', GuiLibrary.MainGui)
-	CharacterOutline = vape.Categories.Utility:CreateModule({
+	CharacterOutline = vape.Categories.Misc:CreateModule({
 		Name = 'CharacterOutline',
 		HoverText = 'Adds a cool outline to your character.',
 		Function = function(calling)
@@ -466,7 +523,7 @@ run(function() local CloudMods = {}
 			cloud.Material = (CloudNeon.Enabled and Enum.Material.Neon or Enum.Material.SmoothPlastic) 
 		end)
 	end
-	CloudMods = vape.Categories.Utility:CreateModule({
+	CloudMods = vape.Categories.Misc:CreateModule({
 		Name = 'CloudMods',
 		HoverText = 'Recolorizes the clouds to your liking.',
 		Function = function(calling)
@@ -784,7 +841,7 @@ run(function()
         animate.idle.Animation2.AnimationId = AnimList.Animation2[AnimIdleB.Value]
         task.wait(4.5)
     end
-	AnimationChanger = vape.Categories.Utility:CreateModule({
+	AnimationChanger = vape.Categories.Misc:CreateModule({
 		Name = "AnimationChanger",
 		Function = function(callback)
 			if callback then
@@ -1307,7 +1364,7 @@ run(function()
 	}
 	local customMouseIcon = {Enabled = false}
 	local customIcon = {Value = ''}
-	mouseMod = vape.Categories.Utility:CreateModule({
+	mouseMod = vape.Categories.Misc:CreateModule({
 		Name = 'MouseMod',
 		HoverText = 'Modifies your cursor\'s image.',
 		Function = function(callback)
@@ -1356,7 +1413,7 @@ run(function()
 	})
 end)
 
-run(function()
+--[[run(function()
 	local CustomNotification = {Enabled = false}
 	local CustomNotificationMode = {Value = 'Absolute'}
 	local CustomNotificationColor = {
@@ -1365,7 +1422,7 @@ run(function()
 		Value = 0.50
 	}
 	local CustomNotificationPath = {Value = 'assets/InfoNotification.png'}
-	CustomNotification = vape.Categories.Utility:CreateModule({
+	CustomNotification = vape.Categories.Misc:CreateModule({
 		Name = 'CustomNotification',
         HoverText = 'Customizes vape\'s notification',
 		Function = function(callback)
@@ -1419,7 +1476,7 @@ run(function()
 			end
 		end
 	})
-end)
+end)--]]
 local tween = game:GetService("TweenService")
 local void = function() end
 local runservice = game:GetService("RunService")
@@ -1482,7 +1539,7 @@ run(function()
 		end);
 		return part
 	end;
-	trails = vape.Categories.Utility:CreateModule({
+	trails = vape.Categories.Misc:CreateModule({
 		Name = 'Trails',
 		HoverText = 'cool trail for your character.',
 		Function = function(calling)
@@ -1514,7 +1571,7 @@ end)
 
 run(function() 
 	local AestheticLighting = {}
-	AestheticLighting = vape.Categories.Utility:CreateModule({
+	AestheticLighting = vape.Categories.Misc:CreateModule({
 		Name = 'AestheticLighting',
 		Function = function(callback)
 			if callback then
@@ -1664,7 +1721,7 @@ run(function()
 		shared.PlayerChanger_DisconnectActions = nil
 		shared.PlayerChanger_GUI_Elements_PlayersDropdown_Value = nil
 	end)
-	PlayerChanger = vape.Categories.Utility:CreateModule({
+	PlayerChanger = vape.Categories.Misc:CreateModule({
 		Name = "PlayerChanger",
 		Function = function(call) if call then else
 			for i,v in pairs(PlayerChanger_DisconnectActions) do pcall(function() PlayerChanger_DisconnectActions[i]() end) end end 
@@ -1692,7 +1749,7 @@ run(function()
 	table.insert(vapeConnections, game:GetService("Players").PlayerRemoving:Connect(function() PlayerChanger_GUI_Elements.PlayersDropdown:Change(getPlayers()) end))
 end)
 
-run(function()
+--[[run(function()
 	local Blacker = {Enabled = false}
 	local niggerfied_plrs = {}
 	local function niggerfy(plr)
@@ -1736,7 +1793,7 @@ run(function()
 		end,
 		HoverText = "Niggerfies all players (except u ofc :D)"
 	})
-end)
+end)--]]
 
 task.spawn(function()
 	local strikes = 0
@@ -2513,7 +2570,7 @@ run(function()
             Material = part.Material
         })
     end
-    CharacterEditor = vape.Categories.Render:CreateModule({
+    CharacterEditor = vape.Categories.Misc:CreateModule({
         Name = "TransparentCharacter",
         Function = function(call)
             if call then

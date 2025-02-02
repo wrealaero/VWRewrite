@@ -5473,6 +5473,15 @@ function mainapi:CreateNotification(title, text, duration, type)
 end
 
 function mainapi:Load(skipgui, profile)
+	--[[local bedwarsID = {
+		game = {6872274481, 8444591321, 8560631822},
+		lobby = {6872265039}
+	}
+	local isGame = table.find(bedwarsID.game, game.PlaceId)
+	local isLobby = table.find(bedwarsID.lobby, game.PlaceId)
+	if isGame or isLobby then
+		repeat task.wait() until game:GetService("Players").LocalPlayer and game:GetService("Players").LocalPlayer.Character
+	end--]]
 	if not skipgui then
 		self.GUIColor:SetValue(nil, nil, nil, 4)
 	end
@@ -5897,6 +5906,11 @@ mainapi:CreateCategory({
 })
 mainapi:CreateCategory({
 	Name = 'World',
+	Icon = getcustomasset('vape/assets/new/worldicon.png'),
+	Size = UDim2.fromOffset(14, 14)
+})
+mainapi:CreateCategory({
+	Name = 'Misc',
 	Icon = getcustomasset('vape/assets/new/worldicon.png'),
 	Size = UDim2.fromOffset(14, 14)
 })
