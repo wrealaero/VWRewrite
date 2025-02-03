@@ -73,7 +73,7 @@ local function checkExecutor()
             return identifyexecutor()
         end)   
         --local blacklist = {'appleware', 'cryptic', 'delta', 'wave', 'codex', 'swift', 'solara', 'vega'}
-        local blacklist = {'solara', 'cryptic'}
+        local blacklist = {'solara', 'cryptic', 'xeno'}
         if suc then
             for i,v in pairs(blacklist) do
                 if string.find(string.lower(tostring(res)), v) then CheatEngineMode = true end
