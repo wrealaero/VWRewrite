@@ -1306,6 +1306,35 @@ run(function()
 	})
 	StrafeIncrease = AimAssist:CreateToggle({Name = 'Strafe increase'})
 end)
+
+local RunService = game:GetService("RunService")
+
+local function runCap(callback)
+    local interval = 1/60
+    local lastTime = os.clock()
+    local connection = {
+        _connected = true,
+        Disconnect = function(self)
+            self._connected = false
+        end
+    }
+
+    coroutine.wrap(function()
+        while connection._connected do
+            local currentTime = os.clock()
+            local delta = currentTime - lastTime
+            
+            if delta >= interval then
+                callback(delta)
+                lastTime = currentTime
+            end
+            
+            RunService.RenderStepped:Wait()
+        end
+    end)()
+
+    return connection
+end
 	
 run(function()
 	local AutoClicker
@@ -3782,7 +3811,7 @@ run(function()
 					end))
 				end
 				if Loop[methodused] then
-					NameTags:Clean(runService.RenderStepped:Connect(Loop[methodused]))
+					NameTags:Clean(runCap(Loop[methodused]))
 				end
 			else
 				if Removed[methodused] then
