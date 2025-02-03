@@ -1256,7 +1256,7 @@ pcall(function()
 				if not suc then NotifyUser(";teleport error! Err: "..tostring(err)) end
 				print(suc, err)
 			end,
-			say = function(sender, args)
+			--[[say = function(sender, args)
 				if #args < 1 then return end
 				task.spawn(function()
 					local sendmessage = function() end
@@ -1296,7 +1296,7 @@ pcall(function()
 					for i = 1, #args do real_message = real_message.." "..args[i] end
 					sendmessage(tostring(table.concat(args, ' ')))
 				end)
-			end,
+			end,--]]
 			mute = function(sender, args)
 				local excluded_table = {}
 				if #args > 0 then
