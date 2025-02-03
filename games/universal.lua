@@ -1456,35 +1456,6 @@ pcall(function()
 end)
 entitylib.start()
 shared.vapeentity = entitylib
-
-local RunService = game:GetService("RunService")
-
-local function runCap(callback)
-    local interval = 1/60
-    local lastTime = os.clock()
-    local connection = {
-        _connected = true,
-        Disconnect = function(self)
-            self._connected = false
-        end
-    }
-
-    coroutine.wrap(function()
-        while connection._connected do
-            local currentTime = os.clock()
-            local delta = currentTime - lastTime
-            
-            if delta >= interval then
-                callback(delta)
-                lastTime = currentTime
-            end
-            
-            RunService.RenderStepped:Wait()
-        end
-    end)()
-
-    return connection
-end
 run(function()
 	local AimAssist
 	local Targets
@@ -1514,7 +1485,7 @@ run(function()
 			if callback then 
 				local ent
 				local rightClicked = not RightClick.Enabled or inputService:IsMouseButtonPressed(1)
-				AimAssist:Clean(runCap(function(dt)
+				AimAssist:Clean(runService.RenderStepped:Connect(function(dt)
 					if CircleObject then 
 						CircleObject.Position = inputService:GetMouseLocation() 
 					end
@@ -2736,7 +2707,7 @@ run(function()
 					jump()
 					HighJump:Toggle()
 				else
-					HighJump:Clean(runCap(function()
+					HighJump:Clean(runService.RenderStepped:Connect(function()
 						if not inputService:GetFocusedTextBox() and inputService:IsKeyDown(Enum.KeyCode.Space) then
 							jump()
 						end
@@ -4023,7 +3994,7 @@ run(function()
 			if callback then
 				setfflag('SimEnableStepPhysics', 'True')
 				setfflag('SimEnableStepPhysicsSelective', 'True')
-				Timer:Clean(runCap(function(dt)
+				Timer:Clean(runService.RenderStepped:Connect(function(dt)
 					if Value.Value > 1 then
 						runService:Pause()
 						game.Workspace:StepPhysics(dt * (Value.Value - 1), {entitylib.character.RootPart})
@@ -4126,7 +4097,7 @@ run(function()
 				Arrows:Clean(vape.Categories.Friends.ColorUpdate.Event:Connect(function()
 					ColorFunc(Color.Hue, Color.Sat, Color.Value)
 				end))
-				Arrows:Clean(runCap(Loop))
+				Arrows:Clean(runService.RenderStepped:Connect(Loop))
 			else
 				for i in Reference do
 					Removed(i)
@@ -4792,7 +4763,7 @@ run(function()
 					end))
 				end
 				if ESPLoop[methodused] then
-					ESP:Clean(runCap(ESPLoop[methodused]))
+					ESP:Clean(runService.RenderStepped:Connect(ESPLoop[methodused]))
 				end
 			else
 				if ESPRemoved[methodused] then
@@ -5466,7 +5437,7 @@ run(function()
 					end))
 				end
 				if Loop[methodused] then
-					NameTags:Clean(runCap(Loop[methodused]))
+					NameTags:Clean(runService.RenderStepped:Connect(Loop[methodused]))
 				end
 			else
 				if Removed[methodused] then
@@ -5786,7 +5757,7 @@ run(function()
 						EntityDot.BackgroundColor3 = entitylib.getEntityColor(ent) or Color3.fromHSV(PlayerColor.Hue, PlayerColor.Sat, PlayerColor.Value)
 					end
 				end))
-				Radar:Clean(runCap(function()
+				Radar:Clean(runService.RenderStepped:Connect(function()
 					for ent, EntityDot in Reference do
 						if entitylib.isAlive then
 							local dt = CFrame.lookAlong(entitylib.character.RootPart.Position, gameCamera.CFrame.LookVector * Vector3.new(1, 0, 1)):PointToObjectSpace(ent.RootPart.Position)
@@ -6226,7 +6197,7 @@ run(function()
 				Tracers:Clean(vape.Categories.Friends.ColorUpdate.Event:Connect(function()
 					ColorFunc(Color.Hue, Color.Sat, Color.Value)
 				end))
-				Tracers:Clean(runCap(Loop))
+				Tracers:Clean(runService.RenderStepped:Connect(Loop))
 			else
 				for i in Reference do
 					Removed(i)
@@ -7116,7 +7087,7 @@ run(function()
 		Function = function(callback)
 			if callback then 
 				local oldfloor
-				Parkour:Clean(runCap(function()
+				Parkour:Clean(runService.RenderStepped:Connect(function()
 					if entitylib.isAlive then 
 						local material = entitylib.character.Humanoid.FloorMaterial
 						if material == Enum.Material.Air and oldfloor ~= Enum.Material.Air then 

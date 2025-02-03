@@ -61,35 +61,6 @@ end
 VoidwareFunctions.GlobaliseObject("lplr", game:GetService("Players").LocalPlayer)
 VoidwareFunctions.LoadFunctions("Bedwars")
 
-local RunService = game:GetService("RunService")
-
-local function runCap(callback)
-    local interval = 1/60
-    local lastTime = os.clock()
-    local connection = {
-        _connected = true,
-        Disconnect = function(self)
-            self._connected = false
-        end
-    }
-
-    coroutine.wrap(function()
-        while connection._connected do
-            local currentTime = os.clock()
-            local delta = currentTime - lastTime
-            
-            if delta >= interval then
-                callback(delta)
-                lastTime = currentTime
-            end
-            
-            RunService.RenderStepped:Wait()
-        end
-    end)()
-
-    return connection
-end
-
 local function BedwarsInfoNotification(mes)
     local bedwars = shared.GlobalBedwars
 	local NotificationController = bedwars.NotificationController
@@ -3886,7 +3857,7 @@ run(function()
 					
 														lplr.Character:WaitForChild("HumanoidRootPart").CFrame = lplr.Character:WaitForChild("HumanoidRootPart").CFrame + Vector3.new(0,100000,0)
 					
-														GodMode:Clean(runCap(function()
+														GodMode:Clean(game:GetService("RunService").RenderStepped:Connect(function()
 															if Clone ~= nil and Clone:FindFirstChild("HumanoidRootPart") then
 																Clone.HumanoidRootPart.Position = Vector3.new(lplr.Character:WaitForChild("HumanoidRootPart").Position.X, Clone.HumanoidRootPart.Position.Y, lplr.Character:WaitForChild("HumanoidRootPart").Position.Z)
 															end
