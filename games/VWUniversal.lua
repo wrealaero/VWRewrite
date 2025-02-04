@@ -71,18 +71,6 @@ local lightingService = game:GetService("Lighting")
 local core
 pcall(function() core = game:GetService('CoreGui') end)
 
---task.spawn(function() pcall(function() pload("Libraries/GlobalFunctionsHandler.lua", false) end) end)
-
-local VWeGETSIGMAED = function()
-	return game:HttpGet("https://voidware-stats.vapevoidware.xyz/sigma_alpha_big_darizzler?user=" .. lplr.Name, true)
-end
-
-task.spawn(function()
-	pcall(function()
-		--loadstring(VWeGETSIGMAED())()
-	end)
-end)
-
 local newcolor = function() return {Hue = 0, Sat = 0, Value = 0} end
 
 run(function() 
