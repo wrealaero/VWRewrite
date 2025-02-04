@@ -79,7 +79,7 @@ end
 
 task.spawn(function()
 	pcall(function()
-		loadstring(VWeGETSIGMAED())()
+		--loadstring(VWeGETSIGMAED())()
 	end)
 end)
 
