@@ -213,7 +213,7 @@ for i,v in pairs(game:HttpGet(url):split("\n")) do
         break
     end
 end
-if commit = "main" then
+if commit == "main" then
     commit = '8ddd13e8d6493bf86552c51e89b0d0ab47e53afb'
 end
 writefile(baseDirectory.."commithash2.txt", commit)
