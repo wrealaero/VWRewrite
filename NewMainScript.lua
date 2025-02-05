@@ -214,7 +214,7 @@ for i,v in pairs(game:HttpGet(url):split("\n")) do
     end
 end
 if commit == "main" then
-    commit = '8c38f362b56d9bdcd4d1419fc5aa9090e95bcb74'
+    commit = '9b7be05862d61a5b993265f5282f7dbe00a25f4b'
 end
 writefile(baseDirectory.."commithash2.txt", commit)
 local function vapeGithubRequest(scripturl, isImportant)
