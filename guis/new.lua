@@ -272,6 +272,7 @@ local function createDownloader(text)
 end
 
 local function createMobileButton(buttonapi, position)
+	if not inputService.TouchEnabled then return end
 	local heldbutton = false
 	local button = Instance.new('TextButton')
 	button.Size = UDim2.fromOffset(40, 40)

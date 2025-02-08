@@ -588,17 +588,22 @@ run(function()
 	local CustomJump = {Enabled = false}
 	local CustomJumpMode = {Value = "Normal"}
 	local CustomJumpVelocity = {Value = 50}
+	local UIS_Connection = {Disconnect = function() end}
 	CustomJump = vape.Categories.Blatant:CreateModule({
 		Name = "InfJUmp",
         HoverText = "Customizes your jumping ability",
 		Function = function(callback)
 			if callback then
-				game:GetService("UserInputService").JumpRequest:Connect(function()
+				UIS_Connection = game:GetService("UserInputService").JumpRequest:Connect(function()
 					if CustomJumpMode.Value == "Normal" then
 						entityLibrary.character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
 					elseif CustomJumpMode.Value == "Velocity" then
 						entityLibrary.character.HumanoidRootPart.Velocity += vec3(0,CustomJumpVelocity.Value,0)
 					end 
+				end)
+			else
+				pcall(function()
+					UIS_Connection:Disconnect()
 				end)
 			end
 		end,
