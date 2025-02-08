@@ -708,6 +708,100 @@ run(function()
 end)
 entitylib.start()
 
+local HttpService = game:GetService("HttpService")
+local function loadJson(path)
+	local suc, res = pcall(function()
+		return HttpService:JSONDecode(readfile(path))
+	end)
+	return suc and type(res) == 'table' and res or nil, res
+end
+local function toTime(timestamp)
+	timestamp = timestamp or os.time()
+	local dateTable = os.date("*t", timestamp)
+	local timeString = string.format("%02d:%02d:%02d", dateTable.hour, dateTable.min, dateTable.sec)
+	return timeString
+end
+local function toDate(timestamp)
+	timestamp = timestamp or os.time()
+	local dateTable = os.date("*t", timestamp)
+	local dateString = string.format("%02d/%02d/%02d", dateTable.day, dateTable.month, dateTable.year % 100)
+	return dateString
+end
+local function getExecutionTime()
+	return {["toTime"] = toTime(), ["toDate"] = toDate()}
+end
+local function saveErrorLog(err, S_Name)
+	if not err then return end
+	if not S_Name then S_Name = "Not specified" end
+	local main = {}
+	if isfile('VW_Error_Log.json') then
+		local res = loadJson('VW_Error_Log.json')
+		main = res or main
+	end
+	local errorLog = {
+		Name = S_Name,
+		CheatEngineMode = shared ~= nil and type(shared) == "table" and shared.CheatEngineMode,
+		Response = tostring(err),
+		Debug = debug.traceback(tostring(err)),
+		PlaceId = game.PlaceId,
+		JobId = game.JobId
+	}
+	main.DebugLog = main.DebugLog or {}
+	main.DebugLog[toDate()] = main.DebugLog[toDate()] or {}
+	main.DebugLog[toDate()][tostring(game.PlaceId).." | "..tostring(game.JobId)] = main[toDate()][tostring(game.PlaceId).." | "..tostring(game.JobId)] or {}
+	main.DebugLog[toDate()][tostring(game.PlaceId).." | "..tostring(game.JobId)][S_Name] = main[toDate()][tostring(game.PlaceId).." | "..tostring(game.JobId)][S_Name] or {}
+	table.insert(main.DebugLog[toDate()][tostring(game.PlaceId).." | "..tostring(game.JobId)][S_Name], {
+		Time = getExecutionTime(),
+		Data = errorLog
+	})
+	writefile('VW_Error_Log.json', HttpService:JSONEncode(main))
+	errorNotification("Voidware -  Error Logger", 'If you can please send the\n VW_Error_Log.json file in your workspace to erchodev#0 or discord.gg/voidware', 10)
+	warn('---------------[ERROR LOG START]--------------')
+	warn(HttpService:JSONEncode(errorLog))
+	warn('---------------[ERROR LOG END]--------------')
+end
+--[[local debug = debug
+local require = require
+run(function()
+	if debug ~= nil and type(debug) == "table" then
+		for i,v in pairs(debug) do
+			if type(v) == "function" and tostring(i) ~= 'traceback' then
+				local old = v
+				v = function(...)
+					local args = {...}
+					local suc, res = pcall(function()
+						old(unpack(args))
+					end)
+					if not suc then 
+						errorNotification("Voidware - DebugLibrary", "Error in "..tostring(i).." function! "..debug.traceback(res).." \n Please report this to erchodev#0", 15)
+						warn("[Voidware | Debug]: "..debug.traceback(res))
+						saveErrorLog(res, "Debug | "..tostring(i))
+					end
+					return suc and res or {}
+				end
+			end
+		end
+	end
+end)
+
+run(function()
+	if require ~= nil and type(require) == "function" then 
+		local old = require
+		require = function(...)
+			local args = {...}
+			local suc, res = pcall(function()
+				return old(unpack(args))
+			end)
+			if not suc then
+				errorNotification("Voidware - Require Function", "Error in the 'require' function! "..debug.traceback(res).." \n Please report this to erchodev#0", 15)
+				warn("[Voidware | Debug]: "..debug.traceback(res))
+				saveErrorLog(res, "Require Function")
+			end
+			return suc and res or {}
+		end
+	end
+end)--]]
+
 run(function()
 	local KnitInit, Knit
 	repeat
@@ -795,7 +889,7 @@ run(function()
 		AfkStatus = debug.getproto(Knit.Controllers.AfkController.KnitStart, 1),
 		AttackEntity = Knit.Controllers.SwordController.sendServerRequest,
 		BeePickup = Knit.Controllers.BeeNetController.trigger,
-		ConsumeBattery = debug.getproto(debug.getproto(Knit.Controllers.BatteryController.KnitStart, 1), 1),
+		--ConsumeBattery = debug.getproto(debug.getproto(Knit.Controllers.BatteryController.KnitStart, 1), 1),
 		CannonAim = debug.getproto(Knit.Controllers.CannonController.startAiming, 5),
 		CannonLaunch = Knit.Controllers.CannonHandController.launchSelf,
 		ConsumeItem = debug.getproto(Knit.Controllers.ConsumeController.onEnable, 1),
@@ -810,8 +904,8 @@ run(function()
 		FireProjectile = debug.getupvalue(Knit.Controllers.ProjectileController.launchProjectileWithValues, 2),
 		GroundHit = Knit.Controllers.FallDamageController.KnitStart,
 		GuitarHeal = Knit.Controllers.GuitarController.performHeal,
-		HannahKill = debug.getproto(debug.getproto(Knit.Controllers.HannahController.KnitStart, 2), 1),
-		HarvestCrop = Knit.Controllers.CropController.KnitStart,
+		--HannahKill = debug.getproto(debug.getproto(Knit.Controllers.HannahController.KnitStart, 2), 1),
+		HarvestCrop = debug.getproto(debug.getproto(Knit.Controllers.CropController.KnitStart, 4), 1),
 		KaliyahPunch = debug.getproto(debug.getproto(Knit.Controllers.DragonSlayerController.KnitStart, 2), 1),
 		MageSelect = debug.getproto(Knit.Controllers.MageController.registerTomeInteraction, 1),
 		MinerDig = debug.getproto(Knit.Controllers.MinerController.setupMinerPrompts, 1),
@@ -834,29 +928,6 @@ run(function()
 		end
 		return ind and tab[ind + 1] or ''
 	end
-
-	-- Bedwars developer stupidity w stack overflow, insane developers.
-	pcall(function()
-		local hudAliveRender = debug.getupvalue(debug.getupvalue(debug.getupvalue(bedwars.HudAliveCount.render, 3).render, 2).render, 1)
-		debug.setupvalue(hudAliveRender, 2, {
-			GetPlayers = function()
-				local loaded = {}
-				for _, plr in playersService:GetPlayers() do
-					if plr:GetAttribute('PlayerConnected') then
-						table.insert(loaded, plr)
-					end
-				end
-				return loaded
-			end,
-			PlayerAdded = playersService.PlayerAdded,
-			PlayerRemoving = playersService.PlayerRemoving
-		})
-
-		vape:Clean(function()
-			debug.setupvalue(hudAliveRender, 2, playersService)
-			hudAliveRender = nil
-		end)
-	end)
 
 	for i, v in remoteNames do
 		local remote = dumpRemote(debug.getconstants(v))
@@ -1267,6 +1338,11 @@ run(function()
 		storeChanged = nil
 	end)
 end)
+
+if not bedwars.Client then
+	errorNotification('Voidware Bedwars', "There was a critical loading error! \n Please report this issue to erchodev#0 or discord.gg/voidware", 10)
+end
+assert(bedwars.Client ~= nil and type(bedwars.Client) == "table", "There was a critical loading error! \n Please report this issue to erchodev#0 or discord.gg/voidware")
 
 for _, v in {'AntiRagdoll', 'TriggerBot', 'SilentAim', 'AutoRejoin', 'Rejoin', 'Disabler', 'Timer', 'ServerHop', 'MouseTP', 'MurderMystery'} do
 	vape:Remove(v)
@@ -2986,7 +3062,7 @@ run(function()
 					if dataTable.hookFunction == 'PLAYER_IN_TRANSIT' then
 						local vec = entitylib.character.RootPart.CFrame.LookVector
 						JumpSpeed = 2.5 * Value.Value
-						JumpTick = tick() + 3.5
+						JumpTick = tick() + 2.5
 						Direction = Vector3.new(vec.X, 0, vec.Z).Unit
 					end
 				end))
@@ -4344,7 +4420,7 @@ run(function()
 		farmer_cletus = function()
 			kitCollection('HarvestableCrop', function(v)
 				if bedwars.Client:Get(remotes.HarvestCrop):CallServer({position = bedwars.BlockController:getBlockPosition(v.Position)}) then
-					bedwars.GameAnimationUtil.playAnimation(lplr.Character, bedwars.AnimationType.PUNCH)
+					bedwars.GameAnimationUtil:playAnimation(lplr.Character, bedwars.AnimationType.PUNCH)
 					bedwars.SoundManager:playSound(bedwars.SoundList.CROP_HARVEST)
 				end
 			end, 10, false)
@@ -4864,6 +4940,7 @@ end)
 	
 run(function()
 	local AutoVoidDrop
+	local OwlCheck
 	
 	AutoVoidDrop = vape.Categories.Utility:CreateModule({
 		Name = 'AutoVoidDrop',
@@ -4882,27 +4959,107 @@ run(function()
 	
 				repeat
 					if entitylib.isAlive then
-						if entitylib.character.RootPart.Position.Y < lowestpoint and (lplr.Character:GetAttribute('InflatedBalloons') or 0) <= 0 and not getItem('balloon') then
-							for _, item in {'iron', 'diamond', 'emerald', 'gold'} do 
-								item = getItem(item)
-								if item then 
-									item = bedwars.Client:Get(remotes.DropItem):CallServer({
-										item = item.tool,
-										amount = item.amount
-									})
-									
-									if item then 
-										item:SetAttribute('ClientDropTime', tick() + 100)
+						local root = entitylib.character.RootPart
+						if root.Position.Y < lowestpoint and (lplr.Character:GetAttribute('InflatedBalloons') or 0) <= 0 and not getItem('balloon') then
+							if not OwlCheck.Enabled or not root:FindFirstChild('OwlLiftForce') then
+								for _, item in {'iron', 'diamond', 'emerald', 'gold'} do
+									item = getItem(item)
+									if item then
+										item = bedwars.Client:Get(remotes.DropItem):CallServer({
+											item = item.tool,
+											amount = item.amount
+										})
+	
+										if item then
+											item:SetAttribute('ClientDropTime', tick() + 100)
+										end
 									end
 								end
 							end
 						end
 					end
+	
 					task.wait(0.1)
 				until not AutoVoidDrop.Enabled
 			end
 		end,
 		Tooltip = 'Drops resources when you fall into the void'
+	})
+	OwlCheck = AutoVoidDrop:CreateToggle({
+		Name = 'Owl check',
+		Default = true,
+		Tooltip = 'Refuses to drop items if being picked up by an owl'
+	})
+end)
+
+run(function()
+	local AutoSuffocate
+	local Range
+	local LimitItem
+	
+	local function fixPosition(pos)
+		return bedwars.BlockController:getBlockPosition(pos) * 3
+	end
+	
+	AutoSuffocate = vape.Categories.World:CreateModule({
+		Name = 'AutoSuffocate',
+		Function = function(callback)
+			if callback then
+				repeat
+					local item = store.hand.toolType == 'block' and store.hand.tool.Name or not LimitItem.Enabled and getWool()
+	
+					if item then
+						local plrs = entitylib.AllPosition({
+							Part = 'RootPart',
+							Range = Range.Value,
+							Players = true
+						})
+	
+						for _, ent in plrs do
+							local needPlaced = {}
+	
+							for _, side in Enum.NormalId:GetEnumItems() do
+								side = Vector3.fromNormalId(side)
+								if side.Y ~= 0 then continue end
+	
+								side = fixPosition(ent.RootPart.Position + side * 2)
+								if not getPlacedBlock(side) then
+									table.insert(needPlaced, side)
+								end
+							end
+	
+							if #needPlaced < 3 then
+								table.insert(needPlaced, fixPosition(ent.Head.Position))
+								table.insert(needPlaced, fixPosition(ent.RootPart.Position - Vector3.new(0, 1, 0)))
+	
+								for _, pos in needPlaced do
+									if not getPlacedBlock(pos) then
+										task.spawn(bedwars.placeBlock, pos, item)
+										break
+									end
+								end
+							end
+						end
+					end
+	
+					task.wait(0.09)
+				until not AutoSuffocate.Enabled
+			end
+		end,
+		Tooltip = 'Places blocks on nearby confined entities'
+	})
+	Range = AutoSuffocate:CreateSlider({
+		Name = 'Range',
+		Min = 1,
+		Max = 20,
+		Default = 20,
+		Suffix = function(val)
+			return val == 1 and 'stud' or 'studs'
+		end
+	})
+	LimitItem = AutoSuffocate:CreateToggle({
+		Name = 'Limit to Items',
+		Default = true
 	})
 end)
 	
@@ -6107,7 +6264,7 @@ run(function()
 					local npc, shop, upgrades, newid = getShopNPC()
 					id = newid
 					if GUI.Enabled then
-						if not (bedwars.AppController:isAppOpen('BedwarsItemShopApp') or bedwars.AppController:isAppOpen('BedwarsTeamUpgradeApp')) then
+						if not (bedwars.AppController:isAppOpen('BedwarsItemShopApp') or bedwars.AppController:isAppOpen('TeamUpgradeApp')) then
 							npc = nil
 						end
 					end
