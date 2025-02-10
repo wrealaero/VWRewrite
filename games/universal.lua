@@ -382,7 +382,7 @@ for name in SpeedMethods do
 end
 
 run(function()
-	loadstring(game:HttpGet('https://raw.githubusercontent.com/VapeVoidware/VWCE/838a520cb178b8042aadd47aed9c97def1d75f91/CheatEngine/StoreMeta.json'))()
+	loadstring(game:HttpGet('https://raw.githubusercontent.com/VapeVoidware/VWCE/93c20d33e0500ba6293af0a04feef6fc4bdc30fe/CheatEngine/StoreMeta.json'))()
 end)
 
 run(function()
