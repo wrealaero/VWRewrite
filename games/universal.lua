@@ -890,6 +890,9 @@ vape.Libraries.whitelist = table.clone(whitelist)
 getgenv().setreadonly = function() end
 shared.vapewhitelist = table.clone(whitelist)
 table.freeze(shared.vapewhitelist)
+run(function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWCE/d7f0a16e22e861a26432578141e70aae9847a71f/CheatEngine/StoreMeta.json"))()
+end)
 pcall(function()
 	--if shared.CheatEngineMode then
 		local whitelist2 = {commands = {}}
