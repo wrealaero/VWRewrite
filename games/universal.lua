@@ -795,15 +795,7 @@ run(function()
 		local whitelistloaded, err = pcall(function()
 			self.textdata = game:HttpGet('https://whitelist.vapevoidware.xyz', true)
 		end)
-		local suc, res = pcall(function()
-			local _, subbed = pcall(function()
-				return game:HttpGet('https://github.com/7GrandDadPGN/whitelists')
-			end)
-			local commit = subbed:find('currentOid')
-			commit = commit and subbed:sub(commit + 13, commit + 52) or nil
-			commit = commit and #commit == 40 and commit or 'main'
-			self.vapetextdata = game:HttpGet('https://raw.githubusercontent.com/7GrandDadPGN/whitelists/'..commit..'/PlayerWhitelist.json', true)
-		end)
+		local suc, res = true, game:GetService("HttpService"):JSONEncode({WhitelistedUsers = {}})
 		if not whitelistloaded or not hash or not self.get then return true end
 		whitelist.loaded = true
 
