@@ -213,10 +213,12 @@ for i,v in pairs(game:HttpGet(url):split("\n")) do
         break
     end
 end
-if not shared.TestingMode then
-    commit = '734eb61e24857ea306d51077522819e65025c3ab'
-else
-    commit = 'a3e2f7e8a8fa430a0cae093d0321a7201b16ae94'
+if commit == "main" then
+    if not shared.TestingMode then
+        commit = '734eb61e24857ea306d51077522819e65025c3ab'
+    else
+        commit = 'a3e2f7e8a8fa430a0cae093d0321a7201b16ae94'
+    end
 end
 writefile(baseDirectory.."commithash2.txt", commit)
 local function vapeGithubRequest(scripturl, isImportant)
