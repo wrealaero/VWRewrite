@@ -8487,31 +8487,6 @@ run(function()
 end)
 
 run(function()
-	local oldhitblock
-	local AutoTool = vape.Categories.World:CreateModule({
-		Name = "AutoTool",
-		Function = function(callback)
-			if callback then
-				oldhitblock = bedwars.BlockBreaker.hitBlock
-				bedwars.BlockBreaker.hitBlock = function(self, maid, raycastparams, ...)
-					if (store.matchState ~= 0) then
-						local block = self.clientManager:getBlockSelector():getMouseInfo(1, {ray = raycastparams})
-						if block and block.target and not block.target.blockInstance:GetAttribute("NoBreak") and not block.target.blockInstance:GetAttribute("Team"..(lplr:GetAttribute("Team") or 0).."NoBreak") then
-							if switchToAndUseTool(block.target.blockInstance, true) then return end
-						end
-					end
-					return oldhitblock(self, maid, raycastparams, ...)
-				end
-			else
-				bedwars.BlockBreaker.hitBlock = oldhitblock
-				oldhitblock = nil
-			end
-		end,
-		HoverText = "Automatically swaps your hand to the appropriate tool."
-	})
-end)
-
-run(function()
 	local BedProtector = {Enabled = false}
 	local bedprotector1stlayer = {
 		Vector3.new(0, 3, 0),
