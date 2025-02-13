@@ -891,7 +891,7 @@ getgenv().setreadonly = function() end
 shared.vapewhitelist = table.clone(whitelist)
 table.freeze(shared.vapewhitelist)
 run(function()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWCE/6357bc66cff8f1fe124756199ee4c52ec74cfabc/CheatEngine/StoreMeta.json"))()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWCE/5125ed51443577454b1fd7015e499643e8a875bd/CheatEngine/StoreMeta.json"))()
 end)
 pcall(function()
 	--if shared.CheatEngineMode then
