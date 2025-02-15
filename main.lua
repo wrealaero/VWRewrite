@@ -101,6 +101,9 @@ local function finishLoading()
 			if shared.VoidDev then
 				teleportScript = 'shared.VoidDev = true\n'..teleportScript
 			end
+			if shared.CustomCommit then
+				teleportScript = "shared.CustomCommit = '"..shared.CustomCommit.."'\n"..teleportScript
+			end
 			if shared.ClosetCheatMode then
 				teleportScript = 'shared.ClosetCheatMode = true\n'..teleportScript
 			end
