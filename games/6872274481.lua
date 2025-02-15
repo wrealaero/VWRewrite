@@ -1,7 +1,6 @@
 local run = function(func)
-	func()
-	--local suc, err = pcall(function() func() end)
-	--if (not suc) then errorNotification("Vape 4481", 'Failure executing function: '..tostring(err), 3); warn(debug.traceback(tostring(err))) end
+	local suc, err = pcall(function() func() end)
+	if (not suc) then errorNotification("Vape 4481", 'Failure executing function: '..tostring(err), 3); warn(debug.traceback(tostring(err))) end
 end
 local cloneref = function(obj)
 	return obj
