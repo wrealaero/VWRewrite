@@ -26,9 +26,13 @@ local runService = game:GetService("RunService")
 local RunService = runService
 local runservice = runService
 
+game.Lighting.Brightness = 3
+game.Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+
 local CustomsAllowed = false
 
 local collectionService = game:GetService("CollectionService")
+local CollectionService = collectionService
 shared.vapewhitelist = vape.Libraries.whitelist
 local playersService = game:GetService("Players")
 if (not shared.GlobalBedwars) or (shared.GlobalBedwars and type(shared.GlobalBedwars) ~= "table") or (not shared.GlobalStore) or (shared.GlobalStore and type(shared.GlobalStore) ~= "table") then
@@ -1572,7 +1576,7 @@ run(function()
             if getHealth() <= antiDeathConfig.Health.Value and getHealth() > 0 then
                 if not handlers.boost then
                     handlers:activateMode()
-                    if not shandlers.hasNotified and antiDeathConfig.Notify.Enabled then
+                    if not handlers.hasNotified and antiDeathConfig.Notify.Enabled then
                         handlers:sendNotification()
                     end
                     handlers:playNotificationSound()
@@ -6206,3 +6210,101 @@ run(function()
 		end
 	})
 end)
+
+if not shared.CheatEngineMode then
+	run(function()
+		local AntiLagback = {Enabled = false}
+		local control_module = require(lplr:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule")).controls
+		local old = control_module.moveFunction
+		local clone
+		local connection
+		local function clone_lplr_char()
+			if not (lplr.Character ~= nil and lplr.Character.PrimaryPart ~= nil) then return nil end
+			lplr.Character.Archivable = true
+		
+			local clone = lplr.Character:Clone()
+		
+			clone.Parent = game.Workspace
+			clone.Name = "Clone"
+		
+			clone.PrimaryPart.CFrame = lplr.Character.PrimaryPart.CFrame
+		
+			gameCamera.CameraSubject = clone.Humanoid	
+		
+			task.spawn(function()
+				for i, v in next, clone:FindFirstChild("Head"):GetDescendants() do
+					v:Destroy()
+				end
+				for i, v in next, clone:GetChildren() do
+					if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" then
+						v.Transparency = 1
+					end
+					if v:IsA("Accessory") then
+						v:FindFirstChild("Handle").Transparency = 1
+					end
+				end
+			end)
+			return clone
+		end
+		local function bypass()
+			clone = clone_lplr_char()
+			if not entitylib.isAlive then return AntiLagback:Toggle() end
+			if not clone then return AntiLagback:Toggle() end
+			control_module.moveFunction = function(self, vec, ...)
+				local RaycastParameters = RaycastParams.new()
+	
+				RaycastParameters.FilterType = Enum.RaycastFilterType.Include
+				RaycastParameters.FilterDescendantsInstances = {CollectionService:GetTagged("block")}
+	
+				local LookVector = Vector3.new(gameCamera.CFrame.LookVector.X, 0, gameCamera.CFrame.LookVector.Z).Unit
+	
+				if clone.PrimaryPart then
+					local Raycast = game.Workspace:Raycast((clone.PrimaryPart.Position + LookVector), Vector3.new(0, -1000, 0), RaycastParameters)
+					local Raycast2 = game.Workspace:Raycast(((clone.PrimaryPart.Position - Vector3.new(0, 15, 0)) + (LookVector * 3)), Vector3.new(0, -1000, 0), RaycastParameters)
+	
+					if Raycast or Raycast2 then
+						clone.PrimaryPart.CFrame = CFrame.new(clone.PrimaryPart.Position + (LookVector / (GetSpeed())))
+						vec = LookVector
+					end
+	
+					if (not clone) and entitylib.isAlive then
+						control_module.moveFunction = OldMoveFunction
+						gameCamera.CameraSubject = lplr.Character.Humanoid
+					end
+				end
+	
+				return old(self, vec, ...)
+			end
+		end
+		local function safe_revert()
+			control_module.moveFunction = old
+			if entitylib.isAlive then
+				gameCamera.CameraSubject = lplr.Character:WaitForChild("Humanoid")
+			end
+			pcall(function()
+				clone:Destroy()
+			end)
+		end
+		AntiLagback = vape.Categories.Blatant:CreateModule({
+			Name = "AntiLagback",
+			Function = function(call)
+				if call then
+					connection = lplr:GetAttributeChangedSignal("LastTeleported"):Connect(function()
+						if entitylib.isAlive and store.matchState ~= 0 and not lplr.Character:FindFirstChildWhichIsA("ForceField") and (not vape.Modules.BedTP.Enabled) and (not vape.Modules.PlayerTP.Enabled) then					
+							bypass()
+							task.wait(4.5)
+							safe_revert()
+						end 
+					end)
+				else
+					pcall(function() connection:Disconnect() end)
+					control_module.moveFunction = old
+					if entitylib.isAlive then
+						gameCamera.CameraSubject = lplr.Character:WaitForChild("Humanoid")
+					end
+					pcall(function() clone:Destroy() end)
+				end
+			end
+		})
+	end)
+end
