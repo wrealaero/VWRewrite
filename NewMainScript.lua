@@ -231,7 +231,7 @@ local function vapeGithubRequest(scripturl, isImportant)
     suc, res = pcall(function() return game:HttpGet(url..commit.."/"..scripturl, true) end)
     if not suc or res == "404: Not Found" then
         if isImportant then
-            game:GetService("Players").LocalPlayer:Kick("Failed to connect to github : "..baseDirectory..scripturl.." : "..res)
+            game:GetService("Players").LocalPlayer:Kick(string.format("CH: %s Failed to connect to github: %s%s : %s", tostring(commit), tostring(baseDirectory), tostring(scripturl), tostring(res)))
         end
         warn(baseDirectory..scripturl, res)
     end
