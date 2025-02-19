@@ -1,6 +1,5 @@
 repeat task.wait() until game:IsLoaded()
 
-local lplr = playersService.LocalPlayer
 local assetfunction = getcustomasset
 
 local vape = shared.vape
@@ -3869,6 +3868,32 @@ local function gettargets(range, maxt, limit)
 	return targets
 end
 
+local IgnoreObject = RaycastParams.new()
+IgnoreObject.RespectCanCollide = true
+local lplr = game:GetService("Players").LocalPlayer
+local List = {}
+local Wallcheck = function(origin, position, ignoreobject)
+	List = entitylib and entitylib.List or entityLibrary and entityLibrary.entityList
+	if typeof(ignoreobject) ~= 'Instance' then
+		local ignorelist = {gameCamera, lplr.Character}
+		for _, v in List do
+			if v.Targetable then
+				table.insert(ignorelist, v.Character)
+			end
+		end
+
+		if typeof(ignoreobject) == 'table' then
+			for _, v in ignoreobject do
+				table.insert(ignorelist, v)
+			end
+		end
+
+		ignoreobject = IgnoreObject
+		ignoreobject.FilterDescendantsInstances = ignorelist
+	end
+	return game.Workspace.Raycast(game.Workspace, origin, (position - origin), ignoreobject)
+end
+
 run(function()
 	local animating
 	local Killaura = {Enabled = false}
@@ -3966,6 +3991,9 @@ run(function()
 					end
 					
 					for _, targ in ipairs(targets) do
+						if Killaura.wallscheck then
+							if not WallCheck(lplr.Character:WaitForChild("HumanoidRootPart"), targ.RootPart.Position, true) then return end
+						end
 						task.spawn(function()
 							bedwars.Client:Get(bedwars.AttackRemote):FireServer({
 								chargedAttack = {chargeRatio = 0},
@@ -4001,6 +4029,13 @@ run(function()
 				
 				table.clear(targetinfo.Targets)
 			end
+		end
+	})
+
+	Killaura:CreateToggle({
+		Name = "Walls Check",
+		Function = function(callback)
+			Killaura.wallscheck = callback
 		end
 	})
 
