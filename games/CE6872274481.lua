@@ -4428,15 +4428,65 @@ end)
 
 run(function()
 	local NoFall = {Enabled = false}
-	local oldfall
+	local SafeRange = {Value = 20}
+	local VelocityThreshold = {Value = 30}
+	local CoreConnection = {Disconnect = function() end}
+
+	local blockRaycast = store.blockRaycast
+
 	NoFall = vape.Categories.Blatant:CreateModule({
 		Name = "NoFall",
 		Function = function(callback)
 			if callback then
-				bedwars.Client:Get("GroundHit"):FireServer()
+				task.spawn(function()
+					pcall(function() 
+						game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("node_modules"):WaitForChild("@rbxts"):WaitForChild("net"):WaitForChild("out"):WaitForChild("_NetManaged"):WaitForChild("TridentUnanchor"):Destroy()
+					end)
+				end)
+
+				local safeRange = SafeRange.Value
+				local velocityThreshold = -VelocityThreshold.Value
+				
+				CoreConnection = game:GetService("RunService").Heartbeat:Connect(function()
+					if not entitylib.isAlive then return end
+					local humanoid = entitylib.character.Humanoid
+					local rootPart = entitylib.character.HumanoidRootPart
+					if humanoid:GetState() == Enum.HumanoidStateType.Freefall and rootPart.Velocity.Y < velocityThreshold then
+						local ray = workspace:Raycast(rootPart.Position, Vector3.new(0, -1000, 0), blockRaycast)
+						if ray then
+							local distance = rootPart.Position.Y - ray.Position.Y
+							if distance > safeRange then
+								local newPosition = Vector3.new(
+									rootPart.Position.X,
+									ray.Position.Y + 0.1, 
+									rootPart.Position.Z
+								)
+								rootPart.CFrame = CFrame.new(newPosition) * rootPart.CFrame.Rotation
+							end
+						end
+					end
+				end)				
+			else
+				pcall(function()
+					CoreConnection:Disconnect()
+				end)
 			end
 		end,
 		HoverText = "Prevents taking fall damage."
+	})
+	SafeRange = NoFall:CreateSlider({
+		Name = "SafeRange",
+		Function = function() end,
+		Min = 10, 
+		Max = 30,
+		Default = 20
+	})
+	VelocityThreshold = NoFall:CreateSlider({
+		Name = "VelocityThreshold",
+		Function = function() end,
+		Min = 20, 
+		Max = 50,
+		Default = 30
 	})
 end)
 
