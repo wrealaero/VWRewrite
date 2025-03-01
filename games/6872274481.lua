@@ -3139,7 +3139,24 @@ run(function()
 	local VelocityThreshold = {Value = 30}
 	local CoreConnection = {Disconnect = function() end}
 
-	local blockRaycast = store.blockRaycast
+	local collectionService = game:GetService("CollectionService")
+
+	local blockRaycast = RaycastParams.new()
+	blockRaycast.FilterType = Enum.RaycastFilterType.Include
+
+	local blocks = collectionService:GetTagged("block")
+	blockRaycast.FilterDescendantsInstances = {blocks}
+	table.insert(vapeConnections, collectionService:GetInstanceAddedSignal("block"):Connect(function(block)
+		table.insert(blocks, block)
+		blockRaycast.FilterDescendantsInstances = {store.blocks}
+	end))
+	table.insert(vapeConnections, collectionService:GetInstanceRemovedSignal("block"):Connect(function(block)
+		block = table.find(blocks, block)
+		if block then
+			table.remove(blocks, block)
+			blockRaycast.FilterDescendantsInstances = {blocks}
+		end
+	end))
 
 	NoFall = vape.Categories.Blatant:CreateModule({
 		Name = "NoFall",
