@@ -4441,7 +4441,7 @@ run(function()
 	blockRaycast.FilterDescendantsInstances = {blocks}
 	table.insert(vapeConnections, collectionService:GetInstanceAddedSignal("block"):Connect(function(block)
 		table.insert(blocks, block)
-		blockRaycast.FilterDescendantsInstances = {store.blocks}
+		blockRaycast.FilterDescendantsInstances = {blocks}
 	end))
 	table.insert(vapeConnections, collectionService:GetInstanceRemovedSignal("block"):Connect(function(block)
 		block = table.find(blocks, block)
