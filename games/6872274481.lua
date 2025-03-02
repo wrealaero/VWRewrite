@@ -5178,7 +5178,7 @@ run(function()
 	})
 end)
 	
-run(function()
+--[[run(function()
 	local PickupRange
 	local Range
 	local Network
@@ -5239,7 +5239,7 @@ run(function()
 		Default = true
 	})
 	Lower = PickupRange:CreateToggle({Name = 'Feet Check'})
-end)
+end)--]]
 	
 run(function()
 	local RavenTP
