@@ -3144,7 +3144,7 @@ run(function()
 	local blockRaycast = RaycastParams.new()
 	blockRaycast.FilterType = Enum.RaycastFilterType.Include
 
-	local blocks = collectionService:GetTagged("block")
+	local blocks = collectionService:GetTagged("block") or {}
 	blockRaycast.FilterDescendantsInstances = {blocks}
 	table.insert(vapeConnections, collectionService:GetInstanceAddedSignal("block"):Connect(function(block)
 		table.insert(blocks, block)
