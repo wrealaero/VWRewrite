@@ -1192,30 +1192,34 @@ run(function()
 	local storeChanged = bedwars.Store.changed:connect(updateStore)
 	updateStore(bedwars.Store:getState(), {})
 
-	for _, event in {'MatchEndEvent', 'EntityDeathEvent', 'EntityDamageEvent', 'BedwarsBedBreak', 'BalloonPopped', 'AngelProgress', 'GrapplingHookFunctions'} do
-		if not vape.Connections then return end
-		bedwars.Client:WaitFor(event):andThen(function(connection)
-			vape:Clean(connection:Connect(function(...)
-				vapeEvents[event]:Fire(...)
-			end))
+	task.spawn(function()
+		pcall(function()
+			for _, event in {'MatchEndEvent', 'EntityDeathEvent', 'EntityDamageEvent', 'BedwarsBedBreak', 'BalloonPopped', 'AngelProgress', 'GrapplingHookFunctions'} do
+				if not vape.Connections then return end
+				bedwars.Client:WaitFor(event):andThen(function(connection)
+					vape:Clean(connection:Connect(function(...)
+						vapeEvents[event]:Fire(...)
+					end))
+				end)
+			end
+		
+			for _, event in {'PlaceBlockEvent', 'BreakBlockEvent'} do
+				bedwars.ClientDamageBlock:WaitFor(event):andThen(function(connection)
+					if not vape.Connections then return end
+					vape:Clean(connection:Connect(function(data)
+						for i, v in cache do
+							if ((data.blockRef.blockPosition * 3) - v[1]).Magnitude <= 30 then
+								table.clear(v[3])
+								table.clear(v)
+								cache[i] = nil
+							end
+						end
+						vapeEvents[event]:Fire(data)
+					end))
+				end)
+			end
 		end)
-	end
-
-	for _, event in {'PlaceBlockEvent', 'BreakBlockEvent'} do
-		bedwars.ClientDamageBlock:WaitFor(event):andThen(function(connection)
-			if not vape.Connections then return end
-			vape:Clean(connection:Connect(function(data)
-				for i, v in cache do
-					if ((data.blockRef.blockPosition * 3) - v[1]).Magnitude <= 30 then
-						table.clear(v[3])
-						table.clear(v)
-						cache[i] = nil
-					end
-				end
-				vapeEvents[event]:Fire(data)
-			end))
-		end)
-	end
+	end)
 
 	store.blocks = collection('block', gui)
 	store.shop = collection({'BedwarsItemShop', 'TeamUpgradeShopkeeper'}, gui, function(tab, obj)
