@@ -3876,8 +3876,8 @@ local function Wallcheck(attackerCharacter, targetCharacter, additionalIgnore)
         return false
     end
 
-    local humanoidRootPart = attackerCharacter:FindFirstChild("HumanoidRootPart")
-    local targetRootPart = targetCharacter:FindFirstChild("HumanoidRootPart")
+    local humanoidRootPart = attackerCharacter.PrimaryPart
+    local targetRootPart = targetCharacter.PrimaryPart
     if not (humanoidRootPart and targetRootPart) then
         return false
     end
@@ -3909,7 +3909,7 @@ local function Wallcheck(attackerCharacter, targetCharacter, additionalIgnore)
             return false
         end
     else
-        return false
+        return true
     end
 end
 
