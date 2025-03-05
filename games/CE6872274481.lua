@@ -4395,7 +4395,6 @@ run(function()
 							if sword and swordmeta and swordmeta.sword then
 								switchItem(sword.tool)
 								for i, plr in pairs(plrs) do
-									print(game:GetService("HttpService"):JSONEncode(plr))
 									local root = plr.RootPart
 									if not root then
 										continue
