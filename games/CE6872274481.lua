@@ -59,7 +59,7 @@ local vapeEvents = setmetatable({}, {
 		return self[index]
 	end
 })
-local vapeTargetInfo = shared.VapeTargetInfo
+local vapeTargetInfo = shared.VapeTargetInfo or {Targets = {}}
 local vapeInjected = true
 
 local CheatEngineHelper = {
@@ -1703,14 +1703,114 @@ local function getBestBreakSide(pos)
 end
 
 local function EntityNearPosition(distance, ignore, overridepos)
-	local ent = entitylib.EntityPosition({
-		Part = 'RootPart',
-		Range = distance,
-		Players = true,
-		NPCs = not ignore,
-		Wallcheck = true
-	})
-	return ent
+	local closestEntity, closestMagnitude = nil, distance
+	if entityLibrary.isAlive then
+		for i, v in pairs(entityLibrary.List) do
+			if not v.Targetable then continue end
+			local mag = (entityLibrary.character.HumanoidRootPart.Position - v.RootPart.Position).magnitude
+			if overridepos and mag > distance then
+				mag = (overridepos - v.RootPart.Position).magnitude
+			end
+			if mag <= closestMagnitude then
+				closestEntity, closestMagnitude = v, mag
+			end
+		end
+		if not ignore then
+			for i, v in pairs(game.Workspace:GetChildren()) do
+				if v.Name == "Void Enemy Dummy" or v.Name == "Emerald Enemy Dummy" or v.Name == "Diamond Enemy Dummy" or v.Name == "Leather Enemy Dummy" or v.Name == "Regular Enemy Dummy" or v.Name == "Iron Enemy Dummy" then
+					if v.PrimaryPart then
+						local mag = (entityLibrary.character.HumanoidRootPart.Position - v.PrimaryPart.Position).magnitude
+						if overridepos and mag > distance then
+							mag = (overridepos - v2.PrimaryPart.Position).magnitude
+						end
+						if mag <= closestMagnitude then
+							closestEntity, closestMagnitude = {Player = {Name = v.Name, UserId = (v.Name == "Duck" and 2020831224 or 1443379645)}, Character = v, RootPart = v.PrimaryPart, JumpTick = tick() + 5, Jumping = false, Humanoid = {HipHeight = 2}}, mag
+						end
+					end
+				end
+			end
+			for i, v in pairs(collectionService:GetTagged("Monster")) do
+				if v.PrimaryPart and v:GetAttribute("Team") ~= lplr:GetAttribute("Team") then
+					local mag = (entityLibrary.character.HumanoidRootPart.Position - v.PrimaryPart.Position).magnitude
+					if overridepos and mag > distance then
+						mag = (overridepos - v2.PrimaryPart.Position).magnitude
+					end
+					if mag <= closestMagnitude then
+						closestEntity, closestMagnitude = {Player = {Name = v.Name, UserId = (v.Name == "Duck" and 2020831224 or 1443379645)}, Character = v, RootPart = v.PrimaryPart, JumpTick = tick() + 5, Jumping = false, Humanoid = {HipHeight = 2}}, mag
+					end
+				end
+			end
+			for i, v in pairs(collectionService:GetTagged("GuardianOfDream")) do
+				if v.PrimaryPart and v:GetAttribute("Team") ~= lplr:GetAttribute("Team") then
+					local mag = (entityLibrary.character.HumanoidRootPart.Position - v.PrimaryPart.Position).magnitude
+					if overridepos and mag > distance then
+						mag = (overridepos - v2.PrimaryPart.Position).magnitude
+					end
+					if mag <= closestMagnitude then
+						closestEntity, closestMagnitude = {Player = {Name = v.Name, UserId = (v.Name == "Duck" and 2020831224 or 1443379645)}, Character = v, RootPart = v.PrimaryPart, JumpTick = tick() + 5, Jumping = false, Humanoid = {HipHeight = 2}}, mag
+					end
+				end
+			end
+			for i, v in pairs(collectionService:GetTagged("DiamondGuardian")) do
+				if v.PrimaryPart then
+					local mag = (entityLibrary.character.HumanoidRootPart.Position - v.PrimaryPart.Position).magnitude
+					if overridepos and mag > distance then
+						mag = (overridepos - v2.PrimaryPart.Position).magnitude
+					end
+					if mag <= closestMagnitude then
+						closestEntity, closestMagnitude = {Player = {Name = "DiamondGuardian", UserId = 1443379645}, Character = v, RootPart = v.PrimaryPart, JumpTick = tick() + 5, Jumping = false, Humanoid = {HipHeight = 2}}, mag
+					end
+				end
+			end
+			for i, v in pairs(collectionService:GetTagged("GolemBoss")) do
+				if v.PrimaryPart then
+					local mag = (entityLibrary.character.HumanoidRootPart.Position - v.PrimaryPart.Position).magnitude
+					if overridepos and mag > distance then
+						mag = (overridepos - v2.PrimaryPart.Position).magnitude
+					end
+					if mag <= closestMagnitude then
+						closestEntity, closestMagnitude = {Player = {Name = "GolemBoss", UserId = 1443379645}, Character = v, RootPart = v.PrimaryPart, JumpTick = tick() + 5, Jumping = false, Humanoid = {HipHeight = 2}}, mag
+					end
+				end
+			end
+			for i, v in pairs(collectionService:GetTagged("Drone")) do
+				if v.PrimaryPart and tonumber(v:GetAttribute("PlayerUserId")) ~= lplr.UserId then
+					local droneplr = playersService:GetPlayerByUserId(v:GetAttribute("PlayerUserId"))
+					if droneplr and droneplr.Team == lplr.Team then continue end
+					local mag = (entityLibrary.character.HumanoidRootPart.Position - v.PrimaryPart.Position).magnitude
+					if overridepos and mag > distance then
+						mag = (overridepos - v.PrimaryPart.Position).magnitude
+					end
+					if mag <= closestMagnitude then -- magcheck
+						closestEntity, closestMagnitude = {Player = {Name = "Drone", UserId = 1443379645}, Character = v, RootPart = v.PrimaryPart, JumpTick = tick() + 5, Jumping = false, Humanoid = {HipHeight = 2}}, mag
+					end
+				end
+			end
+			for i,v in pairs(game.Workspace:GetChildren()) do
+				if v.Name == "InfectedCrateEntity" and v.ClassName == "Model" and v.PrimaryPart then
+					local mag = (entityLibrary.character.HumanoidRootPart.Position - v.PrimaryPart.Position).magnitude
+					if overridepos and mag > distance then
+						mag = (overridepos - v.PrimaryPart.Position).magnitude
+					end
+					if mag <= closestMagnitude then -- magcheck
+						closestEntity, closestMagnitude = {Player = {Name = "InfectedCrateEntity", UserId = 1443379645}, Character = v, RootPart = v.PrimaryPart, JumpTick = tick() + 5, Jumping = false, Humanoid = {HipHeight = 2}}, mag
+					end
+				end
+			end
+			for i, v in pairs(store.pots) do
+				if v.PrimaryPart then
+					local mag = (entityLibrary.character.HumanoidRootPart.Position - v.PrimaryPart.Position).magnitude
+					if overridepos and mag > distance then
+						mag = (overridepos - v.PrimaryPart.Position).magnitude
+					end
+					if mag <= closestMagnitude then -- magcheck
+						closestEntity, closestMagnitude = {Player = {Name = "Pot", UserId = 1443379645}, Character = v, RootPart = v.PrimaryPart, JumpTick = tick() + 5, Jumping = false, Humanoid = {HipHeight = 2}}, mag
+					end
+				end
+			end
+		end
+	end
+	return closestEntity
 end
 VoidwareFunctions.GlobaliseObject("EntityNearPosition", EntityNearPosition)
 
@@ -3914,6 +4014,52 @@ local function Wallcheck(attackerCharacter, targetCharacter, additionalIgnore)
     end
 end
 
+local RunLoops = {
+    RenderStepTable = {},
+    StepTable = {},
+    HeartTable = {}
+}
+
+local function BindToLoop(tableName, service, name, func)
+	local oldfunc = func
+	func = function(delta) VoidwareFunctions.handlepcall(pcall(function() oldfunc(delta) end)) end
+    if RunLoops[tableName][name] == nil then
+        RunLoops[tableName][name] = service:Connect(func)
+        table.insert(vapeConnections, RunLoops[tableName][name])
+    end
+end
+
+local function UnbindFromLoop(tableName, name)
+    if RunLoops[tableName][name] then
+        RunLoops[tableName][name]:Disconnect()
+        RunLoops[tableName][name] = nil
+    end
+end
+
+function RunLoops:BindToRenderStep(name, func)
+    BindToLoop("RenderStepTable", runService.RenderStepped, name, func)
+end
+
+function RunLoops:UnbindFromRenderStep(name)
+    UnbindFromLoop("RenderStepTable", name)
+end
+
+function RunLoops:BindToStepped(name, func)
+    BindToLoop("StepTable", runService.Stepped, name, func)
+end
+
+function RunLoops:UnbindFromStepped(name)
+    UnbindFromLoop("StepTable", name)
+end
+
+function RunLoops:BindToHeartbeat(name, func)
+    BindToLoop("HeartTable", runService.Heartbeat, name, func)
+end
+
+function RunLoops:UnbindFromHeartbeat(name)
+    UnbindFromLoop("HeartTable", name)
+end
+
 local killauraNearPlayer
 run(function()
 	local Killaura = {Enabled = false}
@@ -4232,69 +4378,86 @@ run(function()
 				task.spawn(function()
 					repeat
 						task.wait(0.01)
-						local suc, err = pcall(function()
-							if not Killaura.Enabled then break end
-							vapeTargetInfo.Targets.Killaura = nil
-							local plrs = {EntityNearPosition(killaurarange.Value, false)}
-							local firstPlayerNear
-							if #plrs > 0 then
-								task.spawn(function()
-									pcall(function()
-										--if getItemNear('warlock_staff') then bedwars.WarlockController:link(plrs[1].Character) end
-										if getItemNear('infernal_saber') then bedwars.EmberController:BladeRelease(getItemNear('infernal_saber')) end
-										if getItemNear('summoner_claw') then bedwars.KaidaController:request(plrs[1].Character) end
-										if getItemNear('noctium_blade') then for i,v in pairs({"void_knight_consume_emerald", "void_knight_consume_iron"}) do if bedwars.AbilityController:canUseAbility(v) then bedwars.AbilityController:useAbility(v) end end end
-									end)
+						if not Killaura.Enabled then break end
+						vapeTargetInfo.Targets.Killaura = nil
+						local plrs = {EntityNearPosition(killaurarange.Value, false)}
+						local firstPlayerNear
+						if #plrs > 0 then
+							task.spawn(function()
+								pcall(function()
+									--if getItemNear('warlock_staff') then bedwars.WarlockController:link(plrs[1].Character) end
+									if getItemNear('infernal_saber') then bedwars.EmberController:BladeRelease(getItemNear('infernal_saber')) end
+									if getItemNear('summoner_claw') then bedwars.KaidaController:request(plrs[1].Character) end
+									if getItemNear('noctium_blade') then for i,v in pairs({"void_knight_consume_emerald", "void_knight_consume_iron"}) do if bedwars.AbilityController:canUseAbility(v) then bedwars.AbilityController:useAbility(v) end end end
 								end)
-								local sword, swordmeta = getAttackData()
-								if sword and swordmeta and swordmeta.sword then
-									switchItem(sword.tool)
-									for i, plr in pairs(plrs) do
-										local root = plr.PrimaryPart
-										if not root then
-											continue
-										end
-										local localfacing = entityLibrary.character.HumanoidRootPart.CFrame.lookVector
-										local vec = (plr.PrimaryPart.Position - entityLibrary.character.HumanoidRootPart.Position).unit
-										local angle = math.acos(localfacing:Dot(vec))
-										if angle >= (math.rad(killauraangle.Value) / 2) then
-											continue
-										end
-										local selfrootpos = entityLibrary.character.HumanoidRootPart.Position
-										if killauratargetframe.Walls.Enabled then
-											if not Wallcheck(lplr.Character, plr.Character) then continue end
-										end
-										if killauranovape.Enabled and store.whitelist.clientUsers[plr.Player.Name] then
-											continue
-										end
-										if not firstPlayerNear then
-											firstPlayerNear = true
-											killauraNearPlayer = true
-											targetedPlayer = plr
-											vapeTargetInfo.Targets.Killaura = {
-												Humanoid = {
-													Health = (plr.Character:GetAttribute("Health") or plr.Humanoid.Health) + getShieldAttribute(plr.Character),
-													MaxHealth = plr.Character:GetAttribute("MaxHealth") or plr.Humanoid.MaxHealth
-												},
-												Player = plr.Player
-											}
-											if animationdelay <= tick() then
-												animationdelay = tick() + (swordmeta.sword.respectAttackSpeedForEffects and swordmeta.sword.attackSpeed or (killaurasync.Enabled and 0.24 or 0.14))
-												if not killauraswing.Enabled then
-													bedwars.SwordController:playSwordEffect(swordmeta, false)
-												end
-												if swordmeta.displayName:find(" Scythe") then
-													bedwars.ScytheController:playLocalAnimation()
-												end
+							end)
+							local sword, swordmeta = getAttackData()
+							if sword and swordmeta and swordmeta.sword then
+								switchItem(sword.tool)
+								for i, plr in pairs(plrs) do
+									print(game:GetService("HttpService"):JSONEncode(plr))
+									local root = plr.RootPart
+									if not root then
+										continue
+									end
+									local localfacing = entityLibrary.character.HumanoidRootPart.CFrame.lookVector
+									local vec = (plr.RootPart.Position - entityLibrary.character.HumanoidRootPart.Position).unit
+									local angle = math.acos(localfacing:Dot(vec))
+									if angle >= (math.rad(killauraangle.Value) / 2) then
+										continue
+									end
+									local selfrootpos = entityLibrary.character.HumanoidRootPart.Position
+									if killauratargetframe.Walls.Enabled then
+										if not Wallcheck(lplr.Character, plr.Character) then continue end
+									end
+									if killauranovape.Enabled and store.whitelist.clientUsers[plr.Player.Name] then
+										continue
+									end
+									if not firstPlayerNear then
+										firstPlayerNear = true
+										killauraNearPlayer = true
+										targetedPlayer = plr
+										vapeTargetInfo.Targets.Killaura = {
+											Humanoid = {
+												Health = (plr.Character:GetAttribute("Health") or plr.Humanoid.Health) + getShieldAttribute(plr.Character),
+												MaxHealth = plr.Character:GetAttribute("MaxHealth") or plr.Humanoid.MaxHealth
+											},
+											Player = plr.Player
+										}
+										if animationdelay <= tick() then
+											animationdelay = tick() + (swordmeta.sword.respectAttackSpeedForEffects and swordmeta.sword.attackSpeed or (killaurasync.Enabled and 0.24 or 0.14))
+											if not killauraswing.Enabled then
+												bedwars.SwordController:playSwordEffect(swordmeta, false)
+											end
+											if swordmeta.displayName:find(" Scythe") then
+												bedwars.ScytheController:playLocalAnimation()
 											end
 										end
-										--if (game.Workspace:GetServerTimeNow() - bedwars.SwordController.lastAttack) < 0.02 then break end
-										local selfpos = selfrootpos + (killaurarange.Value > 14 and (selfrootpos - root.Position).magnitude > 14.4 and (CFrame.lookAt(selfrootpos, root.Position).lookVector * ((selfrootpos - root.Position).magnitude - 14)) or Vector3.zero)
-										bedwars.SwordController.lastAttack = game.Workspace:GetServerTimeNow()
-										store.attackReach = math.floor((selfrootpos - root.Position).magnitude * 100) / 100
-										store.attackReachUpdate = tick() + 1
+									end
+									--if (game.Workspace:GetServerTimeNow() - bedwars.SwordController.lastAttack) < 0.02 then break end
+									local selfpos = selfrootpos + (killaurarange.Value > 14 and (selfrootpos - root.Position).magnitude > 14.4 and (CFrame.lookAt(selfrootpos, root.Position).lookVector * ((selfrootpos - root.Position).magnitude - 14)) or Vector3.zero)
+									bedwars.SwordController.lastAttack = game.Workspace:GetServerTimeNow()
+									store.attackReach = math.floor((selfrootpos - root.Position).magnitude * 100) / 100
+									store.attackReachUpdate = tick() + 1
+									print(killaurarealremote)
+									killaurarealremote:FireServer({
+										weapon = sword.tool,
+										chargedAttack = {chargeRatio = swordmeta.sword.chargedAttack and not swordmeta.sword.chargedAttack.disableOnGrounded and 0.999 or 0},
+										entityInstance = plr.Character,
+										validate = {
+											raycast = {
+												cameraPosition = attackValue(root.Position),
+												cursorDirection = attackValue(CFrame.new(selfpos, root.Position).lookVector)
+											},
+											targetPosition = attackValue(root.Position),
+											selfPosition = attackValue(selfpos)
+										}
+									})
+									local spear = getItemNear('spear')
+									if spear then
+										switchItem(spear.tool)
 										killaurarealremote:FireServer({
-											weapon = sword.tool,
+											weapon = spear.tool,
 											chargedAttack = {chargeRatio = swordmeta.sword.chargedAttack and not swordmeta.sword.chargedAttack.disableOnGrounded and 0.999 or 0},
 											entityInstance = plr.Character,
 											validate = {
@@ -4306,58 +4469,38 @@ run(function()
 												selfPosition = attackValue(selfpos)
 											}
 										})
-										local spear = getItemNear('spear')
-										if spear then
-											switchItem(spear.tool)
-											killaurarealremote:FireServer({
-												weapon = spear.tool,
-												chargedAttack = {chargeRatio = swordmeta.sword.chargedAttack and not swordmeta.sword.chargedAttack.disableOnGrounded and 0.999 or 0},
-												entityInstance = plr.Character,
-												validate = {
-													raycast = {
-														cameraPosition = attackValue(root.Position),
-														cursorDirection = attackValue(CFrame.new(selfpos, root.Position).lookVector)
-													},
-													targetPosition = attackValue(root.Position),
-													selfPosition = attackValue(selfpos)
-												}
-											})
-										end
-										break
+									end
+									break
+								end
+							end
+							task.wait(killaurahitslowmode.Value/10)
+						end
+						if not firstPlayerNear then
+							targetedPlayer = nil
+							killauraNearPlayer = false
+							pcall(function()
+								if originalArmC0 == nil then
+									originalArmC0 = gameCamera.Viewmodel.RightHand.RightWrist.C0
+								end
+								if gameCamera.Viewmodel.RightHand.RightWrist.C0 ~= originalArmC0 then
+									pcall(function()
+										killauracurrentanim:Cancel()
+									end)
+									if killauraanimationtween.Enabled then
+										gameCamera.Viewmodel.RightHand.RightWrist.C0 = originalArmC0
+									else
+										killauracurrentanim = tweenservice:Create(gameCamera.Viewmodel.RightHand.RightWrist, TweenInfo.new(0.1), {C0 = originalArmC0})
+										killauracurrentanim:Play()
 									end
 								end
-								task.wait(killaurahitslowmode.Value/10)
-							end
-							if not firstPlayerNear then
-								targetedPlayer = nil
-								killauraNearPlayer = false
-								pcall(function()
-									if originalArmC0 == nil then
-										originalArmC0 = gameCamera.Viewmodel.RightHand.RightWrist.C0
-									end
-									if gameCamera.Viewmodel.RightHand.RightWrist.C0 ~= originalArmC0 then
-										pcall(function()
-											killauracurrentanim:Cancel()
-										end)
-										if killauraanimationtween.Enabled then
-											gameCamera.Viewmodel.RightHand.RightWrist.C0 = originalArmC0
-										else
-											killauracurrentanim = tweenservice:Create(gameCamera.Viewmodel.RightHand.RightWrist, TweenInfo.new(0.1), {C0 = originalArmC0})
-											killauracurrentanim:Play()
-										end
-									end
-								end)
-							end
-							for i,v in pairs(killauraboxes) do
-								pcall(function()
-									local attacked = killauratarget.Enabled and plrs[i] or nil
-									v.Adornee = attacked and ((not killauratargethighlight.Enabled) and attacked.PrimaryPart or (not GuiLibrary.ObjectsThatCanBeSaved.ChamsOptionsButton.Api.Enabled) and attacked.Character or nil)
-								end)
-							end	
-						end)
-						if not suc then
-							warn("[Killaura Error]: "..tostring(err))
+							end)
 						end
+						for i,v in pairs(killauraboxes) do
+							pcall(function()
+								local attacked = killauratarget.Enabled and plrs[i] or nil
+								v.Adornee = attacked and ((not killauratargethighlight.Enabled) and attacked.PrimaryPart or attacked.Character or nil)
+							end)
+						end	
 					until (not Killaura.Enabled)
 				end)
 			else
@@ -4578,12 +4721,7 @@ run(function()
 		end,
 		Default = 1
 	})--]]
-	killauracolor = GuiLibrary.ObjectsThatCanBeSaved["Gui ColorSliderColor"].Api
-	VoidwareFunctions.Connections:register(VoidwareFunctions.Controllers:get("UpdateUI").UIUpdate.Event:Connect(function(h,s,v)
-		color = {Hue = h, Sat = s, Value = v}
-		killauracolor = color
-		killauracolorChanged:Fire()
-	end))
+	killauracolor = {Hue = 1, Sat = 1, Value = 1}
 	for i = 1, 10 do
 		local killaurabox = Instance.new("BoxHandleAdornment")
 		killaurabox.Transparency = 0.5
