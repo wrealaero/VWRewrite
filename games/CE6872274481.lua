@@ -3992,7 +3992,7 @@ run(function()
 
 	local killaurasortmethods = {
 		Distance = function(a, b)
-			return (a.RootPart.Position - entityLibrary.character.HumanoidRootPart.Position).Magnitude < (b.RootPart.Position - entityLibrary.character.HumanoidRootPart.Position).Magnitude
+			return (a.PrimaryPart.Position - entityLibrary.character.HumanoidRootPart.Position).Magnitude < (b.PrimaryPart.Position - entityLibrary.character.HumanoidRootPart.Position).Magnitude
 		end,
 		Health = function(a, b)
 			return a.Humanoid.Health < b.Humanoid.Health
@@ -4184,10 +4184,10 @@ run(function()
 						end
 						if entityLibrary.isAlive then
 							if killauraaimcirclepart then
-								killauraaimcirclepart.Position = targetedPlayer and closestpos(targetedPlayer.RootPart, entityLibrary.character.HumanoidRootPart.Position) or Vector3.new(99999, 99999, 99999)
+								killauraaimcirclepart.Position = targetedPlayer and closestpos(targetedPlayer.PrimaryPart, entityLibrary.character.HumanoidRootPart.Position) or Vector3.new(99999, 99999, 99999)
 							end
 							if killauraparticlepart then
-								killauraparticlepart.Position = targetedPlayer and targetedPlayer.RootPart.Position or Vector3.new(99999, 99999, 99999)
+								killauraparticlepart.Position = targetedPlayer and targetedPlayer.PrimaryPart.Position or Vector3.new(99999, 99999, 99999)
 							end
 							local Root = entityLibrary.character.HumanoidRootPart
 							if Root then
@@ -4206,7 +4206,7 @@ run(function()
 									end
 									if originalRootC0 and killauracframe.Enabled then
 										if targetedPlayer ~= nil then
-											local targetPos = targetedPlayer.RootPart.Position + Vector3.new(0, 2, 0)
+											local targetPos = targetedPlayer.PrimaryPart.Position + Vector3.new(0, 2, 0)
 											local direction = (Vector3.new(targetPos.X, targetPos.Y, targetPos.Z) - entityLibrary.character.Head.Position).Unit
 											local direction2 = (Vector3.new(targetPos.X, Root.Position.Y, targetPos.Z) - Root.Position).Unit
 											local lookCFrame = (CFrame.new(Vector3.zero, (Root.CFrame):VectorToObjectSpace(direction)))
@@ -4250,12 +4250,12 @@ run(function()
 								if sword and swordmeta and swordmeta.sword then
 									switchItem(sword.tool)
 									for i, plr in pairs(plrs) do
-										local root = plr.RootPart
+										local root = plr.PrimaryPart
 										if not root then
 											continue
 										end
 										local localfacing = entityLibrary.character.HumanoidRootPart.CFrame.lookVector
-										local vec = (plr.RootPart.Position - entityLibrary.character.HumanoidRootPart.Position).unit
+										local vec = (plr.PrimaryPart.Position - entityLibrary.character.HumanoidRootPart.Position).unit
 										local angle = math.acos(localfacing:Dot(vec))
 										if angle >= (math.rad(killauraangle.Value) / 2) then
 											continue
@@ -4351,7 +4351,7 @@ run(function()
 							for i,v in pairs(killauraboxes) do
 								pcall(function()
 									local attacked = killauratarget.Enabled and plrs[i] or nil
-									v.Adornee = attacked and ((not killauratargethighlight.Enabled) and attacked.RootPart or (not GuiLibrary.ObjectsThatCanBeSaved.ChamsOptionsButton.Api.Enabled) and attacked.Character or nil)
+									v.Adornee = attacked and ((not killauratargethighlight.Enabled) and attacked.PrimaryPart or (not GuiLibrary.ObjectsThatCanBeSaved.ChamsOptionsButton.Api.Enabled) and attacked.Character or nil)
 								end)
 							end	
 						end)
