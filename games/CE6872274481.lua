@@ -3931,121 +3931,141 @@ run(function()
 		Name = "Killaura",
 		Function = function(callback)
 			if callback then 
-				if Killaura.Animation then
-					armC0 = game.Workspace.Camera.Viewmodel.RightHand.RightWrist.C0
-					
-					task.spawn(function()
-						local started = false
-						repeat
-							if Attacking then
-								local first = not started
-								started = true
-								
-								if Killaura.AnimationMode == "Random" then
-									anims.Random = {{CFrame = CFrame.Angles(math.rad(math.random(1, 360)), math.rad(math.random(1, 360)), math.rad(math.random(1, 360))), Time = 0.12}}
-								end
-								
-								for _, v in anims[Killaura.AnimationMode or "Normal"] do
-									local tt = first and (Killaura.NoTween and 0.001 or 0.1) or v.Time / (Killaura.AnimationSpeed or 1)
-									AnimTween = game:GetService("TweenService"):Create(viewmdl, TweenInfo.new(tt, Enum.EasingStyle.Linear), {
-										C0 = armC0 * v.CFrame
+				local suc, err = pcall(function()
+					if Killaura.Animation then
+						armC0 = game.Workspace.Camera.Viewmodel.RightHand.RightWrist.C0
+						
+						task.spawn(function()
+							local started = false
+							repeat
+								if Attacking then
+									local first = not started
+									started = true
+									
+									if Killaura.AnimationMode == "Random" then
+										anims.Random = {{CFrame = CFrame.Angles(math.rad(math.random(1, 360)), math.rad(math.random(1, 360)), math.rad(math.random(1, 360))), Time = 0.12}}
+									end
+									
+									for _, v in anims[Killaura.AnimationMode or "Normal"] do
+										local tt = first and (Killaura.NoTween and 0.001 or 0.1) or v.Time / (Killaura.AnimationSpeed or 1)
+										AnimTween = game:GetService("TweenService"):Create(viewmdl, TweenInfo.new(tt, Enum.EasingStyle.Linear), {
+											C0 = armC0 * v.CFrame
+										})
+										AnimTween:Play()
+										AnimTween.Completed:Wait()
+										first = false
+										if not (Killaura.Enabled and Attacking) then break end
+									end
+								elseif started then
+									started = false
+									AnimTween = game:GetService("TweenService"):Create(viewmdl, TweenInfo.new(Killaura.NoTween and 0.001 or 0.3, Enum.EasingStyle.Exponential), {
+										C0 = armC0
 									})
 									AnimTween:Play()
-									AnimTween.Completed:Wait()
-									first = false
-									if not (Killaura.Enabled and Attacking) then break end
 								end
-							elseif started then
-								started = false
-								AnimTween = game:GetService("TweenService"):Create(viewmdl, TweenInfo.new(Killaura.NoTween and 0.001 or 0.3, Enum.EasingStyle.Exponential), {
-									C0 = armC0
-								})
-								AnimTween:Play()
-							end
-							
-							if not started then
-								task.wait(1 / (Killaura.UpdateRate or 60))
-							end
-						until not (Killaura.Enabled and Killaura.Animation)
-					end)
-				end
-				
-				auraconn = game:GetService("RunService").Heartbeat:Connect(function()
-					local targets = gettargets(Killaura.range or 18, Killaura.MaxTargets or 5, Killaura.AngleLimit or 360)
-					if #targets == 0 then 
-						Attacking = false
-						killauraNearPlayer = Attacking
-						return 
-					end
-					local weap = getweapon()
-					if Killaura.weaponcheck then
-						if not lplr.Character:FindFirstChild(weap.Name) then
-							return
-						end
-					else
-						if lplr.Character.InventoryFolder.Value:FindFirstChild(weap.Name) then
-							switchitem(weap.Name)
-						end
-					end
-					Attacking = true
-					killauraNearPlayer = Attacking
-					for i, v in pairs(Boxes) do
-						v.Adornee = targets[i] and targets[i].Character.PrimaryPart or nil
-						if v.Adornee then
-							v.Color3 = Color3.fromHSV(Killaura.BoxColor.Hue, Killaura.BoxColor.Sat, Killaura.BoxColor.Value)
-							v.Transparency = 1 - Killaura.BoxColor.Opacity
-						end
-					end
-					for i, v in pairs(Particles) do
-						v.Position = targets[i] and targets[i].Character.PrimaryPart.Position or Vector3.new(9e9, 9e9, 9e9)
-						v.Parent = targets[i] and game.Workspace.CurrentCamera or nil
-					end
-					if Killaura.Face and targets[1] then
-						local vec = targets[1].Character.PrimaryPart.Position * Vector3.new(1, 0, 1)
-						lplr.Character.PrimaryPart.CFrame = CFrame.lookAt(
-							lplr.Character.PrimaryPart.Position,
-							Vector3.new(vec.X, lplr.Character.PrimaryPart.Position.Y, vec.Z)
-						)
-					end
-					
-					for _, targ in ipairs(targets) do
-						if Killaura.wallscheck then
-							if not Wallcheck(lplr.Character, targ.Character) then continue end
-						end
-						task.spawn(function()
-							bedwars.Client:Get(bedwars.AttackRemote):FireServer({
-								chargedAttack = {chargeRatio = 0},
-								entityInstance = targ.Character,
-								validate = {
-									raycast = {
-										cameraPosition = game.Workspace.CurrentCamera.CFrame.Position,
-										cursorDirection = (targ.Character.PrimaryPart.Position - game.Workspace.CurrentCamera.CFrame.Position).Unit
-									},
-									targetPosition = {value = targ.Character.PrimaryPart.Position},
-									selfPosition = {value = lplr.Character.PrimaryPart.Position}
-								},
-								weapon = weap
-							})
+								
+								if not started then
+									task.wait(1 / (Killaura.UpdateRate or 60))
+								end
+							until not (Killaura.Enabled and Killaura.Animation)
 						end)
 					end
 				end)
-			else
-				Attacking = false
-				killauraNearPlayer = Attacking
-				if auraconn then
-					auraconn:Disconnect()
-				end
-				if viewmdl then
-					game:GetService("TweenService"):Create(viewmdl, TweenInfo.new(0.1), {C0 = baseweld}):Play()
-				end
-				for _, v in pairs(Boxes) do
-					v.Adornee = nil
-				end
-				for _, v in pairs(Particles) do
-					v.Parent = nil
+				if not suc then
+					warn("[Killaura Boot Error]: "..tostring(err))
 				end
 				
-				table.clear(targetinfo.Targets)
+				auraconn = game:GetService("RunService").Heartbeat:Connect(function()
+					local suc, err = pcall(function()
+						local targets = gettargets(Killaura.range or 18, Killaura.MaxTargets or 5, Killaura.AngleLimit or 360)
+						if #targets == 0 then 
+							Attacking = false
+							killauraNearPlayer = Attacking
+							return 
+						end
+						local weap = getweapon()
+						if Killaura.weaponcheck then
+							if not lplr.Character:FindFirstChild(weap.Name) then
+								return
+							end
+						else
+							if lplr.Character.InventoryFolder.Value:FindFirstChild(weap.Name) then
+								switchitem(weap.Name)
+							end
+						end
+						Attacking = true
+						killauraNearPlayer = Attacking
+						for i, v in pairs(Boxes) do
+							v.Adornee = targets[i] and targets[i].Character.PrimaryPart or nil
+							if v.Adornee then
+								v.Color3 = Color3.fromHSV(Killaura.BoxColor.Hue, Killaura.BoxColor.Sat, Killaura.BoxColor.Value)
+								v.Transparency = 1 - Killaura.BoxColor.Opacity
+							end
+						end
+						for i, v in pairs(Particles) do
+							v.Position = targets[i] and targets[i].Character.PrimaryPart.Position or Vector3.new(9e9, 9e9, 9e9)
+							v.Parent = targets[i] and game.Workspace.CurrentCamera or nil
+						end
+						if Killaura.Face and targets[1] then
+							local vec = targets[1].Character.PrimaryPart.Position * Vector3.new(1, 0, 1)
+							lplr.Character.PrimaryPart.CFrame = CFrame.lookAt(
+								lplr.Character.PrimaryPart.Position,
+								Vector3.new(vec.X, lplr.Character.PrimaryPart.Position.Y, vec.Z)
+							)
+						end
+						
+						for _, targ in ipairs(targets) do
+							local suc2, err2 = pcall(function()
+								if Killaura.wallscheck then
+									if not Wallcheck(lplr.Character, targ.Character) then continue end
+								end
+								task.spawn(function()
+									bedwars.Client:Get(bedwars.AttackRemote):FireServer({
+										chargedAttack = {chargeRatio = 0},
+										entityInstance = targ.Character,
+										validate = {
+											raycast = {
+												cameraPosition = game.Workspace.CurrentCamera.CFrame.Position,
+												cursorDirection = (targ.Character.PrimaryPart.Position - game.Workspace.CurrentCamera.CFrame.Position).Unit
+											},
+											targetPosition = {value = targ.Character.PrimaryPart.Position},
+											selfPosition = {value = lplr.Character.PrimaryPart.Position}
+										},
+										weapon = weap
+									})
+								end)
+							end)
+							if not suc2 then
+								warn("[Killaura Error for "..tostring(targ).."]: "..tostring(err2))
+							end
+						end
+					end)
+					if not suc then
+						warn("[Killaura Error]: "..tostring(err))
+					end
+				end)
+			else
+				local suc, err = pcall(function()
+					Attacking = false
+					killauraNearPlayer = Attacking
+					if auraconn then
+						auraconn:Disconnect()
+					end
+					if viewmdl then
+						game:GetService("TweenService"):Create(viewmdl, TweenInfo.new(0.1), {C0 = baseweld}):Play()
+					end
+					for _, v in pairs(Boxes) do
+						v.Adornee = nil
+					end
+					for _, v in pairs(Particles) do
+						v.Parent = nil
+					end
+					
+					table.clear(targetinfo.Targets)
+				end)
+				if not suc then
+					warn("[Killaura Disable Error]: "..tostring(err))
+				end
 			end
 		end
 	})
