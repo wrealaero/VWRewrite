@@ -4191,11 +4191,15 @@ run(function()
 								if killauraNearPlayer and isFirstPerson() then
 									local anim = auras[killauraanimmethod.Value]
 									for i, v in pairs(anim) do
-										tweenService:Create(bedwars.ViewModel, TweenInfo.new(v.Time), {C0 = oldrotation * v.CFrame}):Play()
+										pcall(function()
+											tweenService:Create(bedwars.ViewModel, TweenInfo.new(v.Time), {C0 = oldrotation * v.CFrame}):Play()
+										end)
 										task.wait(v.Time - 0.05)
 									end
 								else
-									tweenService:Create(bedwars.ViewModel, TweenInfo.new(0.1), {C0 = oldrotation}):Play()
+									pcall(function()
+										tweenService:Create(bedwars.ViewModel, TweenInfo.new(0.1), {C0 = oldrotation}):Play()
+									end)
 								end
 							end
 						end
@@ -4272,17 +4276,16 @@ run(function()
 		
 							switchItem(weapon.tool)
 
-							if animationdelay <= tick() then
-								local swordmeta = bedwars.ItemTable[weapon.itemType]
-								animationdelay = tick() + (swordmeta.sword.respectAttackSpeedForEffects and swordmeta.sword.attackSpeed or 0.24)
-								bedwars.SwordController:playSwordEffect(swordmeta, false)
-								if swordmeta.displayName:find(" Scythe") then
-									bedwars.ScytheController:playLocalAnimation()
+							pcall(function()
+								if animationdelay <= tick() then
+									local swordmeta = bedwars.ItemTable[weapon.itemType]
+									animationdelay = tick() + (swordmeta.sword.respectAttackSpeedForEffects and swordmeta.sword.attackSpeed or 0.24)
+									bedwars.SwordController:playSwordEffect(swordmeta, false)
+									if swordmeta.displayName:find(" Scythe") then
+										bedwars.ScytheController:playLocalAnimation()
+									end
 								end
-							end
-							--[[if not currentAnimationTrack or not currentAnimationTrack.IsPlaying then
-								currentAnimationTrack = bedwars.AnimationUtil:playAnimation(lplr, animationId)
-							end--]]
+							end)
 
 							killaurarealremote:FireServer({
 								weapon = weapon.tool,
@@ -4305,10 +4308,6 @@ run(function()
 							if AutoHop.Enabled and lplr.Character.Humanoid.FloorMaterial ~= Enum.Material.Air then
 								lplr.Character.PrimaryPart.Velocity = Vector3.new(lplr.Character.PrimaryPart.Velocity.X, 30, lplr.Character.PrimaryPart.Velocity.Z)
 							end
-		
-							--[[if (not isFirstPerson()) or AuraAnim.Value == "None" then
-								bedwars.SwordController:swingSwordAtMouse()
-							end--]]
 
 							local Root = entityLibrary.character.HumanoidRootPart
 							if Root then
