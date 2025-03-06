@@ -561,9 +561,10 @@ run(function()
 		Name = 'Restart',
 		Function = function(calling)
 			if calling then 
-				RestartVoidware["ToggleButton"](false) 
-				wait(0.1)
-				GuiLibrary.Restart()
+				RestartVoidware:Toggle()
+				vape:Uninject()
+				task.wait(0.1)
+				loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWRewrite/main/NewMainScript.lua", true))()
 			end
 		end
 	}) 
