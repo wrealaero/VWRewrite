@@ -3151,10 +3151,12 @@ run(function()
 	local blocks = collectionService:GetTagged("block") or {}
 	blockRaycast.FilterDescendantsInstances = {blocks}
 	table.insert(vapeConnections, collectionService:GetInstanceAddedSignal("block"):Connect(function(block)
+		blocks = blocks ~= nil and type(blocks) == "table" and blocks or {}
 		table.insert(blocks, block)
 		blockRaycast.FilterDescendantsInstances = {blocks}
 	end))
 	table.insert(vapeConnections, collectionService:GetInstanceRemovedSignal("block"):Connect(function(block)
+		blocks = blocks ~= nil and type(blocks) == "table" and blocks or {}
 		block = table.find(blocks, block)
 		if block then
 			table.remove(blocks, block)
