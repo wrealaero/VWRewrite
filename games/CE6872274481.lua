@@ -8223,7 +8223,7 @@ run(function()
 	}
 
 	ChestStealer = vape.Categories.Utility:CreateModule({
-		Name = "ChestStealer",
+		Name = "ChestSteal",
 		Function = function(callback)
 			if callback then
 				chests = collectionService:GetTagged("chest")
