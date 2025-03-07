@@ -5078,11 +5078,11 @@ run(function()
 	Speed.Restart = function()
 		if Speed.Enabled then Speed:Toggle(false); Speed:Toggle(false) end
 	end
-	SpeedDamageBoost = Speed:CreateToggle({
+	--[[SpeedDamageBoost = Speed:CreateToggle({
 		Name = "Damage Boost",
 		Function = Speed.Restart,
 		Default = true
-	})
+	})--]]
 	SpeedValue = Speed:CreateSlider({
 		Name = "Speed",
 		Min = 1,
