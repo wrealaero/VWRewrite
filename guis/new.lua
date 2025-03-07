@@ -5510,7 +5510,9 @@ function mainapi:Load(skipgui, profile)
 					task.wait(shared.LoadSlowmode or 0.03)
 				end
 				if v.Enabled then
-					object.Button:Toggle()
+					task.spawn(function()
+						object.Button:Toggle()
+					end)
 				end
 				if v.Pinned then
 					object:Pin()
@@ -5552,7 +5554,9 @@ function mainapi:Load(skipgui, profile)
 			local object = self.Categories[i]
 			if not object then continue end
 			if object.Options and v.Options then
-				self:LoadOptions(object, v.Options)
+				task.spawn(function()
+					self:LoadOptions(object, v.Options)
+				end)
 			end
 			if v.Pinned ~= object.Pinned then
 				object:Pin()
@@ -5561,7 +5565,9 @@ function mainapi:Load(skipgui, profile)
 				object:Expand()
 			end
 			if object.Button and (v.Enabled or false) ~= object.Button.Enabled then
-				object.Button:Toggle()
+				task.spawn(function()
+					object.Button:Toggle()
+				end)
 			end
 			if v.List and (#object.List > 0 or #v.List > 0) then
 				object.List = v.List or {}
@@ -5575,17 +5581,19 @@ function mainapi:Load(skipgui, profile)
 			local object = self.Modules[i]
 			if not object then continue end
 			if object.Options and v.Options then
-				local suc, err = pcall(function()
-					self:LoadOptions(object, v.Options)
-				end)
-				if (not suc) then
-					task.spawn(function()
-						repeat task.wait() until errorNotification ~= nil and type(errorNotification) == "function" 
-						pcall(function()
-							errorNotification("Voidware", "Failure loading "..tostring(v).." Error: "..tostring(err), 5)
-						end)
+				task.spawn(function()
+					local suc, err = pcall(function()
+						self:LoadOptions(object, v.Options)
 					end)
-				end
+					if (not suc) then
+						task.spawn(function()
+							repeat task.wait() until errorNotification ~= nil and type(errorNotification) == "function" 
+							pcall(function()
+								errorNotification("Voidware", "Failure loading "..tostring(v).." Error: "..tostring(err), 5)
+							end)
+						end)
+					end
+				end)
 			end
 			if v.Enabled ~= object.Enabled then
 				if skipgui then
@@ -5601,7 +5609,9 @@ function mainapi:Load(skipgui, profile)
 			local object = self.Legit.Modules[i]
 			if not object then continue end
 			if object.Options and v.Options then
-				self:LoadOptions(object, v.Options)
+				task.spawn(function()
+					self:LoadOptions(object, v.Options)
+				end)
 			end
 			if object.Enabled ~= v.Enabled then
 				object:Toggle()
@@ -5684,49 +5694,58 @@ function mainapi:Remove(obj)
 end
 
 function mainapi:Save(newprofile)
-	if not self.Loaded then return end
-	local guidata = {
-		Categories = {},
-		Profile = newprofile or self.Profile,
-		Profiles = self.Profiles,
-		Keybind = self.Keybind
-	}
-	local savedata = {
-		Modules = {},
-		Categories = {},
-		Legit = {}
-	}
-
-	for i, v in self.Categories do
-		(v.Type ~= 'Category' and i ~= 'Main' and savedata or guidata).Categories[i] = {
-			Enabled = i ~= 'Main' and v.Button.Enabled or nil,
-			Expanded = v.Type ~= 'Overlay' and v.Expanded or nil,
-			Pinned = v.Pinned,
-			Position = {X = v.Object.Position.X.Offset, Y = v.Object.Position.Y.Offset},
-			Options = mainapi:SaveOptions(v, v.Options),
-			List = v.List,
-			ListEnabled = v.ListEnabled
+	local suc, err = pcall(function()
+		if not self.Loaded then return end
+		local guidata = {
+			Categories = {},
+			Profile = newprofile or self.Profile,
+			Profiles = self.Profiles,
+			Keybind = self.Keybind
 		}
-	end
-
-	for i, v in self.Modules do
-		savedata.Modules[i] = {
-			Enabled = v.Enabled,
-			Bind = v.Bind.Button and {Mobile = true, X = v.Bind.Button.Position.X.Offset, Y = v.Bind.Button.Position.Y.Offset} or v.Bind,
-			Options = mainapi:SaveOptions(v, true)
+		local savedata = {
+			Modules = {},
+			Categories = {},
+			Legit = {}
 		}
+	
+		for i, v in self.Categories do
+			(v.Type ~= 'Category' and i ~= 'Main' and savedata or guidata).Categories[i] = {
+				Enabled = i ~= 'Main' and v.Button.Enabled or nil,
+				Expanded = v.Type ~= 'Overlay' and v.Expanded or nil,
+				Pinned = v.Pinned,
+				Position = {X = v.Object.Position.X.Offset, Y = v.Object.Position.Y.Offset},
+				Options = mainapi:SaveOptions(v, v.Options),
+				List = v.List,
+				ListEnabled = v.ListEnabled
+			}
+		end
+	
+		for i, v in self.Modules do
+			savedata.Modules[i] = {
+				Enabled = v.Enabled,
+				Bind = v.Bind.Button and {Mobile = true, X = v.Bind.Button.Position.X.Offset, Y = v.Bind.Button.Position.Y.Offset} or v.Bind,
+				Options = mainapi:SaveOptions(v, true)
+			}
+		end
+	
+		for i, v in self.Legit.Modules do
+			savedata.Legit[i] = {
+				Enabled = v.Enabled,
+				Position = v.Children and {X = v.Children.Position.X.Offset, Y = v.Children.Position.Y.Offset} or nil,
+				Options = mainapi:SaveOptions(v, v.Options)
+			}
+		end
+	
+		writefile('vape/profiles/'..game.GameId..'.gui.txt', httpService:JSONEncode(guidata))
+		writefile('vape/profiles/'..self.Profile..self.Place..'.txt', httpService:JSONEncode(savedata))
+	end)
+	if not suc then
+		if errorNotification ~= nil and type(errorNotification) == "function" then
+			pcall(function()
+				errorNotification("Voidware", "Failure saving your profile!", 3)
+			end)
+		end
 	end
-
-	for i, v in self.Legit.Modules do
-		savedata.Legit[i] = {
-			Enabled = v.Enabled,
-			Position = v.Children and {X = v.Children.Position.X.Offset, Y = v.Children.Position.Y.Offset} or nil,
-			Options = mainapi:SaveOptions(v, v.Options)
-		}
-	end
-
-	writefile('vape/profiles/'..game.GameId..'.gui.txt', httpService:JSONEncode(guidata))
-	writefile('vape/profiles/'..self.Profile..self.Place..'.txt', httpService:JSONEncode(savedata))
 end
 
 function mainapi:SaveOptions(object, savedoptions)

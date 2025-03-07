@@ -1608,6 +1608,7 @@ run(function()
             Sky = function() self:moveToSky() end,
 			AntiHit = function() self:enableAntiHitMode() end
         }
+		if antiDeathConfig.Mode.Value == "Infinite" then return end
         modeActions[antiDeathConfig.Mode.Value]()
     end
 
