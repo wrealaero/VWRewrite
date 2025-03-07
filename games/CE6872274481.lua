@@ -5023,6 +5023,7 @@ run(function()
 		Name = "Speed",
 		Function = function(callback)
 			if callback then
+				if SpeedValue.Value == 23.3 then SpeedValue.Value = 21 end
 				shared.SpeedBoostEnabled = SpeedDamageBoost.Enabled
 				Speed:Clean(vapeEvents.EntityDamageEvent.Event:Connect(function(damageTable)
 					if damageTable.entityInstance == lplr.Character and (damageTable.damageType ~= 0 or damageTable.extra and damageTable.extra.chargeRatio ~= nil) and (not (damageTable.knockbackMultiplier and damageTable.knockbackMultiplier.disabled or damageTable.knockbackMultiplier and damageTable.knockbackMultiplier.horizontal == 0)) and SpeedDamageBoost.Enabled then 
@@ -5086,9 +5087,9 @@ run(function()
 	SpeedValue = Speed:CreateSlider({
 		Name = "Speed",
 		Min = 1,
-		Max = 23.3,
+		Max = 23,
 		Function = function(val) end,
-		Default = 23
+		Default = 21
 	})
 	SpeedValueLarge = Speed:CreateSlider({
 		Name = "Big Mode Speed",
