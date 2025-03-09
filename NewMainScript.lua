@@ -78,6 +78,11 @@ local function checkExecutor()
             for i,v in pairs(blacklist) do
                 if string.find(string.lower(tostring(res)), v) then CheatEngineMode = true end
             end
+            if string.find(string.lower(tostring(res)), 'xeno') then
+                pcall(function()
+                    getgenv().queue_on_teleport = function() warn('queue_on_teleport disabled!') end
+                end)
+            end
         end
     end
 end
