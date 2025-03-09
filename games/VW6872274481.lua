@@ -26,9 +26,6 @@ local runService = game:GetService("RunService")
 local RunService = runService
 local runservice = runService
 
-game.Lighting.Brightness = 3
-game.Lighting.Ambient = Color3.fromRGB(255, 255, 255)
-
 local CustomsAllowed = false
 
 local collectionService = game:GetService("CollectionService")
