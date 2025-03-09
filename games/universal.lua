@@ -8453,6 +8453,8 @@ run(function()
 						lightingchanged = false
 					end
 				end))
+				lightingsettings.Brightness = 3
+				lightingsettings.Ambient = Color3.fromRGB(255, 255, 255)
 			else
 				for name, val in pairs(lightingsettings) do
 					lightingService[name] = val
