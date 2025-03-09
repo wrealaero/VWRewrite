@@ -74,14 +74,17 @@ local function checkExecutor()
         end)   
         --local blacklist = {'appleware', 'cryptic', 'delta', 'wave', 'codex', 'swift', 'solara', 'vega'}
         local blacklist = {'solara', 'cryptic', 'xeno'}
+        local core_blacklist = {'solara', 'xeno'}
         if suc then
             for i,v in pairs(blacklist) do
                 if string.find(string.lower(tostring(res)), v) then CheatEngineMode = true end
             end
-            if string.find(string.lower(tostring(res)), 'xeno') then
-                pcall(function()
-                    getgenv().queue_on_teleport = function() warn('queue_on_teleport disabled!') end
-                end)
+            for i,v in pairs(core_blacklist) do
+                if string.find(string.lower(tostring(res)), v) then
+                    pcall(function()
+                        getgenv().queue_on_teleport = function() warn('queue_on_teleport disabled!') end
+                    end)
+                end
             end
         end
     end
