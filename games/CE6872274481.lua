@@ -3974,7 +3974,7 @@ run(function()
 						if killauraNearPlayer then
 							if killauraanimmethod.Value ~= "None" then
 								if killauraNearPlayer and isFirstPerson() then
-									local anim = auras[killauraanimmethod.Value]
+									local anim = anims[killauraanimmethod.Value]
 									for i, v in pairs(anim) do
 										pcall(function()
 											tweenService:Create(bedwars.ViewModel, TweenInfo.new(v.Time), {C0 = oldrotation * v.CFrame}):Play()
