@@ -3930,332 +3930,568 @@ local oldrotation = bedwars.ViewModel.C0
 
 local originalArmC0, originalNeckC0, originalRootC0
 
-local killauraNearPlayer = false
+local Attacking
+local killauraNearPlayer = Attacking
 run(function()
+	local inputService = inputService or game:GetService("UserInputService")
 	local tweenService = tweenService or game:GetService("TweenService")
-	local Killaura = {Enabled = false}
-	local currentAnimationTrack
-	local animationId = bedwars.BlockController:getAnimationController():getAssetId(bedwars.AnimationUtil:fetchAnimationIndexId("SWORD_SWING"))
-	local killauraplaying = false
-	local oldNearPlayer
-	local killaurarange = {Value = 18}
-	local killauracurrentanim
-	local killaurarealremote = bedwars.Client:Get(bedwars.AttackRemote)
-	local killauraanimmethod = {Value = "Normal"}
-	local killaurarangecirclepart
-	local killauraparticlepart
-	local killaurawallscheck = {Enabled = false}
-	local killauraboxSize = Vector3.new(6, 9, 6)
-	local killauraparticle = {Enabled = false}
-	local killaurarangecircle = {Enabled = false}
-	local killauraangle = {Value = 360}
-	local killauratarget = {Enabled = false}
-	local killauracframe = {Enabled = false}
-	local animationdelay = tick()
-	local killaurabox = Instance.new("Part", workspace)
-	killaurabox.Size = Vector3.new(4,6,4)
-	killaurabox.Transparency = 0.5
-	killaurabox.Color = Color3.fromRGB(255, 255, 255)
-	killaurabox.CFrame = CFrame.new(0,10000,0)
-	killaurabox.CanCollide = false
-	killaurabox.Anchored = true
-	local killaurahighlightpart = Instance.new("Highlight", killaurabox)
-	killaurahighlightpart.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-	killaurahighlightpart.OutlineTransparency = 1
-	killaurahighlightpart.FillColor = Color3.fromRGB(255, 255, 255)
-	
+	local TweenService = TweenService or tweenService
+	vape.Libraries = vape.Libraries or {}
+	vape.Libraries.auraanims = vape.Libraries.auraanims or {
+		Normal = {
+			{CFrame = CFrame.new(-0.17, -0.14, -0.12) * CFrame.Angles(math.rad(-53), math.rad(50), math.rad(-64)), Time = 0.1},
+			{CFrame = CFrame.new(-0.55, -0.59, -0.1) * CFrame.Angles(math.rad(-161), math.rad(54), math.rad(-6)), Time = 0.08},
+			{CFrame = CFrame.new(-0.62, -0.68, -0.07) * CFrame.Angles(math.rad(-167), math.rad(47), math.rad(-1)), Time = 0.03},
+			{CFrame = CFrame.new(-0.56, -0.86, 0.23) * CFrame.Angles(math.rad(-167), math.rad(49), math.rad(-1)), Time = 0.03}
+		},
+		Random = {},
+		['Horizontal Spin'] = {
+			{CFrame = CFrame.Angles(math.rad(-10), math.rad(-90), math.rad(-80)), Time = 0.12},
+			{CFrame = CFrame.Angles(math.rad(-10), math.rad(180), math.rad(-80)), Time = 0.12},
+			{CFrame = CFrame.Angles(math.rad(-10), math.rad(90), math.rad(-80)), Time = 0.12},
+			{CFrame = CFrame.Angles(math.rad(-10), 0, math.rad(-80)), Time = 0.12}
+		},
+		['Vertical Spin'] = {
+			{CFrame = CFrame.Angles(math.rad(-90), 0, math.rad(15)), Time = 0.12},
+			{CFrame = CFrame.Angles(math.rad(180), 0, math.rad(15)), Time = 0.12},
+			{CFrame = CFrame.Angles(math.rad(90), 0, math.rad(15)), Time = 0.12},
+			{CFrame = CFrame.Angles(0, 0, math.rad(15)), Time = 0.12}
+		},
+		Exhibition = {
+			{CFrame = CFrame.new(0.69, -0.7, 0.6) * CFrame.Angles(math.rad(-30), math.rad(50), math.rad(-90)), Time = 0.1},
+			{CFrame = CFrame.new(0.7, -0.71, 0.59) * CFrame.Angles(math.rad(-84), math.rad(50), math.rad(-38)), Time = 0.2}
+		},
+		['Exhibition Old'] = {
+			{CFrame = CFrame.new(0.69, -0.7, 0.6) * CFrame.Angles(math.rad(-30), math.rad(50), math.rad(-90)), Time = 0.15},
+			{CFrame = CFrame.new(0.69, -0.7, 0.6) * CFrame.Angles(math.rad(-30), math.rad(50), math.rad(-90)), Time = 0.05},
+			{CFrame = CFrame.new(0.7, -0.71, 0.59) * CFrame.Angles(math.rad(-84), math.rad(50), math.rad(-38)), Time = 0.1},
+			{CFrame = CFrame.new(0.7, -0.71, 0.59) * CFrame.Angles(math.rad(-84), math.rad(50), math.rad(-38)), Time = 0.05},
+			{CFrame = CFrame.new(0.63, -0.1, 1.37) * CFrame.Angles(math.rad(-84), math.rad(50), math.rad(-38)), Time = 0.15}
+		}
+	}
+	local Killaura
+	local Targets
+	local Sort
+	local Range
+	local RangeCircle
+	local RangeCirclePart
+	local UpdateRate
+	local AngleSlider
+	local MaxTargets
+	local Mouse
+	local Swing
+	local GUI
+	local BoxColor
+	local ParticleTexture
+	local ParticleColor1
+	local ParticleColor2
+	local ParticleSize
+	local Face
+	local Animation
+	local AnimationMode
+	local AnimationSpeed
+	local AnimationTween
+	local Limit
+	local LegitAura
+	local Sync
+	local Particles, Boxes = {}, {}
+	local anims, AnimDelay, AnimTween, armC0 = vape.Libraries.auraanims, tick()
+	local AttackRemote = {FireServer = function() end}
+	task.spawn(function()
+		AttackRemote = bedwars.Client:Get(bedwars.AttackRemote)
+	end)
+
+	local function getAttackData()
+		if Mouse.Enabled then
+			if not inputService:IsMouseButtonPressed(0) then return false end
+		end
+
+		local sword = Limit.Enabled and store.hand or getSword()
+		if not sword or not sword.tool then return false end
+
+		local meta = bedwars.ItemTable[sword.tool.Name]
+		if Limit.Enabled then
+			if store.hand.toolType ~= 'sword' or bedwars.DaoController.chargingMaid then return false end
+		end
+
+		if LegitAura.Enabled then
+			if (tick() - bedwars.SwordController.lastSwing) > 0.1 then return false end
+		end
+
+		return sword, meta
+	end
+
 	Killaura = vape.Categories.Blatant:CreateModule({
-		Name = "Killaura",
+		Name = 'Killaura',
 		Function = function(callback)
 			if callback then
-				
-				task.spawn(function()
-					repeat
-						if killauraNearPlayer then
-							if killauraanimmethod.Value ~= "None" then
-								if killauraNearPlayer and isFirstPerson() then
-									local anim = anims[killauraanimmethod.Value]
-									for i, v in pairs(anim) do
+				if inputService.TouchEnabled then
+					pcall(function()
+						lplr.PlayerGui.MobileUI['2'].Visible = Limit.Enabled
+					end)
+				end
+
+				if Animation.Enabled and not (identifyexecutor and table.find({'Argon', 'Delta'}, ({identifyexecutor()})[1])) then
+					local fake = {
+						Controllers = {
+							ViewmodelController = {
+								isVisible = function()
+									return not Attacking
+								end,
+								playAnimation = function(...)
+									local args = {...}
+									if not Attacking then
 										pcall(function()
-											tweenService:Create(bedwars.ViewModel, TweenInfo.new(v.Time), {C0 = oldrotation * v.CFrame}):Play()
+											bedwars.ViewmodelController:playAnimation(select(2, unpack(args)))
 										end)
-										task.wait(v.Time - 0.05)
-									end
-								else
-									pcall(function()
-										tweenService:Create(bedwars.ViewModel, TweenInfo.new(0.1), {C0 = oldrotation}):Play()
-									end)
-								end
-							end
-						end
-						task.wait()
-					until not Killaura.Enabled
-				end)
-
-				--[[task.spawn(function()
-					repeat
-						if killauraanimmethod.Value ~= "None" then
-							if killauraNearPlayer then
-								pcall(function()
-									if originalArmC0 == nil then
-										originalArmC0 = gameCamera.Viewmodel.RightHand.RightWrist.C0
-									end
-									if killauraplaying == false then
-										killauraplaying = true
-										for i,v in pairs(anims[killauraanimmethod.Value]) do
-											if (not Killaura.Enabled) or (not killauraNearPlayer) then break end
-											if not oldNearPlayer then
-												gameCamera.Viewmodel.RightHand.RightWrist.C0 = originalArmC0 * v.CFrame
-												continue
-											end
-											killauracurrentanim = tweenService:Create(gameCamera.Viewmodel.RightHand.RightWrist, TweenInfo.new(v.Time), {C0 = originalArmC0 * v.CFrame})
-											killauracurrentanim:Play()
-											task.wait(v.Time - 0.01)
-										end
-										killauraplaying = false
-									end
-								end)
-							end
-						end
-						task.wait()
-					until (not Killaura.Enabled)
-				end)--]]
-	
-				task.spawn(function()
-					repeat
-						if killauratarget.Enabled then
-							local plr = EntityNearPosition(killaurarange.Value, false)
-	
-							if plr then
-								killaurabox.Color = Color3.fromRGB(255, 255, 255)
-								killaurabox.CFrame = plr.Character.PrimaryPart.CFrame
-								killaurahighlightpart.FillColor = Color3.fromRGB(255, 255, 255)
-							else
-								killaurabox.CFrame = CFrame.new(0,1000,0)
-							end
-						end
-						task.wait()
-					until not Killaura.Enabled
-				end)
-				
-				task.spawn(function()
-					repeat
-						local attacked = {}
-						local plr = EntityNearPosition(killaurarange.Value, false)
-						
-						if plr and entitylib.isAlive then
-							table.insert(attacked, plr)
-							local localfacing = entityLibrary.character.HumanoidRootPart.CFrame.lookVector
-							local vec = (plr.RootPart.Position - entityLibrary.character.HumanoidRootPart.Position).unit
-							local angle = math.acos(localfacing:Dot(vec))
-							if angle >= (math.rad(killauraangle.Value) / 2) then
-								return
-							end
-							local selfrootpos = entityLibrary.character.HumanoidRootPart.Position
-							if killaurawallscheck.Enabled then
-								if not Wallcheck(lplr.Character, plr.Character) then return end
-							end
-
-							local weapon = getSword()
-							if not weapon then return end
-		
-							switchItem(weapon.tool)
-
-							pcall(function()
-								if animationdelay <= tick() then
-									local swordmeta = bedwars.ItemTable[weapon.itemType]
-									animationdelay = tick() + (swordmeta.sword.respectAttackSpeedForEffects and swordmeta.sword.attackSpeed or 0.24)
-									bedwars.SwordController:playSwordEffect(swordmeta, false)
-									if swordmeta.displayName:find(" Scythe") then
-										bedwars.ScytheController:playLocalAnimation()
 									end
 								end
-							end)
-
-							killaurarealremote:FireServer({
-								weapon = weapon.tool,
-								chargedAttack = {chargeRatio = 100},
-								entityInstance = plr.Character,
-								validate = {
-									targetPosition = {value = plr.Character.PrimaryPart.Position + Vector3.new(plr.Character.PrimaryPart.Velocity.X / 20, 0, plr.Character.PrimaryPart.Velocity.Z / 20)},
-									selfPosition = {value = lplr.Character.PrimaryPart.Position + Vector3.new(lplr.Character.PrimaryPart.Velocity.X / 20, 0, lplr.Character.PrimaryPart.Velocity.Z / 20)},
-								}
-							})
-							
-							vapeTargetInfo.Targets.Killaura = {
-								Humanoid = {
-									Health = (plr.Character:GetAttribute("Health") or plr.Humanoid.Health) + getShieldAttribute(plr.Character),
-									MaxHealth = plr.Character:GetAttribute("MaxHealth") or plr.Humanoid.MaxHealth
-								},
-								Player = plr.Player
 							}
-		
-							if AutoHop.Enabled and lplr.Character.Humanoid.FloorMaterial ~= Enum.Material.Air then
-								lplr.Character.PrimaryPart.Velocity = Vector3.new(lplr.Character.PrimaryPart.Velocity.X, 30, lplr.Character.PrimaryPart.Velocity.Z)
+						}
+					}
+					--debug.setupvalue(bedwars.SwordController.playSwordEffect, 6, fake)
+					--debug.setupvalue(bedwars.ScytheController.playLocalAnimation, 3, fake)
+
+					task.spawn(function()
+						local started = false
+						repeat
+							if Attacking then
+								if not armC0 then
+									armC0 = gameCamera.Viewmodel.RightHand.RightWrist.C0
+								end
+								local first = not started
+								started = true
+
+								if AnimationMode.Value == 'Random' then
+									anims.Random = {{CFrame = CFrame.Angles(math.rad(math.random(1, 360)), math.rad(math.random(1, 360)), math.rad(math.random(1, 360))), Time = 0.12}}
+								end
+
+								for _, v in anims[AnimationMode.Value] do
+									AnimTween = tweenService:Create(gameCamera.Viewmodel.RightHand.RightWrist, TweenInfo.new(first and (AnimationTween.Enabled and 0.001 or 0.1) or v.Time / AnimationSpeed.Value, Enum.EasingStyle.Linear), {
+										C0 = armC0 * v.CFrame
+									})
+									AnimTween:Play()
+									AnimTween.Completed:Wait()
+									first = false
+									if (not Killaura.Enabled) or (not Attacking) then break end
+								end
+							elseif started then
+								started = false
+								AnimTween = tweenService:Create(gameCamera.Viewmodel.RightHand.RightWrist, TweenInfo.new(AnimationTween.Enabled and 0.001 or 0.3, Enum.EasingStyle.Exponential), {
+									C0 = armC0
+								})
+								AnimTween:Play()
 							end
 
-							local Root = entityLibrary.character.HumanoidRootPart
-							if Root then
-								if killaurarangecirclepart then
-									killaurarangecirclepart.Position = Root.Position - Vector3.new(0, entityLibrary.character.Humanoid.HipHeight, 0)
-								end
-								local Neck = entityLibrary.character.Head:FindFirstChild("Neck")
-								local LowerTorso = Root.Parent and Root.Parent:FindFirstChild("LowerTorso")
-								local RootC0 = LowerTorso and LowerTorso:FindFirstChild("Root")
-								if Neck and RootC0 then
-									if originalNeckC0 == nil then
-										originalNeckC0 = Neck.C0.p
-									end
-									if originalRootC0 == nil then
-										originalRootC0 = RootC0.C0.p
-									end
-									if originalRootC0 and killauracframe.Enabled then
-										if targetedPlayer ~= nil then
-											local targetPos = targetedPlayer.PrimaryPart.Position + Vector3.new(0, 2, 0)
-											local direction = (Vector3.new(targetPos.X, targetPos.Y, targetPos.Z) - entityLibrary.character.Head.Position).Unit
-											local direction2 = (Vector3.new(targetPos.X, Root.Position.Y, targetPos.Z) - Root.Position).Unit
-											local lookCFrame = (CFrame.new(Vector3.zero, (Root.CFrame):VectorToObjectSpace(direction)))
-											local lookCFrame2 = (CFrame.new(Vector3.zero, (Root.CFrame):VectorToObjectSpace(direction2)))
-											Neck.C0 = CFrame.new(originalNeckC0) * CFrame.Angles(lookCFrame.LookVector.Unit.y, 0, 0)
-											RootC0.C0 = lookCFrame2 + originalRootC0
-										else
-											Neck.C0 = CFrame.new(originalNeckC0)
-											RootC0.C0 = CFrame.new(originalRootC0)
+							if not started then
+								task.wait(1 / UpdateRate.Value)
+							end
+						until (not Killaura.Enabled) or (not Animation.Enabled)
+					end)
+				end
+
+				repeat
+					pcall(function()
+						if entitylib.isAlive and entitylib.character.HumanoidRootPart then
+							TweenService:Create(RangeCirclePart, TweenInfo.new(0.2, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {Position = entitylib.character.HumanoidRootPart.Position - Vector3.new(0, entitylib.character.Humanoid.HipHeight, 0)}):Play()
+						end
+					end)
+					local attacked, sword, meta = {}, getAttackData()
+					Attacking = false
+					killauraNearPlayer = Attacking
+					store.KillauraTarget = nil
+					pcall(function() vapeTargetInfo.Targets.Killaura = nil end)
+					if sword then
+						local plrs = entitylib.AllPosition({
+							Range = Range.Value,
+							Part = 'RootPart',
+							Players = Targets.Players.Enabled,
+							NPCs = Targets.NPCs.Enabled,
+							Limit = MaxTargets.Value,
+							Sort = sortmethods[Sort.Value]
+						})
+
+						if #plrs > 0 then
+							switchItem(sword.tool, 0)
+							local selfpos = entitylib.character.RootPart.Position
+							local localfacing = entitylib.character.RootPart.CFrame.LookVector * Vector3.new(1, 0, 1)
+
+							for _, v in plrs do
+								if Targets.Walls.Enabled and not Wallcheck(lplr.Character, plr.Character) then continue end
+
+								local delta = (v.RootPart.Position - selfpos)
+								local angle = math.acos(localfacing:Dot((delta * Vector3.new(1, 0, 1)).Unit))
+								if angle > (math.rad(AngleSlider.Value) / 2) then continue end
+
+								table.insert(attacked, v)
+								targetinfo.Targets[v] = tick() + 1
+								pcall(function()
+									local plr = v
+									vapeTargetInfo.Targets.Killaura = {
+										Humanoid = {
+											Health = (plr.Character:GetAttribute("Health") or plr.Humanoid.Health) + getShieldAttribute(plr.Character),
+											MaxHealth = plr.Character:GetAttribute("MaxHealth") or plr.Humanoid.MaxHealth
+										},
+										Player = plr.Player
+									}
+								end)
+								if not Attacking then
+									Attacking = true
+									killauraNearPlayer = Attacking
+									store.KillauraTarget = v
+									if not Swing.Enabled and AnimDelay <= tick() and not LegitAura.Enabled then
+										AnimDelay = tick() + (meta.sword.respectAttackSpeedForEffects and meta.sword.attackSpeed or (Sync.Enabled and 0.24 or 0.14))
+										bedwars.SwordController:playSwordEffect(meta, 0)
+										if meta.displayName:find(' Scythe') then
+											bedwars.ScytheController:playLocalAnimation()
 										end
 									end
 								end
+
+								local actualRoot = v.Character.PrimaryPart
+								if actualRoot then
+									local dir = CFrame.lookAt(selfpos, actualRoot.Position).LookVector
+									local pos = selfpos + dir * math.max(delta.Magnitude - 14.399, 0)
+									bedwars.SwordController.lastAttack = workspace:GetServerTimeNow()
+									store.attackReach = (delta.Magnitude * 100) // 1 / 100
+									store.attackReachUpdate = tick() + 1
+									AttackRemote:FireServer({
+										weapon = sword.tool,
+										chargedAttack = {chargeRatio = meta.sword.chargedAttack and not meta.sword.chargedAttack.disableOnGrounded and 0.999 or 0},
+										entityInstance = v.Character,
+										validate = {
+											raycast = {
+												cameraPosition = {value = pos},
+												cursorDirection = {value = dir}
+											},
+											targetPosition = {value = actualRoot.Position},
+											selfPosition = {value = pos}
+										}
+									})
+								end
 							end
-		
-							killauraNearPlayer = true
-						else
-							vapeTargetInfo.Targets.Killaura = nil
-							killauraNearPlayer = false
 						end
-						task.wait(#attacked > 0 and #attacked * 0.02 or 1 / 60)
-					until (not Killaura.Enabled)
-				end)
+					end
+
+					for i, v in Boxes do
+						v.Adornee = attacked[i] and attacked[i].RootPart or nil
+						if v.Adornee then
+							v.Color3 = Color3.fromHSV(BoxColor.Hue, BoxColor.Sat, BoxColor.Value)
+							v.Transparency = 1 - BoxColor.Opacity
+						end
+					end
+
+					for i, v in Particles do
+						v.Position = attacked[i] and attacked[i].RootPart.Position or Vector3.new(9e9, 9e9, 9e9)
+						v.Parent = attacked[i] and gameCamera or nil
+					end
+
+					if Face.Enabled and attacked[1] then
+						local vec = attacked[1].RootPart.Position * Vector3.new(1, 0, 1)
+						entitylib.character.RootPart.CFrame = CFrame.lookAt(entitylib.character.RootPart.Position, Vector3.new(vec.X, entitylib.character.RootPart.Position.Y + 0.001, vec.Z))
+					end
+					pcall(function() if RangeCirclePart ~= nil then RangeCirclePart.Parent = gameCamera end end)
+
+					task.wait(#attacked > 0 and #attacked * 0.02 or 1 / UpdateRate.Value)
+				until not Killaura.Enabled
 			else
-				killauraNearPlayer = false
+				store.KillauraTarget = nil
+				for _, v in Boxes do
+					v.Adornee = nil
+				end
+				for _, v in Particles do
+					v.Parent = nil
+				end
+				if inputService.TouchEnabled then
+					pcall(function()
+						lplr.PlayerGui.MobileUI['2'].Visible = true
+					end)
+				end
+				--debug.setupvalue(bedwars.SwordController.playSwordEffect, 6, bedwars.Knit)
+				--debug.setupvalue(bedwars.ScytheController.playLocalAnimation, 3, bedwars.Knit)
+				Attacking = false
+				killauraNearPlayer = Attacking
+				if armC0 then
+					AnimTween = tweenService:Create(gameCamera.Viewmodel.RightHand.RightWrist, TweenInfo.new(AnimationTween.Enabled and 0.001 or 0.3, Enum.EasingStyle.Exponential), {
+						C0 = armC0
+					})
+					AnimTween:Play()
+				end
+				if RangeCirclePart ~= nil then RangeCirclePart:Destroy() end
 			end
 		end,
+		Tooltip = 'Attack players around you\nwithout aiming at them.'
 	})
-	killaurarange = Killaura:CreateSlider({
-		Name = "Attack range",
-		Default = 18,
+	Targets = Killaura:CreateTargets({
+		Players = true,
+		NPCs = true
+	})
+	local methods = {'Damage', 'Distance'}
+	for i in sortmethods do
+		if not table.find(methods, i) then
+			table.insert(methods, i)
+		end
+	end
+	Range = Killaura:CreateSlider({
+		Name = 'Attack range',
 		Min = 1,
-		Max = 22,
-		Function = function(val)
-			if killaurarangecirclepart then
-				killaurarangecirclepart.Size = Vector3.new(val * 0.7, 0.01, val * 0.7)
-			end
+		Max = 18,
+		Default = 18,
+		Suffix = function(val)
+			return val == 1 and 'stud' or 'studs'
 		end
 	})
-	killaurawallscheck = Killaura:CreateToggle({
-		Name = "Walls Check",
-		Function = function()
-			if Killaura.Enabled then
-				Killaura:Toggle()
-				Killaura:Toggle()
-			end
-		end,
-		Default = false
-	})
-	killaurarangecircle = Killaura:CreateToggle({
-		Name = "Range Visualizer",
-		Function = function(callback)
-			if callback then
+	RangeCircle = Killaura:CreateToggle({
+		Name = "Range Visualiser",
+		Function = function(call)
+			if call then
 				local suc, err = pcall(function()
-					if identifyexecutor and not string.find(string.lower(identifyexecutor()), "wave") --[[and not shared.CheatEngineMode--]] then
-						killaurarangecirclepart = Instance.new("MeshPart")
-						killaurarangecirclepart.MeshId = "rbxassetid://3726303797"
+					if (not shared.CheatEngineMode) then
+						RangeCirclePart = Instance.new("MeshPart")
+						RangeCirclePart.MeshId = "rbxassetid://3726303797"
 						if shared.RiseMode and GuiLibrary.GUICoreColor and GuiLibrary.GUICoreColorChanged then
-							killaurarangecirclepart.Color = GuiLibrary.GUICoreColor
+							RangeCirclePart.Color = GuiLibrary.GUICoreColor
 							GuiLibrary.GUICoreColorChanged.Event:Connect(function()
-								killaurarangecirclepart.Color = GuiLibrary.GUICoreColor
+								RangeCirclePart.Color = GuiLibrary.GUICoreColor
 							end)
 						else
-							killaurarangecirclepart.Color = Color3.fromHSV(killauracolor["Hue"], killauracolor["Sat"], killauracolor.Value)
-							killauracolorChanged.Event:Connect(function()
-								killaurarangecirclepart.Color = Color3.fromHSV(killauracolor["Hue"], killauracolor["Sat"], killauracolor.Value)
-							end)
+							RangeCirclePart.Color = Color3.fromHSV(BoxColor["Hue"], BoxColor["Sat"], BoxColor.Value)
 						end
-						killaurarangecirclepart.CanCollide = false
-						killaurarangecirclepart.Anchored = true
-						killaurarangecirclepart.Material = Enum.Material.Neon
-						killaurarangecirclepart.Size = Vector3.new(killaurarange.Value * 0.7, 0.01, killaurarange.Value * 0.7)
+						RangeCirclePart.CanCollide = false
+						RangeCirclePart.Anchored = true
+						RangeCirclePart.Material = Enum.Material.Neon
+						RangeCirclePart.Size = Vector3.new(Range.Value * 0.7, 0.01, Range.Value * 0.7)
 						if Killaura.Enabled then
-							killaurarangecirclepart.Parent = gameCamera
+							RangeCirclePart.Parent = gameCamera
 						end
-						--bedwars.QueryUtil:setQueryIgnored(killaurarangecirclepart, true)
+						--bedwars.QueryUtil:setQueryIgnored(RangeCirclePart, true)
 					end
 				end)
 				if (not suc) then
 					pcall(function()
-						killaurarangecircle:ToggleButton(false)
+						if RangeCirclePart then
+							RangeCirclePart:Destroy()
+							RangeCirclePart = nil
+						end
 						InfoNotification("Killaura - Range Visualiser Circle", "There was an error creating the circle. Disabling...", 2)
 					end)
 				end
 			else
-				if killaurarangecirclepart then
-					killaurarangecirclepart:Destroy()
-					killaurarangecirclepart = nil
+				if RangeCirclePart then
+					RangeCirclePart:Destroy()
+					RangeCirclePart = nil
 				end
 			end
 		end
 	})
-	killauracframe = Killaura:CreateToggle({
-		Name = "Face target",
-		Function = function() end,
-		HoverText = "Makes your character face the opponent."
-	})
-	killauraanimmethod = Killaura:CreateDropdown({
-		Name = "Animation",
-		List = cleanTable(anims),
-		Function = function() end
-	})
-	killauraparticle = Killaura:CreateToggle({
-		Name = "Crit Particle",
-		Function = function(callback)
-			if callback then
-				killauraparticlepart = Instance.new("Part")
-				killauraparticlepart.Transparency = 1
-				killauraparticlepart.CanCollide = false
-				killauraparticlepart.Anchored = true
-				killauraparticlepart.Size = killauraboxSize
-				killauraparticlepart.Parent = cam
-				local particle = Instance.new("ParticleEmitter")
-				particle.Lifetime = NumberRange.new(0.5)
-				particle.Rate = 500
-				particle.Speed = NumberRange.new(0)
-				particle.RotSpeed = NumberRange.new(180)
-				particle.Texture = 'rbxassetid://14736249347'
-				particle.Enabled = true
-				particle.Size = NumberSequence.new(0.3)
-				particle.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(67, 10, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 98, 255))})
-				particle.Parent = killauraparticlepart
-			else
-				if killauraparticlepart then
-					killauraparticlepart:Destroy()
-					killauraparticlepart = nil
-				end
-			end
-		end,
-		Default = true
-	})
-	killauraangle = Killaura:CreateSlider({
-		Name = "Max angle",
+	AngleSlider = Killaura:CreateSlider({
+		Name = 'Max angle',
 		Min = 1,
 		Max = 360,
-		Function = function() end,
 		Default = 360
 	})
-	AutoHop = Killaura:CreateToggle({
-		Name = "AutoHop",
-		Function = function() end
+	UpdateRate = Killaura:CreateSlider({
+		Name = 'Update rate',
+		Min = 1,
+		Max = 120,
+		Default = 60,
+		Suffix = 'hz'
 	})
-	killauratarget = Killaura:CreateToggle({
-		Name = "Target Visualiser",
-		Function = function() end
+	MaxTargets = Killaura:CreateSlider({
+		Name = 'Max targets',
+		Min = 1,
+		Max = 5,
+		Default = 5
+	})
+	Sort = Killaura:CreateDropdown({
+		Name = 'Target Mode',
+		List = methods
+	})
+	Mouse = Killaura:CreateToggle({Name = 'Require mouse down'})
+	Swing = Killaura:CreateToggle({Name = 'No Swing'})
+	GUI = Killaura:CreateToggle({Name = 'GUI check'})
+	Killaura:CreateToggle({
+		Name = 'Show target',
+		Function = function(callback)
+			BoxColor.Object.Visible = callback
+			if callback then
+				for i = 1, 10 do
+					local box = Instance.new('BoxHandleAdornment')
+					box.Adornee = nil
+					box.AlwaysOnTop = true
+					box.Size = Vector3.new(3, 5, 3)
+					box.CFrame = CFrame.new(0, -0.5, 0)
+					box.ZIndex = 0
+					box.Parent = vape.gui
+					Boxes[i] = box
+				end
+			else
+				for _, v in Boxes do
+					v:Destroy()
+				end
+				table.clear(Boxes)
+			end
+		end
+	})
+	BoxColor = Killaura:CreateColorSlider({
+		Name = 'Attack Color',
+		Darker = true,
+		DefaultOpacity = 0.5,
+		Visible = false,
+		Function = function(hue, sat, val)
+			if Killaura.Enabled and RangeCirclePart ~= nil then
+				RangeCirclePart.Color = Color3.fromHSV(hue, sat, val)
+			end
+		end
+	})
+	Killaura:CreateToggle({
+		Name = 'Target particles',
+		Function = function(callback)
+			ParticleTexture.Object.Visible = callback
+			ParticleColor1.Object.Visible = callback
+			ParticleColor2.Object.Visible = callback
+			ParticleSize.Object.Visible = callback
+			if callback then
+				for i = 1, 10 do
+					local part = Instance.new('Part')
+					part.Size = Vector3.new(2, 4, 2)
+					part.Anchored = true
+					part.CanCollide = false
+					part.Transparency = 1
+					part.CanQuery = false
+					part.Parent = Killaura.Enabled and gameCamera or nil
+					local particles = Instance.new('ParticleEmitter')
+					particles.Brightness = 1.5
+					particles.Size = NumberSequence.new(ParticleSize.Value)
+					particles.Shape = Enum.ParticleEmitterShape.Sphere
+					particles.Texture = ParticleTexture.Value
+					particles.Transparency = NumberSequence.new(0)
+					particles.Lifetime = NumberRange.new(0.4)
+					particles.Speed = NumberRange.new(16)
+					particles.Rate = 128
+					particles.Drag = 16
+					particles.ShapePartial = 1
+					particles.Color = ColorSequence.new({
+						ColorSequenceKeypoint.new(0, Color3.fromHSV(ParticleColor1.Hue, ParticleColor1.Sat, ParticleColor1.Value)),
+						ColorSequenceKeypoint.new(1, Color3.fromHSV(ParticleColor2.Hue, ParticleColor2.Sat, ParticleColor2.Value))
+					})
+					particles.Parent = part
+					Particles[i] = part
+				end
+			else
+				for _, v in Particles do
+					v:Destroy()
+				end
+				table.clear(Particles)
+			end
+		end
+	})
+	ParticleTexture = Killaura:CreateTextBox({
+		Name = 'Texture',
+		Default = 'rbxassetid://14736249347',
+		Function = function()
+			for _, v in Particles do
+				v.ParticleEmitter.Texture = ParticleTexture.Value
+			end
+		end,
+		Darker = true,
+		Visible = false
+	})
+	ParticleColor1 = Killaura:CreateColorSlider({
+		Name = 'Color Begin',
+		Function = function(hue, sat, val)
+			for _, v in Particles do
+				v.ParticleEmitter.Color = ColorSequence.new({
+					ColorSequenceKeypoint.new(0, Color3.fromHSV(hue, sat, val)),
+					ColorSequenceKeypoint.new(1, Color3.fromHSV(ParticleColor2.Hue, ParticleColor2.Sat, ParticleColor2.Value))
+				})
+			end
+		end,
+		Darker = true,
+		Visible = false
+	})
+	ParticleColor2 = Killaura:CreateColorSlider({
+		Name = 'Color End',
+		Function = function(hue, sat, val)
+			for _, v in Particles do
+				v.ParticleEmitter.Color = ColorSequence.new({
+					ColorSequenceKeypoint.new(0, Color3.fromHSV(ParticleColor1.Hue, ParticleColor1.Sat, ParticleColor1.Value)),
+					ColorSequenceKeypoint.new(1, Color3.fromHSV(hue, sat, val))
+				})
+			end
+		end,
+		Darker = true,
+		Visible = false
+	})
+	ParticleSize = Killaura:CreateSlider({
+		Name = 'Size',
+		Min = 0,
+		Max = 1,
+		Default = 0.2,
+		Decimal = 100,
+		Function = function(val)
+			for _, v in Particles do
+				v.ParticleEmitter.Size = NumberSequence.new(val)
+			end
+		end,
+		Darker = true,
+		Visible = false
+	})
+	Face = Killaura:CreateToggle({Name = 'Face target'})
+	Animation = Killaura:CreateToggle({
+		Name = 'Custom Animation',
+		Function = function(callback)
+			AnimationMode.Object.Visible = callback
+			AnimationTween.Object.Visible = callback
+			AnimationSpeed.Object.Visible = callback
+			if Killaura.Enabled then
+				Killaura:Toggle()
+				Killaura:Toggle()
+			end
+		end
+	})
+	local animnames = {}
+	for i in anims do
+		table.insert(animnames, i)
+	end
+	AnimationMode = Killaura:CreateDropdown({
+		Name = 'Animation Mode',
+		List = animnames,
+		Darker = true,
+		Visible = false
+	})
+	AnimationSpeed = Killaura:CreateSlider({
+		Name = 'Animation Speed',
+		Min = 0,
+		Max = 2,
+		Default = 1,
+		Decimal = 10,
+		Darker = true,
+		Visible = false
+	})
+	AnimationTween = Killaura:CreateToggle({
+		Name = 'No Tween',
+		Darker = true,
+		Visible = false
+	})
+	Limit = Killaura:CreateToggle({
+		Name = 'Limit to items',
+		Function = function(callback)
+			if inputService.TouchEnabled and Killaura.Enabled then
+				pcall(function()
+					lplr.PlayerGui.MobileUI['2'].Visible = callback
+				end)
+			end
+		end,
+		Tooltip = 'Only attacks when the sword is held'
+	})
+	LegitAura = Killaura:CreateToggle({
+		Name = 'Swing only',
+		Tooltip = 'Only attacks while swinging manually'
+	})
+	Sync = Killaura:CreateToggle({
+		Name = 'Synced Animation',
+		Tooltip = 'Plays animation with hit attempt'
 	})
 end)
 
