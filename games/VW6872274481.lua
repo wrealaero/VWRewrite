@@ -3831,7 +3831,7 @@ run(function()
 			if callback then
 				task.spawn(function()
 					repeat task.wait()
-						pcall(function()
+						local res, msg = pcall(function()
 							if (not vape.Modules.Fly.Enabled) and (not vape.Modules.InfiniteFly.Enabled) then
 								for i, v in pairs(game:GetService("Players"):GetChildren()) do
 									if v.Team ~= lplr.Team and IsAlive(v) and IsAlive(lplr) then
@@ -3857,7 +3857,7 @@ run(function()
 															end
 														end
 					
-														lplr.Character:WaitForChild("HumanoidRootPart").CFrame = lplr.Character:WaitForChild("HumanoidRootPart").CFrame + Vector3.new(0,100000,0)
+														lplr.Character:WaitForChild("HumanoidRootPart").CFrame = lplr.Character:WaitForChild("HumanoidRootPart").CFrame + Vector3.new(0,100,0)
 					
 														GodMode:Clean(game:GetService("RunService").RenderStepped:Connect(function()
 															if Clone ~= nil and Clone:FindFirstChild("HumanoidRootPart") then
@@ -3879,6 +3879,7 @@ run(function()
 								end
 							end
 						end)
+						if not res then warn(msg) end
 					until (not GodMode.Enabled)
 				end)
 			end
@@ -3889,7 +3890,7 @@ run(function()
 		Function = function() end,
 		Default = 2,
 		Min = 1,
-		Max = 10
+		Max = 25
 	})
 end)
 
