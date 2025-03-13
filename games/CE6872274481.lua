@@ -9688,6 +9688,51 @@ run(function()
 	})
 end)
 
+run(function()
+	local function isXeno()
+		local status = false
+
+		if identifyexecutor ~= nil and type(identifyexecutor) == "function" then
+			local suc, res = pcall(function()
+				return identifyexecutor()
+			end)   
+			res = tostring(res)
+			if string.find(string.lower(res), 'xeno') then status = true end
+		else status = false end
+
+		return status
+	end
+	if isXeno() then
+		local CombatConstant
+
+		local Value
+		
+		Reach = vape.Categories.Combat:CreateModule({
+			Name = 'Reach',
+			Function = function(callback)
+				if callback and CombatConstant == nil then CombatConstant = require(game:GetService("ReplicatedStorage"):WaitForChild("TS").combat["combat-constant"]).CombatConstant end
+				CombatConstant.RAYCAST_SWORD_CHARACTER_DISTANCE = callback and Value.Value + 2 or 14.4
+			end,
+			Tooltip = 'Extends attack reach'
+		})
+		Value = Reach:CreateSlider({
+			Name = 'Range',
+			Min = 0,
+			Max = 18,
+			Default = 18,
+			Function = function(val)
+				if Reach.Enabled then
+					if CombatConstant == nil then CombatConstant = require(game:GetService("ReplicatedStorage"):WaitForChild("TS").combat["combat-constant"]).CombatConstant end
+					CombatConstant.RAYCAST_SWORD_CHARACTER_DISTANCE = val + 2
+				end
+			end,
+			Suffix = function(val)
+				return val == 1 and 'stud' or 'studs'
+			end
+		})
+	end
+end)
+
 --VoidwareFunctions.GlobaliseObject("store", store)
 VoidwareFunctions.GlobaliseObject("GlobalStore", store)
 
