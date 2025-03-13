@@ -2336,7 +2336,7 @@ run(function()
 		Function = function(callback)
 			if callback then
 				AimAssist:Clean(runService.Heartbeat:Connect(function(dt)
-					if entitylib.isAlive and store.localHand.toolType == 'sword' and ((not ClickAim.Enabled) or (tick() - bedwars.SwordController.lastSwing) < 0.4) then
+					if entitylib.isAlive and store.localHand.Type == 'sword' and ((not ClickAim.Enabled) or (tick() - bedwars.SwordController.lastSwing) < 0.4) then
 						local ent = entitylib.EntityPosition({
 							Range = Distance.Value,
 							Part = 'RootPart',
@@ -4006,12 +4006,12 @@ run(function()
 			if not inputService:IsMouseButtonPressed(0) then return false end
 		end
 
-		local sword = Limit.Enabled and store.hand or getSword()
+		local sword = Limit.Enabled and store.localHand or getSword()
 		if not sword or not sword.tool then return false end
 
 		local meta = bedwars.ItemTable[sword.tool.Name]
 		if Limit.Enabled then
-			if store.hand.toolType ~= 'sword' or bedwars.DaoController.chargingMaid then return false end
+			if store.localHand.Type ~= 'sword' or bedwars.DaoController.chargingMaid then return false end
 		end
 
 		if LegitAura.Enabled then
