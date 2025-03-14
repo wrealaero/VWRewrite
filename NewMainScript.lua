@@ -264,15 +264,6 @@ local function pload(fileName, isImportant, required)
         end
     end
 end
-
-pcall(function()
-    task.spawn(function()
-        if isfolder('newvape') then 
-            delfolder('newvape') -- skidding from me and then saying that im the skid :skull: ok 
-        end
-    end)
-end)
-
 shared.pload = pload
 getgenv().pload = pload
 
