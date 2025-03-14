@@ -542,79 +542,81 @@ local function hookCF(func, settings)
 	local settings = {}
 	local old = func
 	func = function(...)
-		local args = {...}
-		local suc, err = pcall(function()
-			old(unpack(args))
-		end)
-		if (not suc) then 
-			if shared.VoidDev then
+		task.spawn(function()
+			local args = {...}
+			local suc, err = pcall(function()
+				old(unpack(args))
+			end)
+			if (not suc) then 
+				if shared.VoidDev then
+					task.spawn(function()
+						repeat task.wait() until errorNotification ~= nil and type(errorNotification) == "function"
+						errorNotification("Voidware | "..tostring(S_Name), debug.traceback(tostring(err)), 10)
+					end)
+				end
 				task.spawn(function()
 					repeat task.wait() until errorNotification ~= nil and type(errorNotification) == "function"
-					errorNotification("Voidware | "..tostring(S_Name), debug.traceback(tostring(err)), 10)
-				end)
-			end
-			task.spawn(function()
-				repeat task.wait() until errorNotification ~= nil and type(errorNotification) == "function"
-				if S_Name ~= "Not Specified" then
-					if attemptedRestarts[S_Name] then 
-						errorNotification('Voidware | '..tostring(S_Name), "Restart failed!", 3)
-						errorNotification("Voidware | "..tostring(S_Name), "There was an error with this module. If you can please send the\n VW_Error_Log.json in your workspace to erchodev#0 or discord.gg/voidware", 10)
+					if S_Name ~= "Not Specified" then
+						if attemptedRestarts[S_Name] then 
+							errorNotification('Voidware | '..tostring(S_Name), "Restart failed!", 3)
+							errorNotification("Voidware | "..tostring(S_Name), "There was an error with this module. If you can please send the\n VW_Error_Log.json in your workspace to erchodev#0 or discord.gg/voidware", 10)
+						else
+							errorNotification('Voidware | '..tostring(S_Name), "There was an error with this module. Attempting restart...", 3)
+							attemptedRestarts[S_Name] = true
+							local suc2, err2 = pcall(function() func(false) end)
+							if suc2 then InfoNotification("Voidware | "..tostring(S_Name), "Restart successfull!", 3); end
+						end
 					else
-						errorNotification('Voidware | '..tostring(S_Name), "There was an error with this module. Attempting restart...", 3)
-						attemptedRestarts[S_Name] = true
-						local suc2, err2 = pcall(function() func(false) end)
-						if suc2 then InfoNotification("Voidware | "..tostring(S_Name), "Restart successfull!", 3); end
+						errorNotification("Voidware | "..tostring(S_Name), "There was an error with this module. If you can please send the\n VW_Error_Log.json in your workspace to erchodev#0 or discord.gg/voidware", 10)
 					end
-				else
-					errorNotification("Voidware | "..tostring(S_Name), "There was an error with this module. If you can please send the\n VW_Error_Log.json in your workspace to erchodev#0 or discord.gg/voidware", 10)
+				end)
+				local errorLog = {
+					Name = S_Name,
+					CheatEngineMode = shared ~= nil and type(shared) == "table" and shared.CheatEngineMode,
+					Response = tostring(err),
+					Debug = debug.traceback(tostring(err)),
+					--Creation = S_Creation,
+					PlaceId = game.PlaceId,
+					JobId = game.JobId
+				}
+				local main = {}
+				if isfile('VW_Error_Log.json') then
+					local res = loadJson('VW_Error_Log.json')
+					main = res or main
 				end
-			end)
-			local errorLog = {
-				Name = S_Name,
-				CheatEngineMode = shared ~= nil and type(shared) == "table" and shared.CheatEngineMode,
-				Response = tostring(err),
-				Debug = debug.traceback(tostring(err)),
-				--Creation = S_Creation,
-				PlaceId = game.PlaceId,
-				JobId = game.JobId
-			}
-			local main = {}
-			if isfile('VW_Error_Log.json') then
-				local res = loadJson('VW_Error_Log.json')
-				main = res or main
+				main["LogInfo"] = {
+					Version = "REWRITE",
+					Executor = identifyexecutor and ({identifyexecutor()})[1] or "Unknown executor",
+					CheatEngineMode = shared.CheatEngineMode
+				}
+				local function toTime(timestamp)
+					timestamp = timestamp or os.time()
+					local dateTable = os.date("*t", timestamp)
+					local timeString = string.format("%02d:%02d:%02d", dateTable.hour, dateTable.min, dateTable.sec)
+					return timeString
+				end
+				local function toDate(timestamp)
+					timestamp = timestamp or os.time()
+					local dateTable = os.date("*t", timestamp)
+					local dateString = string.format("%02d/%02d/%02d", dateTable.day, dateTable.month, dateTable.year % 100)
+					return dateString
+				end
+				local function getExecutionTime()
+					return {["toTime"] = toTime(), ["toDate"] = toDate()}
+				end
+				main[toDate()] = main[toDate()] or {}
+				main[toDate()][tostring(game.PlaceId).." | "..tostring(game.JobId)] = main[toDate()][tostring(game.PlaceId).." | "..tostring(game.JobId)] or {}
+				main[toDate()][tostring(game.PlaceId).." | "..tostring(game.JobId)][S_Name] = main[toDate()][tostring(game.PlaceId).." | "..tostring(game.JobId)][S_Name] or {}
+				table.insert(main[toDate()][tostring(game.PlaceId).." | "..tostring(game.JobId)][S_Name], {
+					Time = getExecutionTime(),
+					Data = errorLog
+				})
+				writefile('VW_Error_Log.json', game:GetService("HttpService"):JSONEncode(main))
+				warn('---------------[ERROR LOG START]--------------')
+				warn(game:GetService("HttpService"):JSONEncode(errorLog))
+				warn('---------------[ERROR LOG END]--------------')
 			end
-			main["LogInfo"] = {
-				Version = "REWRITE",
-				Executor = identifyexecutor and ({identifyexecutor()})[1] or "Unknown executor",
-				CheatEngineMode = shared.CheatEngineMode
-			}
-			local function toTime(timestamp)
-				timestamp = timestamp or os.time()
-				local dateTable = os.date("*t", timestamp)
-				local timeString = string.format("%02d:%02d:%02d", dateTable.hour, dateTable.min, dateTable.sec)
-				return timeString
-			end
-			local function toDate(timestamp)
-				timestamp = timestamp or os.time()
-				local dateTable = os.date("*t", timestamp)
-				local dateString = string.format("%02d/%02d/%02d", dateTable.day, dateTable.month, dateTable.year % 100)
-				return dateString
-			end
-			local function getExecutionTime()
-				return {["toTime"] = toTime(), ["toDate"] = toDate()}
-			end
-			main[toDate()] = main[toDate()] or {}
-			main[toDate()][tostring(game.PlaceId).." | "..tostring(game.JobId)] = main[toDate()][tostring(game.PlaceId).." | "..tostring(game.JobId)] or {}
-			main[toDate()][tostring(game.PlaceId).." | "..tostring(game.JobId)][S_Name] = main[toDate()][tostring(game.PlaceId).." | "..tostring(game.JobId)][S_Name] or {}
-			table.insert(main[toDate()][tostring(game.PlaceId).." | "..tostring(game.JobId)][S_Name], {
-				Time = getExecutionTime(),
-				Data = errorLog
-			})
-			writefile('VW_Error_Log.json', game:GetService("HttpService"):JSONEncode(main))
-			warn('---------------[ERROR LOG START]--------------')
-			warn(game:GetService("HttpService"):JSONEncode(errorLog))
-			warn('---------------[ERROR LOG END]--------------')
-		end
+		end)
 	end
 	return func
 end
