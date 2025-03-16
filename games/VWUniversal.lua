@@ -28,6 +28,80 @@ local function run(func)
 	end)
 	if err then warn("[VWUniversal.lua Module Error]: "..tostring(debug.traceback(err))) end
 end
+
+task.spawn(function()
+	pcall(function()
+		local httpService = game:GetService("HttpService")
+		local function loadJson(path)
+			local suc, res = pcall(function()
+				return httpService:JSONDecode(readfile(path))
+			end)
+			return suc and type(res) == 'table' and res or nil, res
+		end
+
+		local function filterStackTrace(stackTrace)
+			if type(stackTrace) == "string" then
+				return string.split(stackTrace, "\n")
+			else
+				return stackTrace
+			end
+		end
+
+		local function saveError(message, stackTrace)
+			stackTrace = stackTrace or ''
+			local errorLog = {
+				Message = message,
+				StackTrace = filterStackTrace(stackTrace)
+			}
+			local S_Name = "CONSOLE"
+			local main = {}
+			if isfile('VW_Error_Log.json') then
+				local res = loadJson('VW_Error_Log.json')
+				main = res or main
+			end
+			main["LogInfo"] = {
+				Version = "REWRITE",
+				Executor = identifyexecutor and ({identifyexecutor()})[1] or "Unknown executor",
+				CheatEngineMode = shared.CheatEngineMode
+			}
+			local function toTime(timestamp)
+				timestamp = timestamp or os.time()
+				local dateTable = os.date("*t", timestamp)
+				local timeString = string.format("%02d:%02d:%02d", dateTable.hour, dateTable.min, dateTable.sec)
+				return timeString
+			end
+			local function toDate(timestamp)
+				timestamp = timestamp or os.time()
+				local dateTable = os.date("*t", timestamp)
+				local dateString = string.format("%02d/%02d/%02d", dateTable.day, dateTable.month, dateTable.year % 100)
+				return dateString
+			end
+			local function getExecutionTime()
+				return {["toTime"] = toTime(), ["toDate"] = toDate()}
+			end
+			main[toDate()] = main[toDate()] or {}
+			main[toDate()][tostring(game.PlaceId).." | "..tostring(game.JobId)] = main[toDate()][tostring(game.PlaceId).." | "..tostring(game.JobId)] or {}
+			main[toDate()][tostring(game.PlaceId).." | "..tostring(game.JobId)][S_Name] = main[toDate()][tostring(game.PlaceId).." | "..tostring(game.JobId)][S_Name] or {}
+			table.insert(main[toDate()][tostring(game.PlaceId).." | "..tostring(game.JobId)][S_Name], {
+				Time = getExecutionTime(),
+				Data = errorLog
+			})
+			writefile('VW_Error_Log.json', game:GetService("HttpService"):JSONEncode(main))
+		end
+
+		if shared.DEBUGLOGGING then 
+			pcall(function()
+				shared.DEBUGLOGGING:Disconnect()
+			end)
+		end
+		shared.DEBUGLOGGING = game:GetService("ScriptContext").Error:Connect(function(message, stack, script)
+			if not script then
+				saveError(message, stack)
+			end
+		end)
+	end)
+end)
+
 local vapeConnections = {}
 GuiLibrary.SelfDestructEvent.Event:Connect(function()
 	for i, v in pairs(vapeConnections) do
