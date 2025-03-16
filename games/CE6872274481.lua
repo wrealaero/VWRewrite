@@ -2336,7 +2336,7 @@ run(function()
 		Function = function(callback)
 			if callback then
 				AimAssist:Clean(runService.Heartbeat:Connect(function(dt)
-					if entitylib.isAlive and store.localHand.Type == 'sword' and ((not ClickAim.Enabled) or (tick() - bedwars.SwordController.lastSwing) < 0.4) then
+					if entitylib.isAlive and store.localHand.toolType == 'sword' and ((not ClickAim.Enabled) or (tick() - bedwars.SwordController.lastSwing) < 0.4) then
 						local ent = entitylib.EntityPosition({
 							Range = Distance.Value,
 							Part = 'RootPart',
@@ -4011,7 +4011,7 @@ run(function()
 
 		local meta = bedwars.ItemTable[sword.tool.Name]
 		if Limit.Enabled then
-			if store.localHand.Type ~= 'sword' or bedwars.DaoController.chargingMaid then return false end
+			if store.localHand.toolType ~= 'sword' or bedwars.DaoController.chargingMaid then return false end
 		end
 
 		if LegitAura.Enabled then
@@ -4117,7 +4117,7 @@ run(function()
 							local localfacing = entitylib.character.RootPart.CFrame.LookVector * Vector3.new(1, 0, 1)
 
 							for _, v in plrs do
-								if Targets.Walls.Enabled and not Wallcheck(lplr.Character, plr.Character) then continue end
+								if Targets.Walls.Enabled and not Wallcheck(lplr.Character, v.Character) then continue end
 
 								local delta = (v.RootPart.Position - selfpos)
 								local angle = math.acos(localfacing:Dot((delta * Vector3.new(1, 0, 1)).Unit))
