@@ -6179,6 +6179,7 @@ end)
 run(function()
 	local AutoBuy
 	local Sword
+	local Item
 	local Armor
 	local Upgrades
 	local TierCheck
@@ -6481,10 +6482,11 @@ run(function()
 		Default = true,
 		Tooltip = 'Buys iron armor before iron axe'
 	})
-	AutoBuy:CreateTextList({
+	Item = AutoBuy:CreateTextList({
 		Name = 'Item',
 		Placeholder = 'priority/item/amount/after',
-		Function = function(list)
+		Function = function()
+			local list = Item.ListEnabled
 			table.clear(Custom)
 			table.clear(CustomPost)
 			for _, entry in list do
