@@ -3719,6 +3719,15 @@ run(function()
 	local function getProjectiles()
 		local items = {}
 		for _, item in store.inventory.inventory.items do
+			if item and item.itemType == "mage_spellbook" then
+				table.insert(items, {
+					item,
+					nil, 
+					nil,
+					0.3
+				})
+				continue
+			end
 			local proj = bedwars.ItemMeta[item.itemType].projectileSource
 			local ammo = proj and getAmmo(proj, item)
 			if not table.find(List.ListEnabled, 'sword_wave1') then table.insert(List.ListEnabled, 'sword_wave1') end
@@ -3809,6 +3818,38 @@ run(function()
 			pcall(function()
 				FireDelays[item.itemType] = tick() + itemMeta.fireDelaySec
 			end)
+		end,
+		Whim = function(ent, item, ammo, projectile, itemMeta)
+			if not item.tool then return end
+			if not ent then return end
+			local selfPos = selfPosition()
+			if not selfPos then return end
+	
+			local vec = ent.RootPart.Position * Vector3.new(1, 0, 1)
+			lplr.Character.PrimaryPart.CFrame = CFrame.lookAt(lplr.Character.PrimaryPart.Position, Vector3.new(vec.X, lplr.Character.PrimaryPart.Position.Y + 0.001, vec.Z))
+	
+			local mag = lplr.Character.PrimaryPart.CFrame.LookVector*80
+	
+			game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("node_modules"):WaitForChild("@rbxts"):WaitForChild("net"):WaitForChild("out"):WaitForChild("_NetManaged"):WaitForChild("ProjectileFire"):InvokeServer(
+				item.tool,
+				nil,
+				"mage_spell_base",
+				Vector3.new(selfPos.X, selfPos.Y + 2, selfPos.Z),
+				selfPos,
+				mag,
+				specialGUID(),
+				{
+					["shotId"] = specialGUID(),
+					["drawDurationSec"] = 0.9
+				},
+				workspace:GetServerTimeNow() - 0.045
+			)
+
+			targetinfo.Targets[ent] = tick() + 1
+			
+			pcall(function()
+				FireDelays[item.itemType] = tick() + itemMeta.fireDelaySec
+			end)
 		end
 	}
 	
@@ -3836,6 +3877,9 @@ run(function()
 												continue
 											elseif item.itemType == "ninja_chakram_4" then
 												handle.Umeko(ent, unpack(data))
+												continue
+											elseif item.itemType == "mage_spellbook" then
+												handle.Whim(ent, unpack(data))
 												continue
 											end
 											rayCheck.FilterDescendantsInstances = {workspace.Map}
