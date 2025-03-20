@@ -7021,7 +7021,7 @@ if not shared.CheatEngineMode then
 	end)
 else
 	run(function()
-		local inputService = game:GetService("InputService")
+		local inputService = game:GetService('UserInputService')
 		local contextService = game:GetService('ContextActionService')
 		local gameCamera = game.Workspace.CurrentCamera or game.Workspace:FindFirstChildWhichIsA('Camera')
 		local Freecam
