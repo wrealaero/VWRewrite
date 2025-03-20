@@ -9923,8 +9923,7 @@ run(function()
 		Reach = vape.Categories.Combat:CreateModule({
 			Name = 'Reach',
 			Function = function(callback)
-				if callback and CombatConstant == nil then CombatConstant = require(game:GetService("ReplicatedStorage"):WaitForChild("TS").combat["combat-constant"]).CombatConstant end
-				CombatConstant.RAYCAST_SWORD_CHARACTER_DISTANCE = callback and Value.Value + 2 or 14.4
+				
 			end,
 			Tooltip = 'Extends attack reach'
 		})
@@ -9935,8 +9934,7 @@ run(function()
 			Default = 18,
 			Function = function(val)
 				if Reach.Enabled then
-					if CombatConstant == nil then CombatConstant = require(game:GetService("ReplicatedStorage"):WaitForChild("TS").combat["combat-constant"]).CombatConstant end
-					CombatConstant.RAYCAST_SWORD_CHARACTER_DISTANCE = val + 2
+					
 				end
 			end,
 			Suffix = function(val)
