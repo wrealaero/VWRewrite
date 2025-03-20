@@ -6963,8 +6963,8 @@ run(function()
 		Name = 'Only Bedwars',
 		Function = function()
 			if AutoBuy.Enabled then
-				AutoBuy.ToggleButton(false)
-				AutoBuy.ToggleButton(false)
+				AutoBuy:Toggle(false)
+				AutoBuy:Toggle(false)
 			end
 		end,
 		Default = true

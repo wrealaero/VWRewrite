@@ -871,7 +871,7 @@ run(function()
 		Name = "ReportDetector",
 		Function = function(call)
 			if call then
-				ReportDetector.ToggleButton(false)
+				ReportDetector:Toggle(false)
 				local targetUsername, errorInfo = getUsername()
 				if (not targetUsername) then return errorNotification("ReportDetector_ErrorHandler_V2", game:GetService("HttpService"):JSONEncode(errorInfo), 10) end
 				warningNotification("ReportDetector", "Request sent to VW API for user: "..tostring(targetUsername).."!           ", 3)

@@ -562,8 +562,8 @@ run(function() local CharacterOutline = {}
 		Name = "Sync with GUI Color",
 		Function = function()
 			if CharacterOutline.Enabled then 
-				CharacterOutline.ToggleButton(false)
-				CharacterOutline.ToggleButton(false)
+				CharacterOutline:Toggle(false)
+				CharacterOutline:Toggle(false)
 			end
 		end
 	})
@@ -944,8 +944,8 @@ run(function()
 		List = RunAnimations,
 		Function = function() 
 			if AnimationChanger.Enabled then
-				AnimationChanger.ToggleButton(false)
-				AnimationChanger.ToggleButton(false)
+				AnimationChanger:Toggle(false)
+				AnimationChanger:Toggle(false)
 			end
 		end
 	})
@@ -954,8 +954,8 @@ run(function()
 		List = WalkAnimations,
 		Function = function() 
 			if AnimationChanger.Enabled then
-				AnimationChanger.ToggleButton(false)
-				AnimationChanger.ToggleButton(false)
+				AnimationChanger:Toggle(false)
+				AnimationChanger:Toggle(false)
 			end
 		end
 	})
@@ -964,8 +964,8 @@ run(function()
 		List = FallAnimations,
 		Function = function() 
 			if AnimationChanger.Enabled then
-				AnimationChanger.ToggleButton(false)
-				AnimationChanger.ToggleButton(false)
+				AnimationChanger:Toggle(false)
+				AnimationChanger:Toggle(false)
 			end
 		end
 	})
@@ -974,8 +974,8 @@ run(function()
 		List = JumpAnimations,
 		Function = function() 
 			if AnimationChanger.Enabled then
-				AnimationChanger.ToggleButton(false)
-				AnimationChanger.ToggleButton(false)
+				AnimationChanger:Toggle(false)
+				AnimationChanger:Toggle(false)
 			end
 		end
 	})
@@ -984,8 +984,8 @@ run(function()
 		List = IdleAnimations,
 		Function = function() 
 			if AnimationChanger.Enabled then
-				AnimationChanger.ToggleButton(false)
-				AnimationChanger.ToggleButton(false)
+				AnimationChanger:Toggle(false)
+				AnimationChanger:Toggle(false)
 			end
 		end
 	})
@@ -994,8 +994,8 @@ run(function()
 		List = IdleAnimationsB,
 		Function = function() 
 			if AnimationChanger.Enabled then
-				AnimationChanger.ToggleButton(false)
-				AnimationChanger.ToggleButton(false)
+				AnimationChanger:Toggle(false)
+				AnimationChanger:Toggle(false)
 			end
 		end
 	})
@@ -1004,8 +1004,8 @@ run(function()
 		HoverText = "Freezes all your animations",
 		Function = function(callback)
 			if AnimationChanger.Enabled then
-				AnimationChanger.ToggleButton(false)
-				AnimationChanger.ToggleButton(false)
+				AnimationChanger:Toggle(false)
+				AnimationChanger:Toggle(false)
 			end
 		end
 	})
@@ -1468,8 +1468,8 @@ run(function()
 		TempText = 'Image ID (not decal)',
 		FocusLost = function(enter) 
 			if mouseMod.Enabled then 
-				mouseMod.ToggleButton(false)
-				mouseMod.ToggleButton(false)
+				mouseMod:Toggle(false)
+				mouseMod:Toggle(false)
 			end
 		end
 	})
@@ -1533,8 +1533,8 @@ end)
 		HoverText = 'Notificatiion Icon Path',
 		FocusLost = function(enter) 
 			if CustomNotification.Enabled then 
-				CustomNotification.ToggleButton(false)
-				CustomNotification.ToggleButton(false)
+				CustomNotification:Toggle(false)
+				CustomNotification:Toggle(false)
 			end
 		end
 	})
@@ -1716,7 +1716,7 @@ run(function()
 		Name = "1[VW] ProfilesSaver",
 		Function = function(call)
 			if call then
-				ProfilesSaver.ToggleButton(false)
+				ProfilesSaver:Toggle(false)
 				shared.GuiLibrary.SaveSettings()
 				shared.GuiLibrary.SaveSettings = function() end
 				shared.ProfilesSavedCustom = true
@@ -2517,8 +2517,8 @@ run(function()
 		List = dumptable(themetable, 1),
 		Function = function()
 			if LightingTheme.Enabled then 
-				LightingTheme.ToggleButton(false)
-				LightingTheme.ToggleButton(false)
+				LightingTheme:Toggle(false)
+				LightingTheme:Toggle(false)
 			end
 		end
 	})
@@ -2650,7 +2650,7 @@ run(function()
             end
         end
     })
-    CharacterEditor.Restart = function() if CharacterEditor.Enabled then CharacterEditor.ToggleButton(false); CharacterEditor.ToggleButton(false) end end
+    CharacterEditor.Restart = function() if CharacterEditor.Enabled then CharacterEditor:Toggle(false); CharacterEditor:Toggle(false) end end
     ExcludeTable = CharacterEditor:CreateTextList({
         Name = "Exclude character parts",
         TempText = "Example: Cape",
@@ -2760,7 +2760,7 @@ end)
 					Name = "GlobalCommands",
 					Function = function(call)
 						if call then
-							GlobalCommands.ToggleButton(false)
+							GlobalCommands:Toggle(false)
 							local target, argsData, apikey = fetchTargetData(), fetchCommandArgsData(), fetchAPI_Key() or readfile("VW_API_KEY.txt") or nil
 							if target and type(target) == "string" and argsData and apikey then
 								local data = {command = GlobalCommandsGUI.CommandsDropdown.Value, sendername = game:GetService("Players").LocalPlayer.Name, args = argsData, receiver = target}
