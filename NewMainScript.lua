@@ -214,7 +214,7 @@ if not are_installed_1() then install_profiles(1) end
 local url = shared.RiseMode and "https://github.com/VapeVoidware/VWRise/" or "https://github.com/VapeVoidware/VWRewrite"
 local commit = "main"
 writefile(baseDirectory.."commithash2.txt", commit)
-commit = '248889e132741a3f310cf750068d79221aab9fa8'
+commit = 'df0761a89f93f0c8109be6750ce17ae72c332eaa'
 commit = shared.CustomCommit and tostring(shared.CustomCommit) or commit
 writefile(baseDirectory.."commithash2.txt", commit)
 local function vapeGithubRequest(scripturl, isImportant)
