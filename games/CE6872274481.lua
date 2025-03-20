@@ -615,6 +615,12 @@ local function corehotbarswitch(tool)
 		end
 	end
 	task.spawn(function()
+		local function run(func)
+			local suc, err = pcall(function()
+				func()
+			end)
+			if err then warn("[CoreSwitch Error]: "..tostring(debug.traceback(err))) end
+		end
 		run(function()
 			if not lplr.Character then return false end
 
