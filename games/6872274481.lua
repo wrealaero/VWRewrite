@@ -596,6 +596,12 @@ local function coreswitch(tool)
         currentHandItem:Destroy()
     end
 
+    for _, weld in pairs(character:GetDescendants()) do
+        if weld:IsA("Weld") and weld.Name == "HandItemWeld" then
+            weld:Destroy()
+        end
+    end
+
     local inventoryFolder = character:FindFirstChild("InventoryFolder")
     if not inventoryFolder or not inventoryFolder.Value then return end
     local toolInstance = inventoryFolder.Value:FindFirstChild(tool.Name)
@@ -613,7 +619,7 @@ local function coreswitch(tool)
             local characterAttachment = character:FindFirstChild(attachment.Name, true)
             if characterAttachment and characterAttachment:IsA("Attachment") then
                 local weld = Instance.new("Weld")
-                weld.Name = "AccessoryWeld"
+                weld.Name = "HandItemWeld"
                 weld.Part0 = characterAttachment.Parent 
                 weld.Part1 = handle
                 weld.C0 = characterAttachment.CFrame
@@ -629,12 +635,12 @@ local function coreswitch(tool)
     end
 
     task.spawn(function()
-        bedwars.Client:Get(remotes.EquipItem):CallServerAsync({hand = tool})
+		bedwars.Client:Get(remotes.EquipItem):CallServerAsync({hand = tool})
     end)
 
-	corehotbarswitch()
+    corehotbarswitch()
 
-	return true
+    return true
 end
 
 local function switchItem(tool, delayTime)
