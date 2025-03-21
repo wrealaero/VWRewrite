@@ -3396,89 +3396,294 @@ run(function()
 	})
 end)
 	
+local vapeConnections = {}
+
+local runService = game:GetService("RunService")
+
+local RunLoops = {
+    RenderStepTable = {},
+    StepTable = {},
+    HeartTable = {}
+}
+
+local function BindToLoop(tableName, service, name, func)
+	local oldfunc = func
+	func = function(delta) VoidwareFunctions.handlepcall(pcall(function() oldfunc(delta) end)) end
+    if RunLoops[tableName][name] == nil then
+        RunLoops[tableName][name] = service:Connect(func)
+        table.insert(vapeConnections, RunLoops[tableName][name])
+    end
+end
+
+local function UnbindFromLoop(tableName, name)
+    if RunLoops[tableName][name] then
+        RunLoops[tableName][name]:Disconnect()
+        RunLoops[tableName][name] = nil
+    end
+end
+
+function RunLoops:BindToRenderStep(name, func)
+    BindToLoop("RenderStepTable", runService.RenderStepped, name, func)
+end
+
+function RunLoops:UnbindFromRenderStep(name)
+    UnbindFromLoop("RenderStepTable", name)
+end
+
+function RunLoops:BindToStepped(name, func)
+    BindToLoop("StepTable", runService.Stepped, name, func)
+end
+
+function RunLoops:UnbindFromStepped(name)
+    UnbindFromLoop("StepTable", name)
+end
+
+function RunLoops:BindToHeartbeat(name, func)
+    BindToLoop("HeartTable", runService.Heartbeat, name, func)
+end
+
+function RunLoops:UnbindFromHeartbeat(name)
+    UnbindFromLoop("HeartTable", name)
+end
+
 run(function()
-	local NoFall = {Enabled = false}
-	local SafeRange = {Value = 20}
-	local VelocityThreshold = {Value = 30}
-	local CoreConnection = {Disconnect = function() end}
-
-	local collectionService = game:GetService("CollectionService")
-	local vapeConnections = vapeConnections or {}
-
-	local blockRaycast = RaycastParams.new()
-	blockRaycast.FilterType = Enum.RaycastFilterType.Include
-
-	local blocks = collectionService:GetTagged("block") or {}
-	blockRaycast.FilterDescendantsInstances = {blocks}
-	table.insert(vapeConnections, collectionService:GetInstanceAddedSignal("block"):Connect(function(block)
-		blocks = blocks ~= nil and type(blocks) == "table" and blocks or {}
-		table.insert(blocks, block)
-		blockRaycast.FilterDescendantsInstances = {blocks}
-	end))
-	table.insert(vapeConnections, collectionService:GetInstanceRemovedSignal("block"):Connect(function(block)
-		blocks = blocks ~= nil and type(blocks) == "table" and blocks or {}
-		block = table.find(blocks, block)
-		if block then
-			table.remove(blocks, block)
-			blockRaycast.FilterDescendantsInstances = {blocks}
-		end
-	end))
-
-	NoFall = vape.Categories.Blatant:CreateModule({
-		Name = "NoFall",
-		Function = function(callback)
-			if callback then
-				task.spawn(function()
-					pcall(function() 
-						game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("node_modules"):WaitForChild("@rbxts"):WaitForChild("net"):WaitForChild("out"):WaitForChild("_NetManaged"):WaitForChild("TridentUnanchor"):Destroy()
-					end)
-				end)
-
-				local safeRange = SafeRange.Value
-				local velocityThreshold = -VelocityThreshold.Value
-				
-				CoreConnection = game:GetService("RunService").Heartbeat:Connect(function()
-					if not entitylib.isAlive then return end
-					if LongJump.Enabled then return end
-					local humanoid = entitylib.character.Humanoid
-					local rootPart = entitylib.character.HumanoidRootPart
-					if humanoid:GetState() == Enum.HumanoidStateType.Freefall and rootPart.Velocity.Y < velocityThreshold then
-						local ray = workspace:Raycast(rootPart.Position, Vector3.new(0, -1000, 0), blockRaycast)
-						if ray then
-							local distance = rootPart.Position.Y - ray.Position.Y
-							if distance > safeRange then
-								local newPosition = Vector3.new(
-									rootPart.Position.X,
-									ray.Position.Y + 0.1, 
-									rootPart.Position.Z
-								)
-								rootPart.CFrame = CFrame.new(newPosition) * rootPart.CFrame.Rotation
+    local NoFall = {}
+	local MitigationChoice = {Value = "VelocityClamp"}
+	local RishThreshold = {Value = 30}
+    local PredictiveAnalysis = {}
+    local MitigationStrategies = {}
+    local velocityHistory = {}
+    local maxHistory = 10
+    
+    local function recordVelocity()
+        if not entitylib.isAlive or not entitylib.character or not entitylib.character.RootPart then return end
+        local velocity = entitylib.character.RootPart.Velocity
+        table.insert(velocityHistory, velocity.Y)
+        if #velocityHistory > maxHistory then
+            table.remove(velocityHistory, 1)
+        end
+    end
+    
+    local function analyzeFallRisk()
+        if #velocityHistory < maxHistory then return 0 end
+        local downwardTrend = 0
+        for i = 2, #velocityHistory do
+            if velocityHistory[i] < velocityHistory[i - 1] and velocityHistory[i] < 0 then
+                downwardTrend = downwardTrend + (velocityHistory[i - 1] - velocityHistory[i])
+            end
+        end
+        local raycastParams = RaycastParams.new()
+        raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+        raycastParams.FilterDescendantsInstances = {lplr.Character}
+        local rootPos = entitylib.character.RootPart.Position
+        local rayResult = workspace:Raycast(rootPos, Vector3.new(0, -50, 0), raycastParams)
+        local distanceToGround = rayResult and (rootPos.Y - rayResult.Position.Y) or math.huge
+        local riskFactor = downwardTrend * (distanceToGround > 10 and 1.5 or 1)
+        return riskFactor, distanceToGround
+    end
+    
+    local function hasMitigationItem()
+        for _, item in pairs(store.inventory.inventory.items) do
+			if item and item.itemType and string.find(string.lower(tostring(item.itemType)), 'wool') then 
+				return item
+			end
+        end
+        return nil
+    end
+    
+    MitigationStrategies.VelocityClamp = function(risk)
+        if not entitylib.isAlive or not entitylib.character or not entitylib.character.RootPart then return end
+        local root = entitylib.character.RootPart
+        local currentVelocity = root.Velocity
+        if currentVelocity.Y < -50 then
+            root.Velocity = Vector3.new(currentVelocity.X, math.clamp(currentVelocity.Y, -50, math.huge), currentVelocity.Z)
+        end
+    end
+    
+    MitigationStrategies.TeleportBuffer = function(distance)
+        if not entitylib.isAlive or not entitylib.character or not entitylib.character.RootPart then return end
+        local root = entitylib.character.RootPart
+        local raycastParams = RaycastParams.new()
+        raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+        raycastParams.FilterDescendantsInstances = {lplr.Character}
+        local rayResult = workspace:Raycast(root.Position, Vector3.new(0, -distance - 2, 0), raycastParams)
+        if rayResult and distance > 10 then
+            local safePos = rayResult.Position + Vector3.new(0, 3, 0)
+            pcall(function()
+                root.CFrame = CFrame.new(safePos)
+            end)
+        end
+    end
+    
+    MitigationStrategies.ItemDeploy = function(item)
+        if not item then return end
+        local root = entitylib.character.RootPart
+        local belowPos = root.Position - Vector3.new(0, 3, 0)
+        bedwars.placeBlock(belowPos, item.itemType, true)
+    end
+    
+    NoFall = vape.Categories.Utility:CreateModule({
+        Name = 'NoFall',
+        Function = function(callback)
+            if callback then
+                RunLoops:BindToHeartbeat('NoFallMonitor', function()
+                    recordVelocity()
+                    local risk, distance = analyzeFallRisk()
+                    if risk > RishThreshold.Value then
+						if MitigationChoice.Value ~= "ItemDeploy" then
+							MitigationStrategies[MitigationChoice.Value](MitigationChoice.Value == "VelocityClamp" and risk or MitigationChoice.Value == "TeleportBuffer" and distance)
+						else
+							local mitigationItem = hasMitigationItem()
+							if mitigationItem then
+								if distance < 10 then
+									MitigationStrategies.ItemDeploy(mitigationItem)
+								end
+							else
+								warningNotification("NoFall", "Mitigation Item not found. Using VelocityClamp instead...", 3)
+								MitigationStrategies.VelocityClamp(risk)
 							end
 						end
-					end
-				end)				
-			else
-				pcall(function()
-					CoreConnection:Disconnect()
-				end)
-			end
-		end,
-		Tooltip = "Prevents taking fall damage."
-	})
-	SafeRange = NoFall:CreateSlider({
-		Name = "SafeRange",
+                    end
+                end)
+            else
+                RunLoops:UnbindFromHeartbeat('NoFallMonitor')
+                table.clear(velocityHistory)
+            end
+        end,
+        Tooltip = 'Prevents fall damage'
+    })
+
+	RishThreshold = NoFall:CreateSlider({
+		Name = "Risk Threshold",
 		Function = function() end,
-		Min = 10, 
-		Max = 30,
-		Default = 20
-	})
-	VelocityThreshold = NoFall:CreateSlider({
-		Name = "VelocityThreshold",
-		Function = function() end,
-		Min = 20, 
-		Max = 50,
+		Min = 5,
+		Max = 100,
 		Default = 30
 	})
+
+	MitigationChoice = NoFall:CreateDropdown({
+		Name = "Mitigation Strategies",
+		Default = "VelocityClamp",
+		List = {"VelocityClamp", "TeleportBuffer", "ItemDeploy"},
+		Function = function()
+			if MitigationChoice.Value == "ItemDeploy" then
+				warningNotification("Mitigation Strategies - ItemDeploy", "Not yet finished! Its recommended to use VelocityClamp instead.", 1.5)
+			end
+		end
+	})
+end)
+
+run(function()
+    local BlockIn = {}
+    
+    local PatternArchitect = {}
+    PatternArchitect.__index = PatternArchitect
+    
+    function PatternArchitect.new()
+        local self = setmetatable({}, PatternArchitect)
+        self.fixedPattern = {
+            Vector3.new(3, 0, 0),
+            Vector3.new(0, 0, 3),
+            Vector3.new(-3, 0, 0),
+            Vector3.new(0, 0, -3),
+            Vector3.new(3, 3, 0),
+            Vector3.new(0, 3, 3),
+            Vector3.new(-3, 3, 0),
+            Vector3.new(0, 3, -3),
+            Vector3.new(0, 6, 0)
+        }
+        return self
+    end
+    
+    function PatternArchitect:GenerateAdaptiveBlueprint(origin)
+        local blueprint = {}
+        for i, offset in ipairs(self.fixedPattern) do
+            blueprint[i] = origin + offset
+        end
+        return blueprint
+    end
+    
+    local BlockStrategist = {}
+    BlockStrategist.__index = BlockStrategist
+    
+    function BlockStrategist.new()
+        local self = setmetatable({}, BlockStrategist)
+        self.cache = nil
+        return self
+    end
+    
+    function BlockStrategist:EvaluateInventory(inventory)
+        if self.cache then return self.cache end
+        
+        local blocks = {}
+        for _, item in pairs(inventory) do
+            local meta = bedwars.ItemMeta[item.itemType]
+            if meta.block then
+                blocks[#blocks + 1] = {itemType = item.itemType, score = meta.block.health or 0}
+            end
+        end
+        table.sort(blocks, function(a, b) return a.score < b.score end)
+        self.cache = blocks
+        return blocks
+    end
+    
+    function BlockStrategist:ResetCache()
+        self.cache = nil
+    end
+    
+    BlockIn = vape.Categories.Utility:CreateModule({
+        Name = 'BlockIn',
+        Function = function(callback)
+            if not callback then return end
+            
+            if not entitylib.isAlive or not entitylib.character or not entitylib.character.RootPart then
+                errorNotification('BlockIn', 'Unable to initialize BlockIn: Player data missing', 5)
+                BlockIn:Toggle()
+                return
+            end
+            
+            local architect = PatternArchitect.new()
+            local strategist = BlockStrategist.new()
+            
+            local origin = entitylib.character.RootPart.Position
+            local blocks = strategist:EvaluateInventory(store.inventory.inventory.items)
+            
+            if #blocks == 0 then
+                errorNotification('BlockIn', 'No suitable blocks available for BlockIn', 5)
+                BlockIn:Toggle()
+                return
+            end
+            
+            local blueprint = architect:GenerateAdaptiveBlueprint(origin)
+            
+            task.spawn(function()
+                local blockIndex = 1
+                local blockCount = #blocks
+                
+                for i, pos in ipairs(blueprint) do
+                    if not BlockIn.Enabled then break end
+                    local blockAtPos = bedwars.BlockController:getStore():getBlockAt(bedwars.BlockController:getBlockPosition(pos))
+                    if not blockAtPos then
+                        local block = blocks[blockIndex]
+                        local success = pcall(function()
+                            bedwars.placeBlock(pos, block.itemType, false)
+                        end)
+                        if not success then
+                            errorNotification('BlockIn', 'Failed to place block at position', 3)
+                        end
+                        blockIndex = (blockIndex % blockCount) + 1
+                        task.wait(0.05) 
+                    end
+                end
+                
+                strategist:ResetCache()
+                if BlockIn.Enabled then
+                    BlockIn:Toggle()
+                end
+            end)
+        end,
+        Tooltip = 'Shields you from attacks for when you are attacking a bed'
+    })
 end)
 	
 run(function()
