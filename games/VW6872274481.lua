@@ -4684,7 +4684,7 @@ run(function()
 	})
 end)
 
-run(function()
+--[[run(function()
 	local DoubleHighJump = {Enabled = false}
 	local DoubleHighJumpHeight = {Value = 500}
 	local DoubleHighJumpHeight2 = {Value = 500}
@@ -4743,7 +4743,7 @@ run(function()
 		Default = 450,
 		Function = function() end
 	})
-end)
+end)--]]
 
 pcall(function()
 	local StaffDetector = {Enabled = false}

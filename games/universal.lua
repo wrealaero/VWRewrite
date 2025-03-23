@@ -6721,6 +6721,8 @@ run(function()
 		Name = 'Panic',
 		Function = function(callback)
 			if callback then
+				vape.Save = function() end
+				warningNotification("Profiles Saving", "Saving disabled due to Panic being enabled!", 3)
 				for _, v in vape.Modules do
 					if v.Enabled then
 						v:Toggle()

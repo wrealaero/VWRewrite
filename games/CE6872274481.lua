@@ -85,6 +85,7 @@ local store = {
 		hotbar = {}
 	},
 	localHand = {},
+	hand = {},
 	matchState = 1,
 	matchStateChanged = tick(),
 	pots = {},
@@ -513,7 +514,7 @@ local function corehotbarswitch(tool)
         for i,v in pairs(children) do if v.Name == name and v.ClassName == className then return v end end
         local args = {Name = tostring(name), ClassName == tostring(className), Children = children}
 		if not nodebug then
-			warn("[findChild]: CHILD NOT FOUND! Args: ", game:GetService("HttpService"):JSONEncode(args), name, className, children)
+			--warn("[findChild]: CHILD NOT FOUND! Args: ", game:GetService("HttpService"):JSONEncode(args), name, className, children)
 		end
         return nil
     end
@@ -661,61 +662,63 @@ local function corehotbarswitch(tool)
 	end)
 end
 
-local function coreswitch(tool)
+local function coreswitch(tool, ignore)
     local character = lplr.Character
     if not character then return end
 
     local humanoid = character:FindFirstChild("Humanoid")
     if not humanoid then return end
 
-    local currentHandItem
-    for _, acc in character:GetChildren() do
-        if acc:IsA("Accessory") and acc:GetAttribute("InvItem") == true and acc:GetAttribute("ArmorSlot") == nil and acc:GetAttribute("IsBackpack") == nil then
-            currentHandItem = acc
-            break
-        end
-    end
-    if currentHandItem then
-        currentHandItem:Destroy()
-    end
-
-    for _, weld in pairs(character:GetDescendants()) do
-        if weld:IsA("Weld") and weld.Name == "HandItemWeld" then
-            weld:Destroy()
-        end
-    end
-
-    local inventoryFolder = character:FindFirstChild("InventoryFolder")
-    if not inventoryFolder or not inventoryFolder.Value then return end
-    local toolInstance = inventoryFolder.Value:FindFirstChild(tool.Name)
-    if not toolInstance then return end
-    local clone = toolInstance:Clone()
-
-    clone:SetAttribute("InvItem", true)
-
-    humanoid:AddAccessory(clone)
-
-    local handle = clone:FindFirstChild("Handle")
-    if handle and handle:IsA("BasePart") then
-        local attachment = handle:FindFirstChildWhichIsA("Attachment")
-        if attachment then
-            local characterAttachment = character:FindFirstChild(attachment.Name, true)
-            if characterAttachment and characterAttachment:IsA("Attachment") then
-                local weld = Instance.new("Weld")
-                weld.Name = "HandItemWeld"
-                weld.Part0 = characterAttachment.Parent 
-                weld.Part1 = handle
-                weld.C0 = characterAttachment.CFrame
-                weld.C1 = attachment.CFrame
-                weld.Parent = handle
-            end
-        end
-    end
-
-    local handInvItem = character:FindFirstChild("HandInvItem")
-    if handInvItem then
-        handInvItem.Value = tool
-    end
+	if not ignore then
+		local currentHandItem
+		for _, acc in character:GetChildren() do
+			if acc:IsA("Accessory") and acc:GetAttribute("InvItem") == true and acc:GetAttribute("ArmorSlot") == nil and acc:GetAttribute("IsBackpack") == nil then
+				currentHandItem = acc
+				break
+			end
+		end
+		if currentHandItem then
+			currentHandItem:Destroy()
+		end
+	
+		for _, weld in pairs(character:GetDescendants()) do
+			if weld:IsA("Weld") and weld.Name == "HandItemWeld" then
+				weld:Destroy()
+			end
+		end
+	
+		local inventoryFolder = character:FindFirstChild("InventoryFolder")
+		if not inventoryFolder or not inventoryFolder.Value then return end
+		local toolInstance = inventoryFolder.Value:FindFirstChild(tool.Name)
+		if not toolInstance then return end
+		local clone = toolInstance:Clone()
+	
+		clone:SetAttribute("InvItem", true)
+	
+		humanoid:AddAccessory(clone)
+	
+		local handle = clone:FindFirstChild("Handle")
+		if handle and handle:IsA("BasePart") then
+			local attachment = handle:FindFirstChildWhichIsA("Attachment")
+			if attachment then
+				local characterAttachment = character:FindFirstChild(attachment.Name, true)
+				if characterAttachment and characterAttachment:IsA("Attachment") then
+					local weld = Instance.new("Weld")
+					weld.Name = "HandItemWeld"
+					weld.Part0 = characterAttachment.Parent 
+					weld.Part1 = handle
+					weld.C0 = characterAttachment.CFrame
+					weld.C1 = attachment.CFrame
+					weld.Parent = handle
+				end
+			end
+		end
+	
+		local handInvItem = character:FindFirstChild("HandInvItem")
+		if handInvItem then
+			handInvItem.Value = tool
+		end
+	end
 
     task.spawn(function()
 		bedwars.Client:Get(bedwars.EquipItemRemote):InvokeServer({hand = tool})
@@ -727,7 +730,7 @@ local function coreswitch(tool)
 end
 
 local function switchItem(tool, delayTime)
-	return coreswitch(tool)
+	return coreswitch(tool, true)
 end
 
 local switchitem = switchItem
@@ -1121,8 +1124,9 @@ function bedwars.CooldownController:getRemainingCooldown(item)
 end
 bedwars.AbilityController = {}
 function bedwars.AbilityController:canUseAbility(ability) return true end -- no reverse engineering possible :(
-function bedwars.AbilityController:useAbility(ability)
-	bedwars.Client:Get("useAbility"):FireServer(ability)
+function bedwars.AbilityController:useAbility(ability, ...)
+	local args = {...}
+	bedwars.Client:Get("useAbility"):FireServer(ability, unpack(args))
 end
 bedwars.ShopItemsMeta = decode(VoidwareFunctions.fetchCheatEngineSupportFile("ShopItemsMeta.json"))
 --decode(readfile('vape/CheatEngine/ShopItemsMeta.json'))
@@ -1356,6 +1360,8 @@ function bedwars.StoreController:updateLocalHand()
 		handType = handData.sword and "sword" or handData.block and "block" or tostring(currentHand.Value):find("bow") and "bow"
 	end
 	store.localHand = {tool = currentHand and currentHand.Value, itemType = currentHand and currentHand.Value and tostring(currentHand.Value) or "", Type = handType, amount = currentHand and currentHand:GetAttribute("Amount") and type(currentHand:GetAttribute("Amount")) == "number" or 0}
+	store.localHand.toolType = store.localHand.Type
+	store.hand = store.localHand
 end
 VoidwareFunctions.GlobaliseObject("StoreTable", {})
 function bedwars.StoreController:executeStoreTable()
@@ -1673,9 +1679,20 @@ local function getAxe()
 	return bestAxe, bestAxeSlot
 end
 
+local function getClaw()
+	for slot, item in store.localInventory.inventory.items do
+		if item.itemType and string.find(string.lower(tostring(item.itemType)), "summoner_claw") then
+			return item, slot, 12
+		end
+	end
+end
+
 local function getSword()
 	local bestSword, bestSwordSlot, bestSwordDamage = nil, nil, 0
 	for slot, item in pairs(store.localInventory.inventory.items) do
+		if store.equippedKit == "summoner" then
+			return getClaw()
+		end
 		local swordMeta = bedwars.ItemTable[item.itemType].sword
 		if swordMeta then
 			local swordDamage = swordMeta.damage or 0
@@ -2477,6 +2494,48 @@ run(function()
 end)
 entitylib.start()
 
+run(function()
+	local checked = {}
+	local function check(v)
+		if table.find(checked, v) then return end
+		local npcNames = {"Void Enemy Dummy", "Emerald Enemy Dummy", "Diamond Enemy Dummy", "Leather Enemy Dummy", "Regular Enemy Dummy", "Iron Enemy Dummy"}
+		local function isNPC(name)
+			for i,v in pairs(npcNames) do
+				if string.find(string.lower(name), string.lower(v)) then return true end
+			end
+			return false
+		end
+		if isNPC(v.Name) then
+			if v.PrimaryPart then
+				v.Name = v.Name.." | "..tostring(#checked)
+				entitylib.addEntity(v, nil, function() return true end)
+				table.insert(checked, v)
+			end
+		end
+	end
+	for i, v in pairs(game.Workspace:GetChildren()) do
+		check(v)
+	end
+	local con
+	local con2
+	con = game.Workspace.ChildAdded:Connect(function(v)
+		if not shared.vape then pcall(function()
+			con:Disconnect()
+			table.clear(checked)
+		end) end
+		check(v)
+	end)
+	con2 = game.Workspace.ChildRemoved:Connect(function(v)
+		if not shared.vape then pcall(function()
+			con2:Disconnect()
+			table.clear(checked)
+		end) end
+		if table.find(checked, v) then
+			entitylib.removeEntity(v)
+		end
+	end)
+end)
+
 pcall(function()
     local options = {
         "SilentAimOptionsButton",
@@ -2533,6 +2592,48 @@ local sortmethods = {
 	end
 }
 
+local function Wallcheck(attackerCharacter, targetCharacter, additionalIgnore)
+    if not (attackerCharacter and targetCharacter) then
+        return false
+    end
+
+    local humanoidRootPart = attackerCharacter.PrimaryPart
+    local targetRootPart = targetCharacter.PrimaryPart
+    if not (humanoidRootPart and targetRootPart) then
+        return false
+    end
+
+    local origin = humanoidRootPart.Position
+    local targetPosition = targetRootPart.Position
+    local direction = targetPosition - origin
+
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+    raycastParams.RespectCanCollide = true
+
+    local ignoreList = {attackerCharacter}
+    
+    if additionalIgnore and typeof(additionalIgnore) == "table" then
+        for _, item in pairs(additionalIgnore) do
+            table.insert(ignoreList, item)
+        end
+    end
+
+    raycastParams.FilterDescendantsInstances = ignoreList
+
+    local raycastResult = workspace:Raycast(origin, direction, raycastParams)
+
+    if raycastResult then
+        if raycastResult.Instance:IsDescendantOf(targetCharacter) then
+            return true
+        else
+            return false
+        end
+    else
+        return true
+    end
+end
+
 run(function()
 	local AimAssist
 	local Targets
@@ -2543,23 +2644,30 @@ run(function()
 	local StrafeIncrease
 	local KillauraTarget
 	local ClickAim
+	local ShopCheck
 	
 	AimAssist = vape.Categories.Combat:CreateModule({
 		Name = 'AimAssist',
 		Function = function(callback)
 			if callback then
 				AimAssist:Clean(runService.Heartbeat:Connect(function(dt)
-					if entitylib.isAlive and store.localHand.toolType == 'sword' and ((not ClickAim.Enabled) or (tick() - bedwars.SwordController.lastSwing) < 0.4) then
+					if entitylib.isAlive and store.localHand.Type == 'sword' and ((not ClickAim.Enabled) or (tick() - bedwars.SwordController.lastSwing) < 0.4) then
 						local ent = entitylib.EntityPosition({
 							Range = Distance.Value,
 							Part = 'RootPart',
-							Wallcheck = Targets.Walls.Enabled,
 							Players = Targets.Players.Enabled,
 							NPCs = Targets.NPCs.Enabled,
 							Sort = sortmethods[Sort.Value]
 						})
 	
 						if ent then
+							if ShopCheck.Enabled then
+								local isShop = lplr:FindFirstChild("PlayerGui") and lplr:FindFirstChild("PlayerGui"):FindFirstChild("ItemShop") or nil
+								if not isShop then return end
+							end
+							if Targets.Walls.Enabled then
+								if not Wallcheck(lplr.Character, ent.Character) then return end
+							end
 							pcall(function()
 								local plr = ent
 								vapeTargetInfo.Targets.AimAssist = {
@@ -2574,7 +2682,9 @@ run(function()
 							local localfacing = entitylib.character.RootPart.CFrame.LookVector * Vector3.new(1, 0, 1)
 							local angle = math.acos(localfacing:Dot((delta * Vector3.new(1, 0, 1)).Unit))
 							if angle >= (math.rad(AngleSlider.Value) / 2) then return end
-							targetinfo.Targets[ent] = tick() + 1
+							pcall(function()
+								targetinfo.Targets[ent] = tick() + 1
+							end)
 							gameCamera.CFrame = gameCamera.CFrame:Lerp(CFrame.lookAt(gameCamera.CFrame.p, ent.RootPart.Position), (AimSpeed.Value + (StrafeIncrease.Enabled and (inputService:IsKeyDown(Enum.KeyCode.A) or inputService:IsKeyDown(Enum.KeyCode.D)) and 10 or 0)) * dt)
 						end
 					end
@@ -2624,6 +2734,11 @@ run(function()
 	})
 	KillauraTarget = AimAssist:CreateToggle({
 		Name = 'Use killaura target'
+	})
+	ShopCheck = AimAssist:CreateToggle({
+		Name = "Shop Check",
+		Function = function() end,
+		Default = false
 	})
 	StrafeIncrease = AimAssist:CreateToggle({Name = 'Strafe increase'})
 end)
@@ -3512,7 +3627,6 @@ run(function()
 	Fly = vape.Categories.Blatant:CreateModule({
 		Name = "Fly",
 		Function = function(callback)
-			print("fly")
 			if callback then
 				olddeflate = bedwars.BalloonController.deflateBalloon
 				bedwars.BalloonController.deflateBalloon = function() end
@@ -4085,48 +4199,6 @@ local anims = {
 	}	
 }
 
-local function Wallcheck(attackerCharacter, targetCharacter, additionalIgnore)
-    if not (attackerCharacter and targetCharacter) then
-        return false
-    end
-
-    local humanoidRootPart = attackerCharacter.PrimaryPart
-    local targetRootPart = targetCharacter.PrimaryPart
-    if not (humanoidRootPart and targetRootPart) then
-        return false
-    end
-
-    local origin = humanoidRootPart.Position
-    local targetPosition = targetRootPart.Position
-    local direction = targetPosition - origin
-
-    local raycastParams = RaycastParams.new()
-    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
-    raycastParams.RespectCanCollide = true
-
-    local ignoreList = {attackerCharacter}
-    
-    if additionalIgnore and typeof(additionalIgnore) == "table" then
-        for _, item in pairs(additionalIgnore) do
-            table.insert(ignoreList, item)
-        end
-    end
-
-    raycastParams.FilterDescendantsInstances = ignoreList
-
-    local raycastResult = workspace:Raycast(origin, direction, raycastParams)
-
-    if raycastResult then
-        if raycastResult.Instance:IsDescendantOf(targetCharacter) then
-            return true
-        else
-            return false
-        end
-    else
-        return true
-    end
-end
-
 local cleanTable = function(tab)
 	local res = {}
 	for i,v in pairs(tab) do table.insert(res, tostring(i)) end
@@ -4214,9 +4286,47 @@ run(function()
 		AttackRemote = bedwars.Client:Get(bedwars.AttackRemote)
 	end)
 
+	local function createRangeCircle()
+		local suc, err = pcall(function()
+			if (not shared.CheatEngineMode) then
+				RangeCirclePart = Instance.new("MeshPart")
+				RangeCirclePart.MeshId = "rbxassetid://3726303797"
+				if shared.RiseMode and GuiLibrary.GUICoreColor and GuiLibrary.GUICoreColorChanged then
+					RangeCirclePart.Color = GuiLibrary.GUICoreColor
+					GuiLibrary.GUICoreColorChanged.Event:Connect(function()
+						RangeCirclePart.Color = GuiLibrary.GUICoreColor
+					end)
+				else
+					RangeCirclePart.Color = Color3.fromHSV(BoxColor["Hue"], BoxColor["Sat"], BoxColor.Value)
+				end
+				RangeCirclePart.CanCollide = false
+				RangeCirclePart.Anchored = true
+				RangeCirclePart.Material = Enum.Material.Neon
+				RangeCirclePart.Size = Vector3.new(Range.Value * 0.7, 0.01, Range.Value * 0.7)
+				if Killaura.Enabled then
+					RangeCirclePart.Parent = gameCamera
+				end
+				RangeCirclePart:SetAttribute("gamecore_GameQueryIgnore", true)
+			end
+		end)
+		if (not suc) then
+			pcall(function()
+				if RangeCirclePart then
+					RangeCirclePart:Destroy()
+					RangeCirclePart = nil
+				end
+				InfoNotification("Killaura - Range Visualiser Circle", "There was an error creating the circle. Disabling...", 2)
+			end)
+		end
+	end
+
 	local function getAttackData()
 		if Mouse.Enabled then
 			if not inputService:IsMouseButtonPressed(0) then return false end
+		end
+
+		if GUI.Enabled then
+			--if bedwars.AppController:isLayerOpen(bedwars.UILayers.MAIN) then return false end
 		end
 
 		local sword = Limit.Enabled and store.localHand or getSword()
@@ -4224,7 +4334,7 @@ run(function()
 
 		local meta = bedwars.ItemTable[sword.tool.Name]
 		if Limit.Enabled then
-			if store.localHand.toolType ~= 'sword' or bedwars.DaoController.chargingMaid then return false end
+			if store.localHand.Type ~= 'sword' or bedwars.DaoController.chargingMaid then return false end
 		end
 
 		if LegitAura.Enabled then
@@ -4238,6 +4348,9 @@ run(function()
 		Name = 'Killaura',
 		Function = function(callback)
 			if callback then
+				if RangeCircle.Enabled then
+					createRangeCircle()
+				end
 				if inputService.TouchEnabled then
 					pcall(function()
 						lplr.PlayerGui.MobileUI['2'].Visible = Limit.Enabled
@@ -4315,6 +4428,7 @@ run(function()
 					store.KillauraTarget = nil
 					pcall(function() vapeTargetInfo.Targets.Killaura = nil end)
 					if sword then
+						local isClaw = string.find(string.lower(tostring(sword and sword.itemType or "")), "summoner_claw")
 						local plrs = entitylib.AllPosition({
 							Range = Range.Value,
 							Part = 'RootPart',
@@ -4323,15 +4437,15 @@ run(function()
 							Limit = MaxTargets.Value,
 							Sort = sortmethods[Sort.Value]
 						})
-
 						if #plrs > 0 then
 							switchItem(sword.tool, 0)
 							local selfpos = entitylib.character.RootPart.Position
 							local localfacing = entitylib.character.RootPart.CFrame.LookVector * Vector3.new(1, 0, 1)
 
 							for _, v in plrs do
-								if Targets.Walls.Enabled and not Wallcheck(lplr.Character, v.Character) then continue end
-
+								if Targets.Walls.Enabled then
+									if not Wallcheck(lplr.Character, v.Character) then continue end
+								end
 								local delta = (v.RootPart.Position - selfpos)
 								local angle = math.acos(localfacing:Dot((delta * Vector3.new(1, 0, 1)).Unit))
 								if angle > (math.rad(AngleSlider.Value) / 2) then continue end
@@ -4352,15 +4466,21 @@ run(function()
 									Attacking = true
 									killauraNearPlayer = Attacking
 									store.KillauraTarget = v
-									if not Swing.Enabled and AnimDelay <= tick() and not LegitAura.Enabled then
-										AnimDelay = tick() + (meta.sword.respectAttackSpeedForEffects and meta.sword.attackSpeed or (Sync.Enabled and 0.24 or 0.14))
-										bedwars.SwordController:playSwordEffect(meta, 0)
-										if meta.displayName:find(' Scythe') then
-											bedwars.ScytheController:playLocalAnimation()
+									if not isClaw then
+										if not Swing.Enabled and AnimDelay <= tick() and not LegitAura.Enabled then
+											AnimDelay = tick() + (meta.sword.respectAttackSpeedForEffects and meta.sword.attackSpeed or (Sync.Enabled and 0.24 or 0.14))
+											bedwars.SwordController:playSwordEffect(meta, 0)
+											if meta.displayName:find(' Scythe') then
+												bedwars.ScytheController:playLocalAnimation()
+											end
+	
+											if vape.ThreadFix then
+												setthreadidentity(8)
+											end
 										end
 									end
 								end
-
+								
 								local actualRoot = v.Character.PrimaryPart
 								if actualRoot then
 									local dir = CFrame.lookAt(selfpos, actualRoot.Position).LookVector
@@ -4368,19 +4488,23 @@ run(function()
 									bedwars.SwordController.lastAttack = workspace:GetServerTimeNow()
 									store.attackReach = (delta.Magnitude * 100) // 1 / 100
 									store.attackReachUpdate = tick() + 1
-									AttackRemote:FireServer({
-										weapon = sword.tool,
-										chargedAttack = {chargeRatio = meta.sword.chargedAttack and not meta.sword.chargedAttack.disableOnGrounded and 0.999 or 0},
-										entityInstance = v.Character,
-										validate = {
-											raycast = {
-												cameraPosition = {value = pos},
-												cursorDirection = {value = dir}
-											},
-											targetPosition = {value = actualRoot.Position},
-											selfPosition = {value = pos}
-										}
-									})
+									if isClaw then
+										bedwars.KaidaController:request(v.Character)
+									else
+										AttackRemote:FireServer({
+											weapon = sword.tool,
+											chargedAttack = {chargeRatio = meta.sword.chargedAttack and not meta.sword.chargedAttack.disableOnGrounded and 0.999 or 0},
+											entityInstance = v.Character,
+											validate = {
+												raycast = {
+													cameraPosition = {value = pos},
+													cursorDirection = {value = dir}
+												},
+												targetPosition = {value = actualRoot.Position},
+												selfPosition = {value = pos}
+											}
+										})
+									end
 								end
 							end
 						end
@@ -4458,37 +4582,7 @@ run(function()
 		Name = "Range Visualiser",
 		Function = function(call)
 			if call then
-				local suc, err = pcall(function()
-					if (not shared.CheatEngineMode) then
-						RangeCirclePart = Instance.new("MeshPart")
-						RangeCirclePart.MeshId = "rbxassetid://3726303797"
-						if shared.RiseMode and GuiLibrary.GUICoreColor and GuiLibrary.GUICoreColorChanged then
-							RangeCirclePart.Color = GuiLibrary.GUICoreColor
-							GuiLibrary.GUICoreColorChanged.Event:Connect(function()
-								RangeCirclePart.Color = GuiLibrary.GUICoreColor
-							end)
-						else
-							RangeCirclePart.Color = Color3.fromHSV(BoxColor["Hue"], BoxColor["Sat"], BoxColor.Value)
-						end
-						RangeCirclePart.CanCollide = false
-						RangeCirclePart.Anchored = true
-						RangeCirclePart.Material = Enum.Material.Neon
-						RangeCirclePart.Size = Vector3.new(Range.Value * 0.7, 0.01, Range.Value * 0.7)
-						if Killaura.Enabled then
-							RangeCirclePart.Parent = gameCamera
-						end
-						--bedwars.QueryUtil:setQueryIgnored(RangeCirclePart, true)
-					end
-				end)
-				if (not suc) then
-					pcall(function()
-						if RangeCirclePart then
-							RangeCirclePart:Destroy()
-							RangeCirclePart = nil
-						end
-						InfoNotification("Killaura - Range Visualiser Circle", "There was an error creating the circle. Disabling...", 2)
-					end)
-				end
+				createRangeCircle()
 			else
 				if RangeCirclePart then
 					RangeCirclePart:Destroy()
@@ -5951,9 +6045,15 @@ run(function()
 						BedPlatesTable[v] = nil
 					end
 				end))
-				for i, v in pairs(collectionService:GetTagged("bed")) do
-					addBed(v)
-				end
+				task.spawn(function()
+					repeat 
+						for i, v in pairs(collectionService:GetTagged("bed")) do
+							addBed(v)
+						end
+						task.wait(5)
+						BedPlatesFolder:ClearAllChildren()
+					until not BedPlates.Enabled
+				end)
 			else
 				BedPlatesFolder:ClearAllChildren()
 			end
@@ -8086,6 +8186,50 @@ run(function()
 	end
 
 	local AutoKit_Functions = {
+		wizard = function()
+			repeat
+				local ability = lplr:GetAttribute('WizardAbility')
+				if ability and bedwars.AbilityController:canUseAbility(ability) then
+					local plr = entitylib.EntityPosition({
+						Range = 50,
+						Part = 'RootPart',
+						Players = true,
+						Sort = sortmethods.Health
+					})
+	
+					if plr then
+						bedwars.AbilityController:useAbility(ability, {target = plr.RootPart.Position})
+					end
+				end
+	
+				task.wait(0.1)
+			until not AutoKit.Enabled
+		end,
+		warlock = function()
+			local lastTarget
+			repeat
+				if store.hand.tool and store.hand.tool.Name == 'warlock_staff' then
+					local plr = entitylib.EntityPosition({
+						Range = 30,
+						Part = 'RootPart',
+						Players = true,
+						NPCs = true
+					})
+	
+					if plr and plr.Character ~= lastTarget then
+						if not bedwars.WarlockController:link(plr) then
+							plr = nil
+						end
+					end
+	
+					lastTarget = plr and plr.Character
+				else
+					lastTarget = nil
+				end
+	
+				task.wait(0.1)
+			until not AutoKit.Enabled
+		end,
 		["star_collector"] = function()
 			local function fetchItem(obj)
 				local args = {
