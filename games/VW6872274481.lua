@@ -4531,7 +4531,13 @@ run(function()
 			NameSuspicious = {},
 			Cached = {}
 		},
-		CacheEnabled = true
+		CacheEnabled = true,
+		TeleportDetection = false,
+		InfiniteFlyDetection = false,
+		InvisibilityDetection = false,
+		NukerDetection = false,
+		SpeedDetection = false,
+		NameDetection = false
 	}
 
     local DetectionCore = {
@@ -4689,22 +4695,28 @@ run(function()
 
     local function initializeDetections(player)
         local toggles = {
-            Teleport = ExploitDetectionSystem.TeleportToggle,
-            Speed = ExploitDetectionSystem.SpeedToggle,
-            InfiniteFly = ExploitDetectionSystem.InfiniteFlyToggle,
-            Invisibility = ExploitDetectionSystem.InvisibilityToggle,
-            NameCheck = ExploitDetectionSystem.NameToggle,
-            CacheCheck = ExploitDetectionSystem.CacheToggle
+            Teleport = ExploitDetectionSystemConfig.TeleportDetection,
+            Speed = ExploitDetectionSystemConfig.SpeedDetection,
+            InfiniteFly = ExploitDetectionSystemConfig.InfiniteFlyDetection,
+            Invisibility = ExploitDetectionSystemConfig.InvisibilityDetection,
+            NameCheck = ExploitDetectionSystemConfig.NameDetection,
+            CacheCheck = ExploitDetectionSystemConfig.CacheEnabled
         }
         
         for detection, method in pairs(DetectionMethods) do
-            if toggles[detection] and toggles[detection].Enabled then
+            if toggles[detection] then
                 task.spawn(method, player)
             end
         end
     end
 
-    ExploitDetectionSystem = vape.Categories.Blatant:CreateModule({
+	local CORE_CONNECTIONS = {}
+
+	local function clean(con)
+		table.insert(CORE_CONNECTIONS, con)
+	end
+
+    ExploitDetectionSystem = vape.Categories.Utility:CreateModule({
         Name = 'HackerDetector',
         Tooltip = 'Advanced exploit detection system for monitoring suspicious player behavior',
         ExtraText = function() return 'Enhanced' end,
@@ -4716,53 +4728,69 @@ run(function()
                         initializeDetections(player)
                     end
                 end
-                ExploitDetectionSystem:Clean(playersService.PlayerAdded:Connect(initializeDetections))
+                clean(playersService.PlayerAdded:Connect(initializeDetections))
             else
                 for _, conn in pairs(ExploitDetectionSystem.Connections) do
                     conn:Disconnect()
                 end
                 table.clear(ExploitDetectionSystem.Connections)
+				for _, conn in pairs(CORE_CONNECTIONS) do
+                    conn:Disconnect()
+                end
+				table.clear(CORE_CONNECTIONS)
             end
         end
     })
 
-    ExploitDetectionSystem.TeleportToggle = ExploitDetectionSystem:CreateToggle({
+    ExploitDetectionSystem:CreateToggle({
         Name = 'Teleport',
         Default = true,
-        Function = function() end
+        Function = function(call) 
+			ExploitDetectionSystemConfig.TeleportDetection = call
+		end	
     })
     
-    ExploitDetectionSystem.InfiniteFlyToggle = ExploitDetectionSystem:CreateToggle({
+    ExploitDetectionSystem:CreateToggle({
         Name = 'InfiniteFly',
         Default = true,
-        Function = function() end
+        Function = function(call) 
+			ExploitDetectionSystemConfig.InfiniteFlyDetection = call
+		end
     })
     
-    ExploitDetectionSystem.InvisibilityToggle = ExploitDetectionSystem:CreateToggle({
+    ExploitDetectionSystem:CreateToggle({
         Name = 'Invisibility',
         Default = true,
-        Function = function() end
+        Function = function(call) 
+			ExploitDetectionSystemConfig.InvisibilityDetection = call
+		end
     })
     
-    ExploitDetectionSystem.NukerToggle = ExploitDetectionSystem:CreateToggle({
+    ExploitDetectionSystem:CreateToggle({
         Name = 'Nuker',
         Default = true,
-        Function = function() end
+        Function = function(call) 
+			ExploitDetectionSystemConfig.NukerDetection = call
+		end
     })
     
-    ExploitDetectionSystem.SpeedToggle = ExploitDetectionSystem:CreateToggle({
+    ExploitDetectionSystem:CreateToggle({
         Name = 'Speed',
         Default = true,
-        Function = function() end
+        Function = function(call) 
+			ExploitDetectionSystemConfig.SpeedDetection = call
+		end
     })
     
-    ExploitDetectionSystem.NameToggle = ExploitDetectionSystem:CreateToggle({
+    ExploitDetectionSystem:CreateToggle({
         Name = 'Name',
         Default = true,
-        Function = function() end
+        Function = function(call)
+			ExploitDetectionSystemConfig.NameDetection = call
+		end
     })
     
-    ExploitDetectionSystem.CacheToggle = ExploitDetectionSystem:CreateToggle({
+    ExploitDetectionSystem:CreateToggle({
         Name = 'Cached detections',
         Tooltip = 'Manages detection cache in vape/Libraries/exploiters.json',
         Default = true,
