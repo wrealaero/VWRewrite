@@ -210,7 +210,7 @@ local function are_installed_1()
     if not isfolder(baseDirectory..'profiles') then makefolder(baseDirectory..'profiles') end
     if isfile(baseDirectory..'libraries/profilesinstalled5.txt') then return true else return false end
 end
-if not are_installed_1() then install_profiles(1) end
+if not are_installed_1() then pcall(function() install_profiles(1) end) end
 local url = shared.RiseMode and "https://github.com/VapeVoidware/VWRise/" or "https://github.com/VapeVoidware/VWRewrite"
 local commit = "main"
 writefile(baseDirectory.."commithash2.txt", commit)
