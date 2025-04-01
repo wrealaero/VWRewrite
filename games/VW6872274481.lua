@@ -3718,49 +3718,32 @@ end)
 end)--]]
 
 run(function()
+    local AdetundeRemote
+	local function upgrade(args)
+		if not AdetundeRemote then
+			AdetundeRemote = game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("node_modules"):WaitForChild("@rbxts"):WaitForChild("net"):WaitForChild("out"):WaitForChild("_NetManaged"):WaitForChild("UpgradeFrostyHammer")
+		end
+		return AdetundeRemote:InvokeServer(unpack(args))
+	end
     local AdetundeExploit = {}
     local AdetundeExploit_List = { Value = "Shield" }
 
     local adetunde_remotes = {
         ["Shield"] = function()
             local args = { [1] = "shield" }
-            local returning = game:GetService("ReplicatedStorage")
-                :WaitForChild("rbxts_include")
-                :WaitForChild("node_modules")
-                :WaitForChild("@rbxts")
-                :WaitForChild("net")
-                :WaitForChild("out")
-                :WaitForChild("_NetManaged")
-                :WaitForChild("UpgradeFrostyHammer")
-                :InvokeServer(unpack(args))
+            local returning = upgrade(args)
             return returning
         end,
 
         ["Speed"] = function()
             local args = { [1] = "speed" }
-            local returning = game:GetService("ReplicatedStorage")
-                :WaitForChild("rbxts_include")
-                :WaitForChild("node_modules")
-                :WaitForChild("@rbxts")
-                :WaitForChild("net")
-                :WaitForChild("out")
-                :WaitForChild("_NetManaged")
-                :WaitForChild("UpgradeFrostyHammer")
-                :InvokeServer(unpack(args))
+            local returning = upgrade(args)
             return returning
         end,
 
         ["Strength"] = function()
             local args = { [1] = "strength" }
-            local returning = game:GetService("ReplicatedStorage")
-                :WaitForChild("rbxts_include")
-                :WaitForChild("node_modules")
-                :WaitForChild("@rbxts")
-                :WaitForChild("net")
-                :WaitForChild("out")
-                :WaitForChild("_NetManaged")
-                :WaitForChild("UpgradeFrostyHammer")
-                :InvokeServer(unpack(args))
+            local returning = upgrade(args)
             return returning
         end
     }
