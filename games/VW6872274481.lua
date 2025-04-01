@@ -36,7 +36,7 @@ if (not shared.GlobalBedwars) or (shared.GlobalBedwars and type(shared.GlobalBed
 	errorNotification("VW-BEDWARS", "Critical! Important connection is missing! Please report this bug to erchodev#0", 10)
 	pcall(function()
 		function GuiLibrary:Save()
-			warningNotification("GuiLibrary.SaveSettings", "Profiles saving is disabled due to error in the code!")
+			warningNotification("GuiLibrary.SaveSettings", "Profiles saving is disabled due to error in the code!", 1)
 		end
 	end)
 	local delfile = delfile or function(file) writefile(file, "") end
@@ -624,79 +624,116 @@ run(function()
 end)
 
 run(function()
-	local QueueCardMods = {}
-	local QueueCardGradientToggle = {}
-	local QueueCardGradient = {Hue = 0, Sat = 0, Value = 0}
-	local QueueCardGradient2 = {Hue = 0, Sat = 0, Value = 0}
-	local function patchQueueCard()
-		if lplr.PlayerGui:FindFirstChild('QueueApp') then 
-			if lplr.PlayerGui.QueueApp:WaitForChild('1'):IsA('Frame') then 
-                if shared.RiseMode and GuiLibrary.MainColor then
-                    lplr.PlayerGui.QueueApp['1'].BackgroundColor3 = GuiLibrary.MainColor
-                else
-				    lplr.PlayerGui.QueueApp['1'].BackgroundColor3 = Color3.fromHSV(QueueCardGradient.Hue, QueueCardGradient.Sat, QueueCardGradient.Value)
-                end
-			end
-            for i = 1, 3 do
-                if QueueCardGradientToggle.Enabled then 
-                    lplr.PlayerGui.QueueApp['1'].BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                    local gradient = (lplr.PlayerGui.QueueApp['1']:FindFirstChildWhichIsA('UIGradient') or Instance.new('UIGradient', lplr.PlayerGui.QueueApp['1']))
-                    if shared.RiseMode and GuiLibrary.MainColor and GuiLibrary.SecondaryColor then
-                        local v = {GuiLibrary.MainColor, GuiLibrary.SecondaryColor, GuiLibrary.ThirdColor}
-                        if v[3] then 
-                            gradient.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, v[1]), ColorSequenceKeypoint.new(0.5, v[2]), ColorSequenceKeypoint.new(1, v[3])})
-                        else
-                            gradient.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, v[1]), ColorSequenceKeypoint.new(1, v[2])})
+    local QueueDisplayConfig = {
+        ActiveState = false,
+        GradientControl = {Enabled = true},
+        ColorSettings = {
+            Gradient1 = {Hue = 0, Saturation = 0, Brightness = 1},
+            Gradient2 = {Hue = 0, Saturation = 0, Brightness = 0.8}
+        },
+        Animation = {Speed = 0.5, Progress = 0}
+    }
+
+    local DisplayUtils = {
+        createGradient = function(parent)
+            local gradient = parent:FindFirstChildOfClass("UIGradient") or Instance.new("UIGradient")
+            gradient.Parent = parent
+            return gradient
+        end,
+        updateColor = function(gradient, config)
+            local time = tick() * config.Animation.Speed
+            local interp = (math.sin(time) + 1) / 2
+            local h = config.ColorSettings.Gradient1.Hue + (config.ColorSettings.Gradient2.Hue - config.ColorSettings.Gradient1.Hue) * interp
+            local s = config.ColorSettings.Gradient1.Saturation + (config.ColorSettings.Gradient2.Saturation - config.ColorSettings.Gradient1.Saturation) * interp
+            local b = config.ColorSettings.Gradient1.Brightness + (config.ColorSettings.Gradient2.Brightness - config.ColorSettings.Gradient1.Brightness) * interp
+            gradient.Color = ColorSequence.new(Color3.fromHSV(h, s, b))
+        end
+    }
+
+	local CoreConnection
+
+    local function enhanceQueueDisplay()
+		pcall(function() 
+			CoreConnection:Disconnect()
+		end)
+        local success, err = pcall(function()
+            if not lplr.PlayerGui:FindFirstChild('QueueApp') then return end
+            
+            for attempt = 1, 3 do
+                if QueueDisplayConfig.GradientControl.Enabled then
+                    local queueFrame = lplr.PlayerGui.QueueApp['1']
+                    queueFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                    
+                    local gradient = DisplayUtils.createGradient(queueFrame)
+                    gradient.Rotation = 180
+                    
+                    local displayInterface = {
+                        module = vape.watermark,
+                        gradient = gradient,
+                        GetEnabled = function()
+                            return QueueDisplayConfig.ActiveState
+                        end,
+                        SetGradientEnabled = function(state)
+                            QueueDisplayConfig.GradientControl.Enabled = state
+                            gradient.Enabled = state
                         end
-                    else
-                        gradient.Color = ColorSequence.new({
-                            ColorSequenceKeypoint.new(0, Color3.fromHSV(QueueCardGradient.Hue, QueueCardGradient.Sat, QueueCardGradient.Value)), 
-                            ColorSequenceKeypoint.new(1, Color3.fromHSV(QueueCardGradient2.Hue, QueueCardGradient2.Sat, QueueCardGradient2.Value))
-                        })
-                    end
+                    }
+                    --vape.whitelistedlines["enhancedQueueDisplay"] = displayInterface
+                    CoreConnection = game:GetService("RunService").RenderStepped:Connect(function()
+                        if QueueDisplayConfig.ActiveState and QueueDisplayConfig.GradientControl.Enabled then
+                            DisplayUtils.updateColor(gradient, QueueDisplayConfig)
+                        end
+                    end)
                 end
-                task.wait()
+                task.wait(0.1)
             end
-		end
-	end
-	QueueCardMods = vape.Categories.Utility:CreateModule({
-		Name = 'QueueCardMods',
-		Tooltip = 'Mods the QueueApp at the end of the game.',
-		Function = function(calling) 
-			if calling then 
-				patchQueueCard()
-				QueueCardMods:Clean(lplr.PlayerGui.ChildAdded:Connect(patchQueueCard))
+        end)
+        
+        if not success then
+            warn("Queue display enhancement failed: " .. tostring(err))
+        end
+    end
+
+    local QueueDisplayEnhancer
+    QueueDisplayEnhancer = vape.Categories.Utility:CreateModule({
+        Name = 'QueueCardMods',
+        Tooltip = 'Enhances the QueueApp display with dynamic gradients',
+        Function = function(enabled)
+            QueueDisplayConfig.ActiveState = enabled
+            if enabled then
+                enhanceQueueDisplay()
+                QueueDisplayEnhancer:Clean(lplr.PlayerGui.ChildAdded:Connect(enhanceQueueDisplay))
+			else
+				pcall(function() 
+					CoreConnection:Disconnect()
+				end)
 			end
-		end
-	})
-    QueueCardGradientToggle = QueueCardMods:CreateToggle({
-        Name = 'Gradient',
-        Function = function(calling)
-            pcall(function() QueueCardGradient2.Object.Visible = calling end) 
         end
     })
-    if (not shared.RiseMode) and not GuiLibrary.MainColor and not GuiLibrary.SecondaryColor then
-        QueueCardGradient = QueueCardMods:CreateColorSlider({
-            Name = 'Color',
-            Function = function()
-				if QueueCardMods.Enabled then pcall(patchQueueCard) end
-            end
-        })
-        QueueCardGradient2 = QueueCardMods:CreateColorSlider({
-            Name = 'Color 2',
-            Function = function()
-                if QueueCardMods.Enabled then pcall(patchQueueCard) end
-            end
-        })
-    else
-		if shared.RiseMode then
-			pcall(function()
-				QueueCardMods:Clean(GuiLibrary.GUIColorChanged.Event:Connect(function()
-					if QueueCardMods.Enabled then pcall(patchQueueCard) end
-				end))
-			end)
-		end
-    end
+
+   	QueueDisplayEnhancer:CreateSlider({
+        Name = "Animation Speed",
+        Function = function(speed)
+            QueueDisplayConfig.Animation.Speed = math.clamp(speed, 0.1, 5)
+        end,
+        Min = 1,
+        Max = 5,
+        Default = 5
+    })
+
+    QueueDisplayEnhancer:CreateColorSlider({
+        Name = "Color 1",
+        Function = function(h, s, v)
+            QueueDisplayConfig.ColorSettings.Gradient1 = {Hue = h, Saturation = s, Brightness = v}
+        end
+    })
+
+    QueueDisplayEnhancer:CreateColorSlider({
+        Name = "Color 2",
+        Function = function(h, s, v)
+            QueueDisplayConfig.ColorSettings.Gradient2 = {Hue = h, Saturation = s, Brightness = v}
+        end
+    })
 end)
 
 --[[run(function()
@@ -4316,7 +4353,7 @@ run(function()
 				pcall(function() bedtween:Cancel() end)
 			end
 		end,
-		HoverText = "best paid autowin 2023!1!!! rel11!11!1"
+		Tooltip = "best paid autowin 2023!1!!! rel11!11!1"
 	})
 end)
 
@@ -4463,225 +4500,276 @@ run(function()
 end)
 
 run(function()
-	local HackerDetector = {}
-	local HackerDetectorInfFly = {}
-	local HackerDetectorTeleport = {}
-	local HackerDetectorNuker = {}
-	local HackerDetectorFunny = {}
-	local HackerDetectorInvis = {}
-	local HackerDetectorName = {}
-	local HackerDetectorSpeed = {}
-	local HackerDetectorFileCache = {}
-	local pastesploit
-	local detectedusers = {
-		InfiniteFly = {},
-		Teleport = {},
-		Nuker = {},
-		AnticheatBypass = {},
-		Invisibility = {},
-		Speed = {},
-		Name = {},
-		Cache = {}
-	}
-	local distances = {
-		windwalker = 80
-	}
-	local function cachedetection(player, detection)
-		if not HackerDetectorFileCache.Enabled then 
-			return 
+	local isAlive = function(plr, healthblacklist)
+		plr = plr or lplr
+		local alive = false 
+		if plr.Character and plr.Character.PrimaryPart and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character:FindFirstChild("Humanoid") and plr.Character:FindFirstChild("Head") then 
+			alive = true
 		end
-		if type(response) ~= 'table' then 
-			response = {}
+		if not healthblacklist and alive and plr.Character.Humanoid.Health and plr.Character.Humanoid.Health <= 0 then 
+			alive = false
 		end
-		if response[player.Name] then 
-			if table.find(response[player.Name], detection) == nil then 
-				table.insert(response[player.Name].Detections, detection) 
-			end
-		else
-			response[player.Name] = {DisplayName = player.DisplayName, UserId = tostring(player.DisplayName), Detections = {detection}}
-		end
+		return alive
 	end
-	local detectionmethods = {
-		Teleport = function(plr)
-			if table.find(detectedusers.Teleport, plr) then 
-				return 
-			end
-			if store.queueType:find('bedwars') == nil or plr:GetAttribute('Spectator') then 
-				return 
-			end
-			local lastbwteleport = plr:GetAttribute('LastTeleported')
-			HackerDetector:Clean(plr:GetAttributeChangedSignal('LastTeleported'):Connect(function() lastbwteleport = plr:GetAttribute('LastTeleported') end))
-			HackerDetector:Clean(plr.CharacterAdded:Connect(function()
-				oldpos = Vector3.zero
-				if table.find(detectedusers.Teleport, plr) then 
-					return 
-				end
-				 repeat task.wait() until isAlive(plr, true)
-				 local oldpos2 = plr.Character.HumanoidRootPart.Position 
-				 task.delay(2, function()
-					if isAlive(plr, true) then 
-						local newdistance = (plr.Character.HumanoidRootPart.Position - oldpos2).Magnitude 
-						if newdistance >= 400 and (plr:GetAttribute('LastTeleported') - lastbwteleport) == 0 then 
-							InfoNotification('HackerDetector', plr.DisplayName..' is using Teleport Exploit!', 100) 
-							table.insert(detectedusers.Teleport, plr)
-							cachedetection(plr, 'Teleport')
-							whitelist.customtags[plr.Name] = {{text = 'VAPE USER', color = Color3.new(1, 1, 0)}}
-						end 
-					end
-				 end)
-			end))
-		end,
-		Speed = function(plr) 
-			repeat task.wait() until (store.matchState ~= 0 or not HackerDetector.Enabled or not HackerDetectorSpeed.Enabled)
-			if table.find(detectedusers.Speed, plr) then 
-				return 
-			end
-			local lastbwteleport = plr:GetAttribute('LastTeleported')
-			local oldpos = Vector3.zero 
-			HackerDetector:Clean(plr:GetAttributeChangedSignal('LastTeleported'):Connect(function() lastbwteleport = plr:GetAttribute('LastTeleported') end))
-			HackerDetector:Clean(plr.CharacterAdded:Connect(function() oldpos = Vector3.zero end))
-			repeat 
-				if isAlive(plr, true) then 
-					local magnitude = (plr.Character.HumanoidRootPart.Position - oldpos).Magnitude
-					if (plr:GetAttribute('LastTeleported') - lastbwteleport) ~= 0 and magnitude >= ((distances[plr:GetAttribute('PlayingAsKit') or ''] or 25) + (playerRaycasted(plr, Vector3.new(0, -15, 0)) and 0 or 40)) then 
-						InfoNotification('HackerDetector', plr.DisplayName..' is using speed!', 60)
-						whitelist.customtags[plr.Name] = {{text = 'VAPE USER', color = Color3.new(1, 1, 0)}}
-					end
-					oldpos = plr.Character.HumanoidRootPart.Position
-					task.wait(2.5)
-					lastbwteleport = plr:GetAttribute('LastTeleported')
-				end
-			until not task.wait() or table.find(detectedusers.Speed, plr) or (not HackerDetector.Enabled or not HackerDetectorSpeed.Enabled)
-		end,
-		InfiniteFly = function(plr) 
-			pcall(function()
-				repeat 
-					if isAlive(plr, true) then 
-						local magnitude = (lplr.Character:WaitForChild("HumanoidRootPart").Position - plr.Character.HumanoidRootPart.Position).Magnitude
-						if magnitude >= 10000 and playerRaycast(plr) == nil and playerRaycast({Character = {PrimaryPart = {Position = lplr.Character:WaitForChild("HumanoidRootPart").Position}}}) then 
-							InfoNotification('HackerDetector', plr.DisplayName..' is using InfiniteFly!', 60) 
-							cachedetection(plr, 'InfiniteFly')
-							table.insert(detectedusers.InfiniteFly, plr)
-							whitelist.customtags[plr.Name] = {{text = 'VAPE USER', color = Color3.new(1, 1, 0)}}
-						end
-						task.wait(2.5)
-					end
-				until not task.wait() or table.find(detectedusers.InfiniteFly, plr) or (not HackerDetector.Enabled or not HackerDetectorInfFly.Enabled)
-			end)
-		end,
-		Invisibility = function(plr) 
-			pcall(function()
-				if table.find(detectedusers.Invisibility, plr) then 
-					return 
-				end
-				repeat 
-					for i,v in next, (isAlive(plr, true) and plr.Character.Humanoid:GetPlayingAnimationTracks() or {}) do 
-						if v.Animation.AnimationId == 'http://www.roblox.com/asset/?id=11335949902' or v.Animation.AnimationId == 'rbxassetid://11335949902' then 
-							InfoNotification('HackerDetector', plr.DisplayName..' is using Invisibility!', 60) 
-							table.insert(detectedusers.Invisibility, plr)
-							cachedetection(plr, 'Invisibility')
-							whitelist.customtags[plr.Name] = {{text = 'VAPE USER', color = Color3.new(1, 1, 0)}}
-						end
-					end
-					task.wait(0.5)
-				until table.find(detectedusers.Invisibility, plr) or (not HackerDetector.Enabled or not HackerDetectorInvis.Enabled)
-			end)
-		end,
-		Name = function(plr) 
-			pcall(function()
-				repeat task.wait() until pastesploit 
-				local lines = pastesploit:split('\n') 
-				for i,v in next, lines do 
-					if v:find('local Owner = ') then 
-						local name = lines[i]:gsub('local Owner =', ''):gsub('"', ''):gsub("'", '') 
-						if plr.Name == name then 
-							InfoNotification('HackerDetector', plr.DisplayName..' is the owner of Godsploit! They\'re is most likely cheating.', 60) 
-							cachedetection(plr, 'Name')
-							whitelist.customtags[plr.Name] = {{text = 'VAPE USER', color = Color3.new(1, 1, 0)}}
-						end
-					end
-				end
-				for i,v in next, ({'godsploit', 'alsploit', 'renderintents'}) do 
-					local user = plr.Name:lower():find(v) 
-					local display = plr.DisplayName:lower():find(v)
-					if user or display then 
-						InfoNotification('HackerDetector', plr.DisplayName..' has "'..v..'" in their '..(user and 'username' or 'display name')..'! They might be cheating.', 20)
-						cachedetection(plr, 'Name') 
-						return 
-					end
-				end
-			end)
-		end, 
-		Cache = function(plr)
-			local success, response = pcall(function()
-				return httpService:JSONDecode(readfile('vape/Libraries/exploiters.json')) 
-			end) 
-			if type(response) == 'table' and response[plr.Name] then 
-				InfoNotification('HackerDetector', plr.DisplayName..' is cached on the exploiter database!', 30)
-				table.insert(detectedusers.Cached, plr)
-				whitelist.customtags[plr.Name] = {{text = 'VAPE USER', color = Color3.new(1, 1, 0)}}
-			end
-		end
+
+    local ExploitDetectionSystem = {
+        Connections = {},
+        PlayerData = {}
+    }
+	local ExploitDetectionSystemConfig = {
+		DetectionThresholds = {
+			TeleportDistance = 400,
+			SpeedDistance = 25,
+			FlyDistance = 10000,
+			CheckInterval = 2.5
+		},
+		DetectedPlayers = {
+			Teleport = {},
+			Speed = {},
+			InfiniteFly = {},
+			Invisibility = {},
+			NameSuspicious = {},
+			Cached = {}
+		},
+		CacheEnabled = true
 	}
-	local function bootdetections(player)
-		local detectiontoggles = {InfiniteFly = HackerDetectorInfFly, Teleport = HackerDetectorTeleport, Nuker = HackerDetectorNuker, Invisibility = HackerDetectorInvis, Speed = HackerDetectorSpeed, Name = HackerDetectorName, Cache = HackerDetectorFileCache}
-		for i, detection in next, detectionmethods do 
-			if detectiontoggles[i].Enabled then
-			   task.spawn(detection, player)
-			end
-		end
-	end
-	HackerDetector = vape.Categories.Blatant:CreateModule({
-		Name = 'HackerDetector',
-		Tooltip = 'Notify when someone is\nsuspected of using exploits.',
-		ExtraText = function() return 'Vanilla' end,
-		Function = function(calling) 
-			if calling then 
-				for i,v in next, playersService:GetPlayers() do 
-					if v ~= lplr then 
-						bootdetections(v) 
-					end 
-				end
-				HackerDetector:Clean(playersService.PlayerAdded:Connect(bootdetections))
-			end
-		end
-	})
-	HackerDetectorTeleport = HackerDetector:CreateToggle({
-		Name = 'Teleport',
-		Default = true,
-		Function = function() end
-	})
-	HackerDetectorInfFly = HackerDetector:CreateToggle({
-		Name = 'InfiniteFly',
-		Default = true,
-		Function = function() end
-	})
-	HackerDetectorInvis = HackerDetector:CreateToggle({
-		Name = 'Invisibility',
-		Default = true,
-		Function = function() end
-	})
-	HackerDetectorNuker = HackerDetector:CreateToggle({
-		Name = 'Nuker',
-		Default = true,
-		Function = function() end
-	})
-	HackerDetectorSpeed = HackerDetector:CreateToggle({
-		Name = 'Speed',
-		Default = true,
-		Function = function() end
-	})
-	HackerDetectorName = HackerDetector:CreateToggle({
-		Name = 'Name',
-		Default = true,
-		Function = function() end
-	})
-	HackerDetectorFileCache = HackerDetector:CreateToggle({
-		Name = 'Cached detections',
-		Tooltip = 'Writes (vape/Libraries/exploiters.json)\neverytime someone is detected.',
-		Default = true,
-		Function = function() end
-	})
+
+    local DetectionCore = {
+        updateCache = function(player, detectionType)
+            if not ExploitDetectionSystemConfig.CacheEnabled then return end
+            
+            local success, cache = pcall(function()
+                local file = readfile('vape/Libraries/exploiters.json')
+                return file and httpService:JSONDecode(file) or {}
+            end)
+            
+            cache = cache or {}
+            cache[player.Name] = cache[player.Name] or {
+                DisplayName = player.DisplayName,
+                UserId = tostring(player.UserId),
+                Detections = {}
+            }
+            
+            if not table.find(cache[player.Name].Detections, detectionType) then
+                table.insert(cache[player.Name].Detections, detectionType)
+                pcall(function()
+                    writefile('vape/Libraries/exploiters.json', httpService:JSONEncode(cache))
+                end)
+            end
+        end,
+
+        isValidTarget = function(player)
+            return player ~= lplr and not player:GetAttribute('Spectator') and store.queueType:find('bedwars') ~= nil
+        end,
+
+        notify = function(title, message, duration)
+            InfoNotification('HackerDetector', message, duration)
+            whitelist.customtags[title] = {{text = 'VAPE USER', color = Color3.fromRGB(255, 255, 0)}}
+        end
+    }
+
+    local DetectionMethods = {
+        Teleport = function(player)
+            local lastTeleport = player:GetAttribute('LastTeleported') or 0
+            local lastPosition = Vector3.zero
+            
+            table.insert(ExploitDetectionSystem.Connections, player:GetAttributeChangedSignal('LastTeleported'):Connect(function()
+                lastTeleport = player:GetAttribute('LastTeleported')
+            end))
+            
+            table.insert(ExploitDetectionSystem.Connections, player.CharacterAdded:Connect(function()
+                task.spawn(function()
+                    repeat task.wait() until isAlive(player, true)
+                    lastPosition = player.Character.HumanoidRootPart.Position
+                    
+                    task.delay(ExploitDetectionSystemConfig.DetectionThresholds.CheckInterval, function()
+                        if isAlive(player, true) and not table.find(ExploitDetectionSystemConfig.DetectedPlayers.Teleport, player) then
+                            local distance = (player.Character.HumanoidRootPart.Position - lastPosition).Magnitude
+                            if distance >= ExploitDetectionSystemConfig.DetectionThresholds.TeleportDistance and 
+                               (player:GetAttribute('LastTeleported') - lastTeleport) == 0 then
+                                DetectionCore.notify(player.Name, player.DisplayName .. ' detected using Teleport!', 100)
+                                table.insert(ExploitDetectionSystemConfig.DetectedPlayers.Teleport, player)
+                                DetectionCore.updateCache(player, 'Teleport')
+                            end
+                        end
+                    end)
+                end)
+            end))
+        end,
+
+        Speed = function(player)
+            local lastTeleport = player:GetAttribute('LastTeleported') or 0
+            local lastPosition = Vector3.zero
+            
+            table.insert(ExploitDetectionSystem.Connections, player:GetAttributeChangedSignal('LastTeleported'):Connect(function()
+                lastTeleport = player:GetAttribute('LastTeleported')
+            end))
+            
+            task.spawn(function()
+                repeat
+                    if isAlive(player, true) and not table.find(ExploitDetectionSystemConfig.DetectedPlayers.Speed, player) then
+                        local magnitude = (player.Character.HumanoidRootPart.Position - lastPosition).Magnitude
+                        local kitDistance = ExploitDetectionSystemConfig.DetectionThresholds.SpeedDistance
+                        local threshold = kitDistance + (playerRaycasted(player, Vector3.new(0, -15, 0)) and 0 or 40)
+                        
+                        if magnitude >= threshold and (player:GetAttribute('LastTeleported') - lastTeleport) ~= 0 then
+                            DetectionCore.notify(player.Name, player.DisplayName .. ' detected using Speed!', 60)
+                            table.insert(ExploitDetectionSystemConfig.DetectedPlayers.Speed, player)
+                            DetectionCore.updateCache(player, 'Speed')
+                        end
+                        lastPosition = player.Character.HumanoidRootPart.Position
+                        task.wait(ExploitDetectionSystemConfig.DetectionThresholds.CheckInterval)
+                    end
+                until not ExploitDetectionSystem.Enabled or not ExploitDetectionSystem.SpeedToggle.Enabled
+            end)
+        end,
+
+        InfiniteFly = function(player)
+            task.spawn(function()
+                repeat
+                    if isAlive(player, true) and not table.find(ExploitDetectionSystemConfig.DetectedPlayers.InfiniteFly, player) then
+                        local distance = (lplr.Character:WaitForChild("HumanoidRootPart").Position - player.Character.HumanoidRootPart.Position).Magnitude
+                        if distance >= ExploitDetectionSystemConfig.DetectionThresholds.FlyDistance and 
+                           not playerRaycast(player) then
+                            DetectionCore.notify(player.Name, player.DisplayName .. ' detected using Infinite Fly!', 60)
+                            table.insert(ExploitDetectionSystemConfig.DetectedPlayers.InfiniteFly, player)
+                            DetectionCore.updateCache(player, 'InfiniteFly')
+                        end
+                        task.wait(ExploitDetectionSystemConfig.DetectionThresholds.CheckInterval)
+                    end
+                until not ExploitDetectionSystem.Enabled or not ExploitDetectionSystem.InfiniteFlyToggle.Enabled
+            end)
+        end,
+
+        Invisibility = function(player)
+            task.spawn(function()
+                repeat
+                    if isAlive(player, true) and not table.find(ExploitDetectionSystemConfig.DetectedPlayers.Invisibility, player) then
+                        for _, track in pairs(player.Character.Humanoid:GetPlayingAnimationTracks()) do
+                            local animId = track.Animation.AnimationId
+                            if animId == 'http://www.roblox.com/asset/?id=11335949902' or animId == 'rbxassetid://11335949902' then
+                                DetectionCore.notify(player.Name, player.DisplayName .. ' detected using Invisibility!', 60)
+                                table.insert(ExploitDetectionSystemConfig.DetectedPlayers.Invisibility, player)
+                                DetectionCore.updateCache(player, 'Invisibility')
+                            end
+                        end
+                        task.wait(0.5)
+                    end
+                until not ExploitDetectionSystem.Enabled or not ExploitDetectionSystem.InvisibilityToggle.Enabled
+            end)
+        end,
+
+        NameCheck = function(player)
+            task.spawn(function()
+                local suspiciousNames = {'godsploit', 'alsploit', 'renderintents'}
+                local nameLower = player.Name:lower()
+                local displayLower = player.DisplayName:lower()
+                
+                for _, term in ipairs(suspiciousNames) do
+                    if nameLower:find(term) or displayLower:find(term) then
+                        DetectionCore.notify(player.Name, player.DisplayName .. ' has suspicious ' .. (nameLower:find(term) and 'username' or 'display name') .. ' "' .. term .. '"!', 20)
+                        DetectionCore.updateCache(player, 'SuspiciousName')
+                        return
+                    end
+                end
+            end)
+        end,
+
+        CacheCheck = function(player)
+            local success, cache = pcall(function()
+                return httpService:JSONDecode(readfile('vape/Libraries/exploiters.json'))
+            end)
+            
+            if success and cache[player.Name] then
+                DetectionCore.notify(player.Name, player.DisplayName .. ' found in exploiter cache!', 30)
+                table.insert(ExploitDetectionSystemConfig.DetectedPlayers.Cached, player)
+            end
+        end
+    }
+
+    local function initializeDetections(player)
+        local toggles = {
+            Teleport = ExploitDetectionSystem.TeleportToggle,
+            Speed = ExploitDetectionSystem.SpeedToggle,
+            InfiniteFly = ExploitDetectionSystem.InfiniteFlyToggle,
+            Invisibility = ExploitDetectionSystem.InvisibilityToggle,
+            NameCheck = ExploitDetectionSystem.NameToggle,
+            CacheCheck = ExploitDetectionSystem.CacheToggle
+        }
+        
+        for detection, method in pairs(DetectionMethods) do
+            if toggles[detection] and toggles[detection].Enabled then
+                task.spawn(method, player)
+            end
+        end
+    end
+
+    ExploitDetectionSystem = vape.Categories.Blatant:CreateModule({
+        Name = 'HackerDetector',
+        Tooltip = 'Advanced exploit detection system for monitoring suspicious player behavior',
+        ExtraText = function() return 'Enhanced' end,
+        Function = function(enabled)
+            ExploitDetectionSystem.Enabled = enabled
+            if enabled then
+                for _, player in pairs(playersService:GetPlayers()) do
+                    if player ~= lplr then
+                        initializeDetections(player)
+                    end
+                end
+                ExploitDetectionSystem:Clean(playersService.PlayerAdded:Connect(initializeDetections))
+            else
+                for _, conn in pairs(ExploitDetectionSystem.Connections) do
+                    conn:Disconnect()
+                end
+                table.clear(ExploitDetectionSystem.Connections)
+            end
+        end
+    })
+
+    ExploitDetectionSystem.TeleportToggle = ExploitDetectionSystem:CreateToggle({
+        Name = 'Teleport',
+        Default = true,
+        Function = function() end
+    })
+    
+    ExploitDetectionSystem.InfiniteFlyToggle = ExploitDetectionSystem:CreateToggle({
+        Name = 'InfiniteFly',
+        Default = true,
+        Function = function() end
+    })
+    
+    ExploitDetectionSystem.InvisibilityToggle = ExploitDetectionSystem:CreateToggle({
+        Name = 'Invisibility',
+        Default = true,
+        Function = function() end
+    })
+    
+    ExploitDetectionSystem.NukerToggle = ExploitDetectionSystem:CreateToggle({
+        Name = 'Nuker',
+        Default = true,
+        Function = function() end
+    })
+    
+    ExploitDetectionSystem.SpeedToggle = ExploitDetectionSystem:CreateToggle({
+        Name = 'Speed',
+        Default = true,
+        Function = function() end
+    })
+    
+    ExploitDetectionSystem.NameToggle = ExploitDetectionSystem:CreateToggle({
+        Name = 'Name',
+        Default = true,
+        Function = function() end
+    })
+    
+    ExploitDetectionSystem.CacheToggle = ExploitDetectionSystem:CreateToggle({
+        Name = 'Cached detections',
+        Tooltip = 'Manages detection cache in vape/Libraries/exploiters.json',
+        Default = true,
+        Function = function(state) 
+            ExploitDetectionSystemConfig.CacheEnabled = state 
+        end
+    })
 end)
 
 --[[run(function()
@@ -4748,127 +4836,214 @@ end)--]]
 pcall(function()
 	local StaffDetector = {Enabled = false}
 	run(function()
-		local TPService = game:GetService('TeleportService')
-		local HTTPService = game:GetService("HttpService")
-		local StaffDetector_Connections = {}
-		local StaffDetector_Functions = {}
-		local StaffDetector_Extra = {
+		local TeleportService = game:GetService('TeleportService')
+		local HttpService = game:GetService("HttpService")
+		local PlayersService = game:GetService("Players")
+		
+		local StaffDetectionConfig = {
+			Connections = {},
+			Blacklist = {
+				Users = {
+					"chasemaser", "OrionYeets", "lIllllllllllIllIIlll", "AUW345678",
+					"GhostWxstaken", "throughthewindow009", "YT_GoraPlays",
+					"IllIIIIlllIlllIlIIII", "celisnix", "7SlyR", "DoordashRP",
+					"IlIIIIIlIIIIIIIllI", "lIIlIlIllllllIIlI", "IllIIIIIIlllllIIlIlI",
+					"asapzyzz", "WhyZev", "sworduserpro332", "Muscular_Gorilla",
+					"Typhoon_Kang"
+				},
+				GroupRanks = {
+					[79029254] = "AC MOD",
+					[86172137] = "Lead AC MOD",
+					[43926962] = "Developer",
+					[37929139] = "Developer",
+					[87049509] = "Owner",
+					[37929138] = "Owner"
+				}
+			},
+			Actions = {
+				Current = "Uninject",
+				Options = {
+					Uninject = function()
+						GuiLibrary:Uninject()
+					end,
+					Panic = function()
+						task.spawn(function()
+							if shared.saveSettingsLoop then
+								coroutine.close(shared.saveSettingsLoop)
+							end
+						end)
+						GuiLibrary:Save()
+						GuiLibrary.Save = function() end
+						local originalSave = GuiLibrary.Save
+						GuiLibrary.Save = function()
+							warningNotification("GuiLibrary", "Saving settings blocked by Panic mode!", 1.5)
+						end
+						warningNotification("StaffDetector", "Panic mode activated - settings save disabled!", 1.5)
+						task.spawn(function()
+							repeat task.wait() until GuiLibrary.Modules.Panic
+							GuiLibrary.Modules.Panic:Toggle()
+						end)
+					end,
+					Lobby = function()
+						TeleportService:Teleport(6872265039)
+					end
+				}
+			},
 			JoinNotifier = {Enabled = false}
 		}
-		local StaffDetector_Checks = {
-			CustomBlacklist = {
-				"chasemaser",
-				"OrionYeets",
-				"lIllllllllllIllIIlll",
-				"AUW345678",
-				"GhostWxstaken",
-				"throughthewindow009",
-				"YT_GoraPlays",
-				"IllIIIIlllIlllIlIIII",
-				"celisnix",
-				"7SlyR",
-				"DoordashRP",
-				"IlIIIIIlIIIIIIIllI",
-				"lIIlIlIllllllIIlI",
-				"IllIIIIIIlllllIIlIlI",
-				"asapzyzz",
-				"WhyZev",
-				"sworduserpro332",
-				"Muscular_Gorilla",
-				"Typhoon_Kang"
-			}
+	
+		local DetectionUtils = {
+			saveStaffRecord = function(player, detectionMethod)
+				local success, data = pcall(function()
+					return HttpService:JSONDecode(readfile('vape/Libraries/StaffData.json') or '[]')
+				end)
+				
+				data = success and data or {}
+				table.insert(data, {
+					StaffName = player.DisplayName .. "(@" .. player.Name .. ")",
+					Time = os.time(),
+					DetectionMethod = detectionMethod
+				})
+				
+				if not isfolder('vape/Libraries') then
+					makefolder('vape/Libraries')
+				end
+				pcall(function()
+					writefile('vape/Libraries/StaffData.json', HttpService:JSONEncode(data))
+				end)
+			end,
+	
+			notify = function(message, duration)
+				warningNotification("StaffDetector", message, duration or 30)
+				game:GetService('StarterGui'):SetCore('ChatMakeSystemMessage', {
+					Text = message,
+					Color = Color3.fromRGB(255, 0, 0),
+					Font = Enum.Font.GothamBold,
+					FontSize = Enum.FontSize.Size24
+				})
+			end,
+	
+			triggerAction = function(player, detectionType, extraInfo)
+				local message = string.format("%s (@%s) detected as staff via %s! Executing %s action...", player.DisplayName, player.Name, detectionType, StaffDetectionConfig.Actions.Current)
+				if extraInfo then
+					message = message .. " Info: " .. extraInfo
+				end
+				
+				DetectionUtils.notify(message)
+				DetectionUtils.saveStaffRecord(player, detectionType)
+				StaffDetectionConfig.Actions.Options[StaffDetectionConfig.Actions.Current]()
+			end
 		}
-		local StaffDetector_Action = {
-			DropdownValue = {Value = "Uninject"},
-			FunctionsTable = {
-				["Uninject"] = function() GuiLibrary.SelfDestruct() end, 
-				["Panic"] = function() 
-					task.spawn(function() coroutine.close(shared.saveSettingsLoop) end)
-					GuiLibrary.SaveSettings()
-					function GuiLibrary.SaveSettings() return warningNotification("GuiLibrary - SaveSettings", "Saving Settings has been prevented from staff detector!", 1.5) end
-					warningNotification("StaffDetector", "Saving settings has been disabled!", 1.5)
-					task.spawn(function()
-						repeat task.wait() until shared.vape.Modules.Panic
-						shared.vape.Modules.Panic:Toggle(false)
-					end)
-				end,
-				["Lobby"] = function() TPService:Teleport(6872265039) end
-			},
+	
+		local DetectionMethods = {
+			checkBlacklist = function(player)
+				if table.find(StaffDetectionConfig.Blacklist.Users, player.Name) then
+					DetectionUtils.triggerAction(player, "Blacklist")
+				end
+			end,
+	
+			checkGroupRank = function(player)
+				local success, rank = pcall(function() return player:GetRankInGroup(5774246) end)
+				rank = success and rank or 0
+				
+				local rankInfo = StaffDetectionConfig.Blacklist.GroupRanks[rank]
+				if rankInfo then
+					DetectionUtils.triggerAction(player, "GroupRank", "Role: " .. rankInfo)
+				elseif StaffDetector.YoutuberToggle and StaffDetector.YoutuberToggle.Enabled and rank == 42378457 then
+					DetectionUtils.triggerAction(player, "GroupRank", "Role: Youtuber/Famous")
+				end
+			end,
+	
+			checkPermissions = function(player)
+				local success, KnitClient = pcall(function()
+					return debug.getupvalue(require(lplr.PlayerScripts.TS.knit).setup, 6)
+				end)
+				
+				if success then
+					local permissionController
+					repeat
+						permissionController = KnitClient.Controllers.PermissionController
+						task.wait()
+					until permissionController
+					
+					if permissionController:isStaffMember(player) then
+						DetectionUtils.triggerAction(player, "Permissions")
+					end
+				end
+			end,
+	
+			scanPlayer = function(player)
+				if player == PlayersService.LocalPlayer then return end
+				task.spawn(function() pcall(DetectionMethods.checkBlacklist, player) end)
+				task.spawn(function() pcall(DetectionMethods.checkGroupRank, player) end)
+				task.spawn(function() pcall(DetectionMethods.checkPermissions, player) end)
+			end
 		}
-		function StaffDetector_Functions.SaveStaffData(staff, detection_type)
-			local suc, res = pcall(function() return HTTPService:JSONDecode(readfile('vape/Libraries/StaffData.json')) end)
-			local json = suc and res or {}
-			table.insert(json, {StaffName = staff.DisplayName.."(@"..staff.Name..")", Time = os.time(), DetectionType = detection_type})
-			if (not isfolder('vape/Libraries')) then makefolder('vape/Libraries') end
-			writefile('vape/Libraries/StaffData.json', HTTPService:JSONEncode(json))
-		end
-		function StaffDetector_Functions.Notify(text)
-			pcall(function()
-				warningNotification("StaffDetector", tostring(text), 30)
-				game:GetService('StarterGui'):SetCore('ChatMakeSystemMessage', {Text = text, Color = Color3.fromRGB(255, 0, 0), Font = Enum.Font.GothamBold, FontSize = Enum.FontSize.Size24})
-			end)
-		end
-		function StaffDetector_Functions.Trigger(plr, det_type, addInfo)
-			StaffDetector_Functions.SaveStaffData(plr, det_type)
-			local text = plr.DisplayName.."(@"..plr.Name..") has been detected as staff via "..det_type.." detection type! "..StaffDetector_Action.DropdownValue.." action type will be used shortly."
-			if addInfo then text = text.." Additonal Info: "..addInfo end
-			StaffDetector_Functions.Notify(text)
-			StaffDetector_Action.FunctionsTable[StaffDetector_Action.DropdownValue]()
-		end
-		function StaffDetector_Checks:groupCheck(plr)
-			local suc, plrRank = pcall(function() plr:GetRankInGroup(5774246) end)
-			if (not suc) then plrRank = 0 end
-			local state, Type = false, nil
-			local Rank_Table = {[79029254] = "AC MOD", [86172137] = "Lead AC MOD (chase :D)", [43926962] = "Developer", [37929139] = "Developer", [87049509] = "Owner", [37929138] = "Owner"}
-			if StaffDetector_CustomBlacklist.YoutuberToggle.Enabled then Rank_Table[42378457] = "Youtuber/Famous" end
-			if Rank_Table[plrRank] then state = true; Type = Rank_Table[plrRank] end
-			if state then StaffDetector_Functions.Trigger(plr, "Group Check", "Rank: "..tostring(Type)) end
-		end
-		function StaffDetector_Checks:checkCustomBlacklist(plr) if table.find(self.CustomBlacklist, plr.Name) then StaffDetector_Functions.Trigger(plr, "CustomBlacklist") end end
-		function StaffDetector_Checks:checkPermissions(plr)
-			local KnitGotten, KnitClient
-			repeat
-				KnitGotten, KnitClient = pcall(function() return debug.getupvalue(require(lplr.PlayerScripts.TS.knit).setup, 6) end)
-				if KnitGotten then break end
-				task.wait()
-			until KnitGotten
-			repeat task.wait() until debug.getupvalue(KnitClient.Start, 1)
-			local PermissionController = KnitClient.Controllers.PermissionController
-			if KnitClient.Controllers.PermissionController:isStaffMember(plr) then StaffDetector_Functions.Trigger(plr, "PermissionController") end
-		end
-		function StaffDetector_Checks:check(plr)
-			task.spawn(function() pcall(function() self:checkCustomBlacklist(plr) end) end)
-			task.spawn(function() pcall(function() self:checkPermissions(plr) end) end)
-			task.spawn(function() pcall(function() self:groupCheck(plr) end) end)
-		end
+	
 		StaffDetector = vape.Categories.Utility:CreateModule({
-			Name = "StaffDetector [NEW]",
-			Function = function(call)
-				if call then
-					for i,v in pairs(game:GetService("Players"):GetPlayers()) do if v ~= game:GetService("Players").LocalPlayer then StaffDetector_Checks:check(v) end end
-					StaffDetector:Clean(game:GetService("Players").PlayerAdded:Connect(function(v)
-						if StaffDetector.Enabled then 
-							StaffDetector_Checks:check(v) 
-							if StaffDetector_Extra.JoinNotifier.Enabled and store.matchState > 0 then warningNotification("StaffDetector", tostring(v.Name).." has joined!", 3) end
+			Name = "StaffDetector [Enhanced]",
+			Function = function(enabled)
+				StaffDetector.Enabled = enabled
+				if enabled then
+					for _, player in pairs(PlayersService:GetPlayers()) do
+						DetectionMethods.scanPlayer(player)
+					end
+					
+					local connection = PlayersService.PlayerAdded:Connect(function(player)
+						if StaffDetector.Enabled then
+							DetectionMethods.scanPlayer(player)
+							if StaffDetectionConfig.JoinNotifier.Enabled and store.matchState > 0 then
+								DetectionUtils.notify(player.Name .. " has joined the game!", 3)
+							end
 						end
-					end))
-				else for i, v in pairs(StaffDetector_Connections) do if v.Disconnect then pcall(function() v:Disconnect() end) continue end; if v.disconnect then pcall(function() v:disconnect() end) continue end end end
+					end)
+					table.insert(StaffDetectionConfig.Connections, connection)
+				else
+					for _, conn in pairs(StaffDetectionConfig.Connections) do
+						pcall(function() conn:Disconnect() end)
+					end
+					table.clear(StaffDetectionConfig.Connections)
+				end
+			end,
+			Default = true
+		})
+	
+		StaffDetector.Restart = function()
+			if StaffDetector.Enabled then
+				StaffDetector:Toggle()
+				task.wait(0.1)
+				StaffDetector:Toggle()
+			end
+		end
+	
+		local actionList = {}
+		for action in pairs(StaffDetectionConfig.Actions.Options) do
+			table.insert(actionList, action)
+		end
+		StaffDetectionConfig.Actions.Dropdown = StaffDetector:CreateDropdown({
+			Name = 'Action',
+			List = actionList,
+			Function = function(value)
+				StaffDetectionConfig.Actions.Current = value
 			end
 		})
-		StaffDetector.Restart = function() if StaffDetector.Enabled then StaffDetector:Toggle(false); StaffDetector:Toggle(false) end end
-		local list = {}
-		for i,v in pairs(StaffDetector_Action.FunctionsTable) do table.insert(list, i) end
-		StaffDetector_Action.DropdownValue = StaffDetector:CreateDropdown({Name = 'Action', List = list, Function = function() end})
-		StaffDetector_Extra.JoinNotifier = StaffDetector:CreateToggle({Name = "Illegal player notifier", Function = StaffDetector.Restart, Default = true})
-	end)
 	
-	task.spawn(function()
-		pcall(function()
-			repeat task.wait() until shared.VapeFullyLoaded
-			if (not StaffDetector.Enabled) then StaffDetector:Toggle(false) end
-		end)
+		StaffDetectionConfig.JoinNotifier = StaffDetector:CreateToggle({
+			Name = "Join Notifier",
+			Function = function(enabled)
+				StaffDetectionConfig.JoinNotifier.Enabled = enabled
+				StaffDetector.Restart()
+			end,
+			Default = true
+		})
+	
+		StaffDetector.YoutuberToggle = StaffDetector:CreateToggle({
+			Name = "Youtuber Detection",
+			Function = StaffDetector.Restart,
+			Default = false
+		})
 	end)
-end)	
+end)		
 
 --[[local isEnabled = function() return false end
 local function isEnabled(module)
@@ -5625,86 +5800,175 @@ run(function()
 end)
 
 run(function()
-	local invis = {};
-	local invisbaseparts = safearray();
-	local invisroot = {};
-	local invisrootcolor = newcolor();
-	local invisanim = Instance.new('Animation');
-	local invisrenderstep;
-	local invistask;
-	local invshumanim;
-	local SpiderDisabled = false
-	invis = vape.Categories.Blatant:CreateModule({
-		Name = 'Invisibility',
-		Tooltip = 'Plays an animation which makes it harder\nfor targets to see you.',
-		Function = function(calling)
-			local invisFunction = function()
-				pcall(task.cancel, invistask);
-				pcall(function() invisrenderstep:Disconnect() end);
-				repeat task.wait() until isAlive(lplr, true);
-				for i,v in lplr.Character:GetDescendants() do 
-					pcall(function()
-						if v.ClassName:lower():find('part') and v.CanCollide and v ~= lplr.Character:FindFirstChild('HumanoidRootPart') then 
-							v.CanCollide = false;
-							table.insert(invisbaseparts, v);
-						end 
-					end)
-				end;
-				invis:Clean(lplr.Character.DescendantAdded:Connect(function(v)
-					pcall(function()
-						if v.ClassName:lower():find('part') and v.CanCollide and v ~= lplr.Character:FindFirstChild('HumanoidRootPart') then 
-							v.CanCollide = false;
-							table.insert(invisbaseparts, v);
-						end
-					end) 
-				end))
-				task.spawn(function()
-					invis:Clean(runservice.Stepped:Connect(function()
-						for i,v in invisbaseparts do 
-							v.CanCollide = false;
-						end
-					end))
-				end)
-				invisanim.AnimationId = 'rbxassetid://11335949902';
-				local anim = lplr.Character:WaitForChild("Humanoid").Animator:LoadAnimation(invisanim);
-				invishumanim = anim;
-				repeat 
-					task.wait()
-					if vape.Modules.AnimationPlayer.Enabled then 
-						vape.Modules.AnimationPlayer:Toggle();
-					end
-					pcall(function() 
-						anim:AdjustSpeed(0);
-						anim:Stop() 
-					end)
-					lplr.Character.PrimaryPart.Transparency = invisroot.Enabled and 0.6 or 1;
-					lplr.Character.PrimaryPart.Color = Color3.fromHSV(invisrootcolor.Hue, invisrootcolor.Sat, invisrootcolor.Value);
-					anim:Play(0.1, 9e9, 0.1);
-				until (not invis.Enabled)
-			end;
-			if calling then
-				invistask = task.spawn(invisFunction);
-				invis:Clean(lplr.CharacterAdded:Connect(invisFunction))
-			else 
-				pcall(function()
-					invishumanim:AdjustSpeed(0);
-					invishumanim:Stop();
-				end);
-				pcall(task.cancel, invistask)
-			end
-		end
-	})
-	invisroot = invis:CreateToggle({
-		Name = 'Show Root',
-		Default = true,
-		Function = function(calling)
-			pcall(function() invisrootcolor.Object.Visible = calling; end)
-		end
-	})
-	invisrootcolor = invis:CreateColorSlider({
-		Name = 'Root Color',
-		Function = void
-	})
+    local InvisibilitySystem = {
+        Enabled = false
+    }
+	local InvisibilitySystemConnections = {}
+	local InvisibilitySystemConfig = {
+		ShowRoot = true,
+		RootColor = {Hue = 0, Sat = 0, Val = 1}
+	}
+	local InvisibilitySystemParts = {}
+	local InvisibilitySystemAnimation = nil
+
+    local RunService = game:GetService("RunService")
+    local Players = game:GetService("Players")
+    local lplr = Players.LocalPlayer
+
+    local InvisUtils = {
+        disableCollisions = function(character)
+            InvisibilitySystemParts = {}
+            for _, part in pairs(character:GetDescendants()) do
+                if part:IsA("BasePart") and part.CanCollide and part ~= character:FindFirstChild("HumanoidRootPart") then
+                    part.CanCollide = false
+                    table.insert(InvisibilitySystemParts, part)
+                end
+            end
+        end,
+
+        setupAnimation = function(character)
+            local anim = Instance.new("Animation")
+            anim.AnimationId = "rbxassetid://11335949902"
+            local humanoid = character:WaitForChild("Humanoid", 5)
+            if humanoid then
+                local animator = humanoid:FindFirstChildOfClass("Animator") or Instance.new("Animator", humanoid)
+                InvisibilitySystemAnimation = animator:LoadAnimation(anim)
+                return InvisibilitySystemAnimation
+            end
+            return nil
+        end,
+
+        updateRootAppearance = function(rootPart)
+            if rootPart then
+                rootPart.Transparency = InvisibilitySystemConfig.ShowRoot and 0.6 or 1
+                rootPart.Color = Color3.fromHSV(
+                    InvisibilitySystemConfig.RootColor.Hue,
+                    InvisibilitySystemConfig.RootColor.Sat,
+                    InvisibilitySystemConfig.RootColor.Val
+                )
+            end
+        end,
+
+        toggleSpider = function(enable)
+            local spiderButton = vape.Modules.Spider
+            if not spiderButton then return end
+            
+            if enable and spiderButton.Enabled then
+                spiderButton:Toggle(false)
+                task.spawn(function()
+                    repeat task.wait(0.1) until warningNotification
+                    warningNotification("Invisibility", "Spider disabled to prevent suffocation.\nRe-enabled when invisibility ends!", 10)
+                end)
+                return true
+            elseif not enable and not spiderButton.Enabled then
+                spiderButton:Toggle(false)
+                task.spawn(function()
+                    repeat task.wait(0.1) until warningNotification
+                    warningNotification("Invisibility", "Spider re-enabled!", 10)
+                end)
+            end
+            return false
+        end
+    }
+
+    local function applyInvisibility()
+        local character = lplr.Character
+        if not isAlive(lplr, true) or not character then return end
+
+        InvisUtils.disableCollisions(character)
+        local rootPart = character:FindFirstChild("HumanoidRootPart")
+        local anim = InvisibilitySystemAnimation or InvisUtils.setupAnimation(character)
+
+        table.insert(InvisibilitySystemConnections, character.DescendantAdded:Connect(function(part)
+            if part:IsA("BasePart") and part.CanCollide and part ~= rootPart then
+                part.CanCollide = false
+                table.insert(InvisibilitySystemParts, part)
+            end
+        end))
+
+        local stepConnection = RunService.Stepped:Connect(function()
+            for _, part in pairs(InvisibilitySystemParts) do
+                part.CanCollide = false
+            end
+        end)
+        table.insert(InvisibilitySystemConnections, stepConnection)
+
+        while InvisibilitySystem.Enabled and isAlive(lplr, true) and anim do
+            if vape.Modules.AnimationPlayer.Enabled then
+                vape.Modules.AnimationPlayer:Toggle(false)
+            end
+            
+            InvisUtils.updateRootAppearance(rootPart)
+            anim:Play(0.1, 9e9, 0.1)
+            task.wait(0.1)
+        end
+
+        if anim then
+            anim:Stop()
+            anim:AdjustSpeed(0)
+        end
+        stepConnection:Disconnect()
+    end
+
+    InvisibilitySystem = vape.Categories.Blatant:CreateModule({
+        Name = "Invisibility",
+        Tooltip = "Renders you less visible via animation and transparency",
+        Function = function(enabled)
+            InvisibilitySystem.Enabled = enabled
+            if enabled then
+                local spiderWasDisabled = InvisUtils.toggleSpider(true)
+                
+                local taskHandle = task.spawn(applyInvisibility)
+                table.insert(InvisibilitySystemConnections, lplr.CharacterAdded:Connect(function()
+                    task.cancel(taskHandle)
+                    taskHandle = task.spawn(applyInvisibility)
+                end))
+
+                InvisibilitySystem.Cleanup = function()
+                    if spiderWasDisabled then
+                        InvisUtils.toggleSpider(false)
+                    end
+                    if InvisibilitySystemAnimation then
+                        InvisibilitySystemAnimation:Stop()
+                        InvisibilitySystemAnimation:AdjustSpeed(0)
+                    end
+                    for _, conn in pairs(InvisibilitySystemConnections) do
+                        pcall(conn.Disconnect, conn)
+                    end
+                    table.clear(InvisibilitySystemConnections)
+                    InvisibilitySystemParts = {}
+                end
+            else
+                if InvisibilitySystem.Cleanup then
+                    InvisibilitySystem.Cleanup()
+                    InvisibilitySystem.Cleanup = nil
+                end
+            end
+        end
+    })
+
+    InvisibilitySystem.RootToggle = InvisibilitySystem:CreateToggle({
+        Name = "Show Root Part",
+        Default = true,
+        Function = function(enabled)
+			pcall(function()
+				InvisibilitySystemConfig.ShowRoot = enabled
+				InvisibilitySystem.RootColor.Object.Visible = enabled
+			end)
+        end,
+        Tooltip = "Toggles visibility of the root part"
+    })
+
+    InvisibilitySystem.RootColor = InvisibilitySystem:CreateColorSlider({
+        Name = "Root Color",
+        Function = function(hue, sat, val)
+            InvisibilitySystemConfig.RootColor = {Hue = hue, Sat = sat, Val = val}
+        end,
+        Default = {Hue = 0, Sat = 0, Val = 1},
+        Tooltip = "Sets the color of the root part when visible"
+    })
+
+    InvisibilitySystem.RootColor.Object.Visible = InvisibilitySystemConfig.ShowRoot
 end)
 
 run(function() 
@@ -5968,136 +6232,6 @@ if CustomsAllowed then
 	end)
 end
 
-if shared.CheatEngineMode then
-	run(function()
-		local function getDiamonds()
-			local function getItem(itemName, inv)
-				for slot, item in pairs(inv or store.localInventory.inventory.items) do if item.itemType == itemName then return item, slot end end
-				return nil
-			end
-			local inv = store.localInventory.inventory
-			if inv.items and type(inv.items) == "table" and getItem("diamond", inv.items) and getItem("diamond", inv.items).amount then return tostring(getItem("diamond", inv.items).amount) ~= "inf" and tonumber(getItem("diamond", inv.items).amount) or 9999999999999
-			else return 0 end
-		end
-		local resolve = {["Armor"] = {Name = "ARMOR", Upgrades = {[1] = 4, [2] = 8, [3] = 20}, CurrentUpgrade = 0, Function = function() end}, ["Damage"] = {Name = "DAMAGE", Upgrades = {[1] = 5, [2] = 10, [3] = 18}, CurrentUpgrade = 0, Function = function() end}, ["Diamond Gen"] = {Name = "DIAMOND_GENERATOR", Upgrades = {[1] = 4, [2] = 8, [3] = 12}, CurrentUpgrade = 0, Function = function() end}, ["Team Gen"] = {Name = "TEAM_GENERATOR", Upgrades = {[1] = 4, [2] = 8, [3] = 16}, CurrentUpgrade = 0, Function = function() end}}
-		local function buyUpgrade(translation)
-			if not translation or not resolve[translation] or not type(resolve[translation]) == "table" then return warn(debug.traceback("[buyUpgrade]: Invalid translation given! "..tostring(translation))) end
-			local res = game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("node_modules"):WaitForChild("@rbxts"):WaitForChild("net"):WaitForChild("out"):WaitForChild("_NetManaged"):WaitForChild("RequestPurchaseTeamUpgrade"):InvokeServer(resolve[translation].Name)
-			if res == true then resolve[translation].CurrentUpgrade = resolve[translation].CurrentUpgrade + 1 else
-				if getDiamonds() >= resolve[translation].Upgrades[resolve[translation].CurrentUpgrade + 1] then
-					local res2 = game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("node_modules"):WaitForChild("@rbxts"):WaitForChild("net"):WaitForChild("out"):WaitForChild("_NetManaged"):WaitForChild("RequestPurchaseTeamUpgrade"):InvokeServer(resolve[translation].Name)
-					if res2 == true then resolve[translation].CurrentUpgrade = resolve[translation].CurrentUpgrade + 1 else
-						warn("Using force use of current upgrade...", translation, tostring(res), tostring(res2))
-						resolve[translation].CurrentUpgrade = resolve[translation].CurrentUpgrade + 1
-					end
-				end
-			end
-		end
-		local function resolveTeamUpgradeApp(app)
-			if (not app) or not app:IsA("ScreenGui") then return "invalid app! "..tostring(app) end
-			local function findChild(name, className, children)
-				for i,v in pairs(children) do if v.Name == name and v.ClassName == className then return v end end
-				local args = {Name = tostring(name), ClassName == tostring(className), Children = children}
-				warn(debug.traceback("[findChild]: CHILD NOT FOUND! Args: "), game:GetService("HttpService"):JSONEncode(args), name, className, children)
-				return nil
-			end
-			local function resolveCard(card, translation)
-				local a = "["..tostring(card).." | "..tostring(translation).."] "
-				local suc, res = true, a
-				local function p(b) suc = false; res = a..tostring(b).." not found!" return suc, res end
-				if not card or not translation or not card:IsA("Frame") then suc = false; res = a.."Invalid use of resolveCard!" return suc, res end
-				translation = tostring(translation)
-				local function resolveUpgradeCost(cost)
-					if not cost then return warn(debug.traceback("[resolveUpgradeCost]: Invalid cost given!")) end
-					cost = tonumber(cost)
-					if resolve[translation] and resolve[translation].Upgrades and type(resolve[translation].Upgrades) == "table" then
-						for i,v in pairs(resolve[translation].Upgrades) do 
-							if v == cost then return i end
-						end
-					end
-				end
-				local Content = findChild("Content", "Frame", card:GetChildren())
-				if Content then
-					local PurchaseSection = findChild("PurchaseSection", "Frame", Content:GetChildren())
-					if PurchaseSection then
-						local Cost_Info = findChild("Cost Info", "Frame", PurchaseSection:GetChildren())
-						if Cost_Info then
-							local Current_Diamond_Required = findChild("2", "TextLabel", Cost_Info:GetChildren())
-							if Current_Diamond_Required then
-								local upgrade = resolveUpgradeCost(Current_Diamond_Required.Text)
-								if upgrade then
-									resolve[translation].CurrentUpgrade = upgrade - 1
-								else warn("invalid upgrade", translation, Current_Diamond_Required.Text) end
-							else return p("Card->Content->PurchaseSection->Cost Info") end
-						else resolve[translation].CurrentUpgrade = 3 return p("Card->Content->PurchaseSection->Cost Info") end
-					else return p("Card->Content->PurchaseSection") end
-				else return p("Card->Content") end
-			end
-			local frame2 = findChild("2", "Frame", app:GetChildren())
-			if frame2 then
-				local TeamUpgradeAppContainer = findChild("TeamUpgradeAppContainer", "ImageButton", frame2:GetChildren())
-				if TeamUpgradeAppContainer then
-					local UpgradesWrapper = findChild("UpgradesWrapper", "Frame", TeamUpgradeAppContainer:GetChildren())
-					if UpgradesWrapper then
-						local suc1, res1, suc2, res2, suc3, res3, suc4, res4 = resolveCard(findChild("ARMOR_Card", "Frame", UpgradesWrapper:GetChildren()), "Armor"), resolveCard(findChild("DAMAGE_Card", "Frame", UpgradesWrapper:GetChildren()), "Damage"), resolveCard(findChild("DIAMOND_GENERATOR_Card", "Frame", UpgradesWrapper:GetChildren()), "Diamond Gen"), resolveCard(findChild("TEAM_GENERATOR_Card", "Frame", UpgradesWrapper:GetChildren()), "Team Gen")
-					end
-				end
-			end
-		end
-		local function check(app) if app.Name and app:IsA("ScreenGui") and app.Name == "TeamUpgradeApp" then resolveTeamUpgradeApp(app) end end
-		local con = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui").ChildAdded:Connect(check)
-		GuiLibrary.SelfDestructEvent.Event:Connect(function() pcall(function() con:Disconnect() end) end)
-		for i, app in pairs(game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui"):GetChildren()) do check(app) end
-
-		local bedwarsshopnpcs = {}
-		task.spawn(function()
-			repeat task.wait() until store.matchState ~= 0 or not shared.VapeExecuted
-			for i,v in pairs(collectionService:GetTagged("TeamUpgradeShopkeeper")) do table.insert(bedwarsshopnpcs, {Position = v.Position, TeamUpgradeNPC = false, Id = v.Name}) end
-		end)
-
-		local function nearNPC(range)
-			local npc, npccheck, enchant, newid = nil, false, false, nil
-			if entityLibrary.isAlive then
-				for i, v in pairs(bedwarsshopnpcs) do
-					if ((entityLibrary.LocalPosition or entityLibrary.character.HumanoidRootPart.Position) - v.Position).magnitude <= (range or 20) then
-						npc, npccheck, enchant = true, (v.TeamUpgradeNPC or npccheck), false
-						newid = v.TeamUpgradeNPC and v.Id or newid
-					end
-				end
-			end
-			return npc, not npccheck, enchant, newid
-		end
-
-		local AutoBuyDiamond = {Enabled = false}
-		local PreferredUpgrade = {Value = "Damage"}
-		local AutoBuyDiamondGui = {Enabled = false}
-		local AutoBuyDiamondRange = {Value = 20}
-
-		AutoBuyDiamond = vape.Categories.Utility:CreateModule({
-			Name = "AutoBuyDiamondUpgrades",
-			Function = function(call)
-				if call then
-					repeat task.wait()
-						if nearNPC(AutoBuyDiamondRange.Value) then
-							if (not AutoBuyDiamondGui.Enabled) or bedwars.AppController:isAppOpen("TeamUpgradeApp") then
-								if resolve[PreferredUpgrade.Value].CurrentUpgrade ~= 3 and getDiamonds() >= resolve[PreferredUpgrade.Value].Upgrades[resolve[PreferredUpgrade.Value].CurrentUpgrade + 1] then buyUpgrade(PreferredUpgrade.Value) end
-								for i,v in pairs(resolve) do if v.CurrentUpgrade ~= 3 and getDiamonds() >= v.Upgrades[v.CurrentUpgrade + 1] then buyUpgrade(i) end end
-							end
-						end
-					until (not AutoBuyDiamond.Enabled)
-				end
-			end,
-			Tooltip = "Auto buys diamond upgrades"
-		})
-		AutoBuyDiamond.Restart = function() if AutoBuyDiamond.Enabled then AutoBuyDiamond:Toggle(false); AutoBuyDiamond:Toggle(false) end end
-		AutoBuyDiamondRange = AutoBuyDiamond:CreateSlider({Name = "Range", Function = function() end, Min = 1, Max = 20, Default = 20})
-		local real_list = {}
-		for i,v in pairs(resolve) do table.insert(real_list, tostring(i)) end
-		PreferredUpgrade = AutoBuyDiamond:CreateDropdown({Name = "PreferredUpgrade", Function = AutoBuyDiamond.Restart, List = real_list, Default = "Damage"})
-		AutoBuyDiamondGui = AutoBuyDiamond:CreateToggle({Name = "Gui Check", Function = AutoBuyDiamond.Restart})
-	end)
-end
-
 local isAlive = function(plr, healthblacklist)
 	plr = plr or lplr
 	local alive = false 
@@ -6210,7 +6344,7 @@ run(function()
 	})
 end)
 
-if not shared.CheatEngineMode then
+--[[if not shared.CheatEngineMode then
 	run(function()
 		local AntiLagback = {Enabled = false}
 		local control_module = require(lplr:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule")).controls
@@ -6306,4 +6440,4 @@ if not shared.CheatEngineMode then
 			end
 		})
 	end)
-end
+end--]]

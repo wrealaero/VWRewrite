@@ -84,79 +84,116 @@ if shared.TeleportExploitAutowinEnabled then
 end
 
 run(function()
-	local QueueCardMods = {}
-	local QueueCardGradientToggle = {}
-	local QueueCardGradient = {Hue = 0, Sat = 0, Value = 0}
-	local QueueCardGradient2 = {Hue = 0, Sat = 0, Value = 0}
-	local function patchQueueCard()
-		if lplr.PlayerGui:FindFirstChild('QueueApp') then 
-			if lplr.PlayerGui.QueueApp:WaitForChild('1'):IsA('Frame') then 
-                if shared.RiseMode and GuiLibrary.MainColor then
-                    lplr.PlayerGui.QueueApp['1'].BackgroundColor3 = GuiLibrary.MainColor
-                else
-				    lplr.PlayerGui.QueueApp['1'].BackgroundColor3 = Color3.fromHSV(QueueCardGradient.Hue, QueueCardGradient.Sat, QueueCardGradient.Value)
-                end
-			end
-            for i = 1, 3 do
-                if QueueCardGradientToggle.Enabled then 
-                    lplr.PlayerGui.QueueApp['1'].BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                    local gradient = (lplr.PlayerGui.QueueApp['1']:FindFirstChildWhichIsA('UIGradient') or Instance.new('UIGradient', lplr.PlayerGui.QueueApp['1']))
-                    if shared.RiseMode and GuiLibrary.MainColor and GuiLibrary.SecondaryColor then
-                        local v = {GuiLibrary.MainColor, GuiLibrary.SecondaryColor, GuiLibrary.ThirdColor}
-                        if v[3] then 
-                            gradient.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, v[1]), ColorSequenceKeypoint.new(0.5, v[2]), ColorSequenceKeypoint.new(1, v[3])})
-                        else
-                            gradient.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, v[1]), ColorSequenceKeypoint.new(1, v[2])})
-                        end
-                    else
-                        gradient.Color = ColorSequence.new({
-                            ColorSequenceKeypoint.new(0, Color3.fromHSV(QueueCardGradient.Hue, QueueCardGradient.Sat, QueueCardGradient.Value)), 
-                            ColorSequenceKeypoint.new(1, Color3.fromHSV(QueueCardGradient2.Hue, QueueCardGradient2.Sat, QueueCardGradient2.Value))
-                        })
-                    end
-                end
-                task.wait()
-            end
-		end
-	end
-	QueueCardMods = vape.Categories.Utility:CreateModule({
-		Name = 'QueueCardMods',
-		HoverText = 'Mods the QueueApp at the end of the game.',
-		Function = function(calling) 
-			if calling then 
-				patchQueueCard()
-                QueueCardMods:Clean(lplr.PlayerGui.ChildAdded:Connect(patchQueueCard))
-			end
-		end
-	})
-    QueueCardGradientToggle = QueueCardMods:CreateToggle({
-        Name = 'Gradient',
-        Function = function(calling)
-            pcall(function() QueueCardGradient2.Object.Visible = calling end) 
+    local QueueDisplayConfig = {
+        ActiveState = false,
+        GradientControl = {Enabled = true},
+        ColorSettings = {
+            Gradient1 = {Hue = 0, Saturation = 0, Brightness = 1},
+            Gradient2 = {Hue = 0, Saturation = 0, Brightness = 0.8}
+        },
+        Animation = {Speed = 0.5, Progress = 0}
+    }
+
+    local DisplayUtils = {
+        createGradient = function(parent)
+            local gradient = parent:FindFirstChildOfClass("UIGradient") or Instance.new("UIGradient")
+            gradient.Parent = parent
+            return gradient
+        end,
+        updateColor = function(gradient, config)
+            local time = tick() * config.Animation.Speed
+            local interp = (math.sin(time) + 1) / 2
+            local h = config.ColorSettings.Gradient1.Hue + (config.ColorSettings.Gradient2.Hue - config.ColorSettings.Gradient1.Hue) * interp
+            local s = config.ColorSettings.Gradient1.Saturation + (config.ColorSettings.Gradient2.Saturation - config.ColorSettings.Gradient1.Saturation) * interp
+            local b = config.ColorSettings.Gradient1.Brightness + (config.ColorSettings.Gradient2.Brightness - config.ColorSettings.Gradient1.Brightness) * interp
+            gradient.Color = ColorSequence.new(Color3.fromHSV(h, s, b))
         end
-    })
-    if (not shared.RiseMode) and not GuiLibrary.MainColor and not GuiLibrary.SecondaryColor then
-        QueueCardGradient = QueueCardMods:CreateColorSlider({
-            Name = 'Color',
-            Function = function()
-                pcall(patchQueueCard)
+    }
+
+	local CoreConnection
+
+    local function enhanceQueueDisplay()
+		pcall(function() 
+			CoreConnection:Disconnect()
+		end)
+        local success, err = pcall(function()
+            if not lplr.PlayerGui:FindFirstChild('QueueApp') then return end
+            
+            for attempt = 1, 3 do
+                if QueueDisplayConfig.GradientControl.Enabled then
+                    local queueFrame = lplr.PlayerGui.QueueApp['1']
+                    queueFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                    
+                    local gradient = DisplayUtils.createGradient(queueFrame)
+                    gradient.Rotation = 180
+                    
+                    local displayInterface = {
+                        module = vape.watermark,
+                        gradient = gradient,
+                        GetEnabled = function()
+                            return QueueDisplayConfig.ActiveState
+                        end,
+                        SetGradientEnabled = function(state)
+                            QueueDisplayConfig.GradientControl.Enabled = state
+                            gradient.Enabled = state
+                        end
+                    }
+                    --vape.whitelistedlines["enhancedQueueDisplay"] = displayInterface
+                    CoreConnection = game:GetService("RunService").RenderStepped:Connect(function()
+                        if QueueDisplayConfig.ActiveState and QueueDisplayConfig.GradientControl.Enabled then
+                            DisplayUtils.updateColor(gradient, QueueDisplayConfig)
+                        end
+                    end)
+                end
+                task.wait(0.1)
             end
-        })
-        QueueCardGradient2 = QueueCardMods:CreateColorSlider({
-            Name = 'Color 2',
-            Function = function()
-                pcall(patchQueueCard)
-            end
-        })
-    else
-        if shared.RiseMode then
-            pcall(function()
-                GuiLibrary.GUIColorChanged.Event:Connect(function()
-                    pcall(patchQueueCard)
-                end)
-            end)
+        end)
+        
+        if not success then
+            warn("Queue display enhancement failed: " .. tostring(err))
         end
     end
+
+    local QueueDisplayEnhancer
+    QueueDisplayEnhancer = vape.Categories.Utility:CreateModule({
+        Name = 'QueueCardMods',
+        Tooltip = 'Enhances the QueueApp display with dynamic gradients',
+        Function = function(enabled)
+            QueueDisplayConfig.ActiveState = enabled
+            if enabled then
+                enhanceQueueDisplay()
+                QueueDisplayEnhancer:Clean(lplr.PlayerGui.ChildAdded:Connect(enhanceQueueDisplay))
+			else
+				pcall(function() 
+					CoreConnection:Disconnect()
+				end)
+			end
+        end
+    })
+
+   	QueueDisplayEnhancer:CreateSlider({
+        Name = "Animation Speed",
+        Function = function(speed)
+            QueueDisplayConfig.Animation.Speed = math.clamp(speed, 0.1, 5)
+        end,
+        Min = 1,
+        Max = 5,
+        Default = 5
+    })
+
+    QueueDisplayEnhancer:CreateColorSlider({
+        Name = "Color 1",
+        Function = function(h, s, v)
+            QueueDisplayConfig.ColorSettings.Gradient1 = {Hue = h, Saturation = s, Brightness = v}
+        end
+    })
+
+    QueueDisplayEnhancer:CreateColorSlider({
+        Name = "Color 2",
+        Function = function(h, s, v)
+            QueueDisplayConfig.ColorSettings.Gradient2 = {Hue = h, Saturation = s, Brightness = v}
+        end
+    })
 end)
 
 --[[run(function()
@@ -188,7 +225,7 @@ end)
 
 	AutoCrate = vape.Categories.Blatant:CreateModule({
 		Name = "AutoCrate",
-		HoverText = "Automatically open crates if you have any.",
+		Tooltip = "Automatically open crates if you have any.",
 		Function = function(callback)
 			if callback then
 			    task.spawn(function()
@@ -510,13 +547,13 @@ shared.slowmode = 0
                 StaffDetector_Games.Object.Visible = true
             end
         end,
-		HoverText = "Choose another staff group",
+		Tooltip = "Choose another staff group",
 		Default = false
 	})
 	IgnoreOnlineStaff = StaffDetector:CreateToggle({
 		Name = "IgnoreOnlineStaff",
 		Function = function() end,
-		HoverText = "Make the module ignore online staff and only \n show ingame staff",
+		Tooltip = "Make the module ignore online staff and only \n show ingame staff",
 		Default = false
 	})
     Staff_Members_Limit = StaffDetector:CreateSlider({
@@ -529,7 +566,7 @@ shared.slowmode = 0
 	AutoCheck = StaffDetector:CreateToggle({
 		Name = "AutoCheck",
 		Function = function() end,
-		HoverText = "Checks for new staffs every 30 seconds",
+		Tooltip = "Checks for new staffs every 30 seconds",
 		Default = false
 	}) --- work in progress
 	task.spawn(function()
@@ -903,7 +940,7 @@ run(function()
 				end
 			end
 		end,
-		HoverText = "Detects if anyone has reported you."
+		Tooltip = "Detects if anyone has reported you."
 	})
 	local GUI_Elements = {
 		{GUI_Name = "Mode", GUI_Args = {Type = "CreateDropdown", Arg = {Value = "Self"}, Creation_Args = {Name = "Mode", List = {"Self", "Server", "Global"}, Function = function(val) Methods_Functions[val]() end}}},

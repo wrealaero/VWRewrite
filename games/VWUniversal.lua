@@ -40,10 +40,10 @@ task.spawn(function()
 		end
 
 		local function filterStackTrace(stackTrace)
+			stackTrace = stackTrace or "Unknown"
+			if type(stackTrace) ~= "string" then stackTrace = "INVALID \n"..tostring(stackTrace) end
 			if type(stackTrace) == "string" then
 				return string.split(stackTrace, "\n")
-			else
-				return stackTrace
 			end
 		end
 
@@ -204,7 +204,7 @@ run(function()
 				SearchFolder:ClearAllChildren()
 			end
 		end,
-		HoverText = "Draws a box around selected parts\nAdd parts in Search frame"
+		Tooltip = "Draws a box around selected parts\nAdd parts in Search frame"
 	})
 	SearchColor = Search:CreateColorSlider({
 		Name = "new part color",
@@ -347,7 +347,7 @@ run(function() local Shader = {Enabled = false}
 	}
 	Shader = vape.Categories.Misc:CreateModule({
 		Name = "RichShader",
-		HoverText = "pro shader",
+		Tooltip = "pro shader",
 		Function = function(callback)
 			if callback then 
 				task.spawn(function()
@@ -477,7 +477,7 @@ run(function() local chatDisable = {Enabled = false}
 	end
 	chatDisable = vape.Categories.Misc:CreateModule({
 		Name = "ChatDisable",
-		HoverText = "Disables the chat",
+		Tooltip = "Disables the chat",
 		Function = function(callback)
 			if callback then
 				if chatVersion() then
@@ -510,7 +510,7 @@ run(function() local CharacterOutline = {}
 	local outline = Instance.new('Highlight', GuiLibrary.MainGui)
 	CharacterOutline = vape.Categories.Misc:CreateModule({
 		Name = 'CharacterOutline',
-		HoverText = 'Adds a cool outline to your character.',
+		Tooltip = 'Adds a cool outline to your character.',
 		Function = function(calling)
 			if calling then 
 				task.spawn(function()
@@ -587,7 +587,7 @@ run(function() local CloudMods = {}
 	end
 	CloudMods = vape.Categories.Misc:CreateModule({
 		Name = 'CloudMods',
-		HoverText = 'Recolorizes the clouds to your liking.',
+		Tooltip = 'Recolorizes the clouds to your liking.',
 		Function = function(calling)
 			if calling then 
 				clouds = game.Workspace:WaitForChild('Clouds'):GetChildren()
@@ -666,7 +666,7 @@ run(function()
 	local UIS_Connection = {Disconnect = function() end}
 	CustomJump = vape.Categories.Blatant:CreateModule({
 		Name = "InfJUmp",
-        HoverText = "Customizes your jumping ability",
+        Tooltip = "Customizes your jumping ability",
 		Function = function(callback)
 			if callback then
 				UIS_Connection = game:GetService("UserInputService").JumpRequest:Connect(function()
@@ -930,7 +930,7 @@ run(function()
 				Animate = nil
 			end
 		end,
-		HoverText = "customize your animations freely."
+		Tooltip = "customize your animations freely."
 	})
 	for i,v in pairs(AnimList.RunAnim) do table.insert(RunAnimations, i) end
 	for i,v in pairs(AnimList.WalkAnim) do table.insert(WalkAnimations, i) end
@@ -1001,7 +1001,7 @@ run(function()
 	})
 	AnimFreeze = AnimationChanger:CreateToggle({
 		Name = "Freeze",
-		HoverText = "Freezes all your animations",
+		Tooltip = "Freezes all your animations",
 		Function = function(callback)
 			if AnimationChanger.Enabled then
 				AnimationChanger:Toggle(false)
@@ -1060,7 +1060,7 @@ run(function()
 	})
 	VPLeave = VapePrivateDetector:CreateToggle({
 		Name = "ServerHop",
-		HoverText = "switches servers on detection.",
+		Tooltip = "switches servers on detection.",
 		Function = function() end
 	})
 	--[[task.spawn(function()
@@ -1074,7 +1074,7 @@ end)
 run(function() local InfiniteYield = {Enabled = false}
 	InfiniteYield = vape.Categories.Blatant:CreateModule({
 		Name = "InfiniteYield",
-		HoverText = "Loads the Infinite Yield script.",
+		Tooltip = "Loads the Infinite Yield script.",
 		Function = function(callback)
 			if callback then 
 				task.spawn(function()
@@ -1088,7 +1088,7 @@ end)
 run(function() local Dex = {Enabled = false}
 	Dex = vape.Categories.Blatant:CreateModule({
 		Name = "Dex",
-		HoverText = "Loads Dex",
+		Tooltip = "Loads Dex",
 		Function = function(callback)
 			if callback then 
 				task.spawn(function()
@@ -1246,7 +1246,7 @@ run(function()
 	end
 	EditWL = vape.Categories.Blatant:CreateModule({
 		Name = 'EditWL',
-		HoverText = "Use this to edit your whitelist data (whitelisted users only!)",
+		Tooltip = "Use this to edit your whitelist data (whitelisted users only!)",
 		Function = function(calling)
 			if calling then 
 				EditWL["ToggleButton"](false) 
@@ -1428,7 +1428,7 @@ run(function()
 	local customIcon = {Value = ''}
 	mouseMod = vape.Categories.Misc:CreateModule({
 		Name = 'MouseMod',
-		HoverText = 'Modifies your cursor\'s image.',
+		Tooltip = 'Modifies your cursor\'s image.',
 		Function = function(callback)
 			if callback then
 				task.spawn(function()
@@ -1486,7 +1486,7 @@ end)
 	local CustomNotificationPath = {Value = 'assets/InfoNotification.png'}
 	CustomNotification = vape.Categories.Misc:CreateModule({
 		Name = 'CustomNotification',
-        HoverText = 'Customizes vape\'s notification',
+        Tooltip = 'Customizes vape\'s notification',
 		Function = function(callback)
 			if callback then
 				task.spawn(function()
@@ -1519,18 +1519,18 @@ end)
 			'Icon',
 			'Absolute'
 		},
-		HoverText = 'Notifcation Mode',
+		Tooltip = 'Notifcation Mode',
 		Function = function() end,
 	})
 	CustomNotificationColor = CustomNotification:CreateColorSlider({
 		Name = 'Color',
-		HoverText = 'Notification Color',
+		Tooltip = 'Notification Color',
 		Function = function() end,
 	})
 	CustomNotificationPath = CustomNotification:CreateTextBox({
 		Name = 'IconPath',
 		TempText = 'Icon Path',
-		HoverText = 'Notificatiion Icon Path',
+		Tooltip = 'Notificatiion Icon Path',
 		FocusLost = function(enter) 
 			if CustomNotification.Enabled then 
 				CustomNotification:Toggle(false)
@@ -1603,7 +1603,7 @@ run(function()
 	end;
 	trails = vape.Categories.Misc:CreateModule({
 		Name = 'Trails',
-		HoverText = 'cool trail for your character.',
+		Tooltip = 'cool trail for your character.',
 		Function = function(calling)
 			if calling then 
 				repeat 
@@ -1717,10 +1717,11 @@ run(function()
 		Function = function(call)
 			if call then
 				ProfilesSaver:Toggle(false)
-				shared.GuiLibrary.SaveSettings()
-				shared.GuiLibrary.SaveSettings = function() end
+				shared.vape:Save()
+				shared.Save = function() end
 				shared.ProfilesSavedCustom = true
-				shared.GuiLibrary.Restart()
+				shared.vape:Uninject()
+				loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWRewrite/main/NewMainScript.lua", true))()
 			end
 		end
 	})
@@ -1853,7 +1854,7 @@ end)
 				for i,v in pairs(niggerfied_plrs) do un_niggerfy(v) end
 			end
 		end,
-		HoverText = "Niggerfies all players (except u ofc :D)"
+		Tooltip = "Niggerfies all players (except u ofc :D)"
 	})
 end)--]]
 
@@ -2024,7 +2025,7 @@ end)--]]
                 EventSys:Disconnect("ResetPlr")
             end
         end,
-        HoverText = "Transform yourself into an Among Us character.",
+        Tooltip = "Transform yourself into an Among Us character.",
         ExtraText = function() return "sussy" end
     })
 
@@ -2414,7 +2415,7 @@ run(function()
 	}
 	LightingTheme = vape.Categories.World:CreateModule({
 		Name = "LightingTheme",
-		HoverText = "Add a whole new look to your game.",
+		Tooltip = "Add a whole new look to your game.",
 		ExtraText = function() return LightingThemeType.Value end,
 		Function = function(callback) 
 			if callback then 
