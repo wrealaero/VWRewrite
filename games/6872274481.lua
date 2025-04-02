@@ -2413,9 +2413,41 @@ run(function()
 	local WallCheck
 	local PopBalloons
 	local TP
+	local lastonground = false
+	local MobileButtons
+	local FlyAnywayProgressBar = {Enabled = false}
+	local FlyAnywayProgressBarFrame
 	local rayCheck = RaycastParams.new()
 	rayCheck.RespectCanCollide = true
 	local up, down, old = 0, 0
+	local mobileControls = {}
+
+	local function createMobileButton(name, position, icon)
+		local button = Instance.new("TextButton")
+		button.Name = name
+		button.Size = UDim2.new(0, 60, 0, 60)
+		button.Position = position
+		button.BackgroundTransparency = 0.2
+		button.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+		button.BorderSizePixel = 0
+		button.Text = icon
+		button.TextScaled = true
+		button.TextColor3 = Color3.fromRGB(255, 255, 255)
+		button.Font = Enum.Font.SourceSansBold
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0, 8)
+		corner.Parent = button
+		return button
+	end
+
+	local function cleanupMobileControls()
+		for _, control in pairs(mobileControls) do
+			if control then
+				control:Destroy()
+			end
+		end
+		mobileControls = {}
+	end
 
 	Fly = vape.Categories.Blatant:CreateModule({
 		Name = 'Fly',
@@ -2430,11 +2462,62 @@ run(function()
 				if lplr.Character and (lplr.Character:GetAttribute('InflatedBalloons') or 0) == 0 and getItem('balloon') then
 					bedwars.BalloonController:inflateBalloon()
 				end
+
 				Fly:Clean(vapeEvents.AttributeChanged.Event:Connect(function(changed)
 					if changed == 'InflatedBalloons' and (lplr.Character:GetAttribute('InflatedBalloons') or 0) == 0 and getItem('balloon') then
 						bedwars.BalloonController:inflateBalloon()
 					end
 				end))
+
+				task.spawn(function()
+					repeat
+						task.wait()
+						if entitylib.isAlive then
+							entityLibrary.groundTick = entitylib.character.Humanoid.FloorMaterial ~= Enum.Material.Air and tick() or entityLibrary.groundTick
+						end
+					until not Fly.Enabled
+				end)
+
+				Fly:Clean(runService.Heartbeat:Connect(function(delta)
+					if entityLibrary.isAlive then
+						local playerMass = (entityLibrary.character.HumanoidRootPart:GetMass() - 1.4) * (delta * 100)
+						flyAllowed = ((lplr.Character:GetAttribute("InflatedBalloons") and lplr.Character:GetAttribute("InflatedBalloons") > 0) or store.matchState == 2 or megacheck) and 1 or 0
+						playerMass = playerMass + (flyAllowed > 0 and 4 or 0) * (tick() % 0.4 < 0.2 and -1 or 1)
+
+						if FlyAnywayProgressBarFrame then
+							FlyAnywayProgressBarFrame.Visible = flyAllowed <= 0
+							FlyAnywayProgressBarFrame.BackgroundColor3 = Color3.fromHSV(vape.GUIColor.Hue, vape.GUIColor.Sat, vape.GUIColor.Value)
+							pcall(function()
+								FlyAnywayProgressBarFrame.Frame.BackgroundColor3 = Color3.fromHSV(vape.GUIColor.Hue, vape.GUIColor.Sat, vape.GUIColor.Value)
+							end)
+						end
+
+						if flyAllowed <= 0 then
+							local newray = getPlacedBlock(entityLibrary.character.HumanoidRootPart.Position + Vector3.new(0, (entityLibrary.character.Humanoid.HipHeight * -2) - 1, 0))
+							onground = newray and true or false
+							if lastonground ~= onground then
+								if (not onground) then
+									groundtime = tick() + (2.6 + (entityLibrary.groundTick - tick()))
+									if FlyAnywayProgressBarFrame then
+										FlyAnywayProgressBarFrame.Frame:TweenSize(UDim2.new(0, 0, 0, 20), Enum.EasingDirection.InOut, Enum.EasingStyle.Linear, groundtime - tick(), true)
+									end
+								else
+									if FlyAnywayProgressBarFrame then
+										FlyAnywayProgressBarFrame.Frame:TweenSize(UDim2.new(1, 0, 0, 20), Enum.EasingDirection.InOut, Enum.EasingStyle.Linear, 0, true)
+									end
+								end
+							end
+							if FlyAnywayProgressBarFrame then
+								FlyAnywayProgressBarFrame.TextLabel.Text = math.max(onground and 2.5 or math.floor((groundtime - tick()) * 10) / 10, 0).."s"
+							end
+							lastonground = onground
+						else
+							onground = true
+							lastonground = true
+						end
+					end
+				end))
+
 				Fly:Clean(runService.PreSimulation:Connect(function(dt)
 					if entitylib.isAlive and not InfiniteFly.Enabled and isnetworkowner(entitylib.character.RootPart) then
 						local flyAllowed = (lplr.Character:GetAttribute('InflatedBalloons') and lplr.Character:GetAttribute('InflatedBalloons') > 0) or store.matchState == 2
@@ -2450,6 +2533,11 @@ run(function()
 							if ray then
 								destination = ((ray.Position + ray.Normal) - root.Position)
 							end
+						end
+
+						if FlyAnywayProgressBarFrame and not flyAllowed then
+							FlyAnywayProgressBarFrame.Visible = true
+							pcall(function() FlyAnywayProgressBarFrame.Frame:TweenSize(UDim2.new(1, 0, 0, 20), Enum.EasingDirection.InOut, Enum.EasingStyle.Linear, 0, true) end)
 						end
 
 						if not flyAllowed then
@@ -2484,6 +2572,39 @@ run(function()
 						root.AssemblyLinearVelocity = (moveDirection * velo) + Vector3.new(0, mass, 0)
 					end
 				end))
+
+				local isMobile = inputService.TouchEnabled and not inputService.KeyboardEnabled and not inputService.MouseEnabled
+				local MobileEnabled = MobileButtons.Enabled or isMobile
+				if MobileEnabled then
+					local gui = Instance.new("ScreenGui")
+					gui.Name = "FlyControls"
+					gui.ResetOnSpawn = false
+					gui.Parent = lplr.PlayerGui
+
+					local upButton = createMobileButton("UpButton", UDim2.new(0.9, -70, 0.7, -140), "↑")
+					local downButton = createMobileButton("DownButton", UDim2.new(0.9, -70, 0.7, -70), "↓")
+
+					mobileControls.UpButton = upButton
+					mobileControls.DownButton = downButton
+					mobileControls.ScreenGui = gui
+
+					upButton.Parent = gui
+					downButton.Parent = gui
+
+					Fly:Clean(upButton.MouseButton1Down:Connect(function()
+						up = 1
+					end))
+					Fly:Clean(upButton.MouseButton1Up:Connect(function()
+						up = 0
+					end))
+					Fly:Clean(downButton.MouseButton1Down:Connect(function()
+						down = -1
+					end))
+					Fly:Clean(downButton.MouseButton1Up:Connect(function()
+						down = 0
+					end))
+				end
+
 				Fly:Clean(inputService.InputBegan:Connect(function(input)
 					if not inputService:GetFocusedTextBox() then
 						if input.KeyCode == Enum.KeyCode.Space or input.KeyCode == Enum.KeyCode.ButtonA then
@@ -2504,17 +2625,24 @@ run(function()
 					pcall(function()
 						local jumpButton = lplr.PlayerGui.TouchGui.TouchControlFrame.JumpButton
 						Fly:Clean(jumpButton:GetPropertyChangedSignal('ImageRectOffset'):Connect(function()
-							up = jumpButton.ImageRectOffset.X == 146 and 1 or 0
+							if not mobileControls.UpButton then
+								up = jumpButton.ImageRectOffset.X == 146 and 1 or 0
+							end
 						end))
 					end)
 				end
 			else
+				if FlyAnywayProgressBarFrame then
+					FlyAnywayProgressBarFrame.Visible = false
+				end
+				lastonground = nil
 				bedwars.BalloonController.deflateBalloon = old
 				if PopBalloons.Enabled and entitylib.isAlive and (lplr.Character:GetAttribute('InflatedBalloons') or 0) > 0 then
 					for _ = 1, 3 do
 						bedwars.BalloonController:deflateBalloon()
 					end
 				end
+				cleanupMobileControls()
 			end
 		end,
 		ExtraText = function()
@@ -2548,9 +2676,55 @@ run(function()
 		Name = 'Pop Balloons',
 		Default = true
 	})
+	FlyAnywayProgressBar = Fly:CreateToggle({
+		Name = "Progress Bar",
+		Function = function(callback)
+			if callback then
+				FlyAnywayProgressBarFrame = Instance.new("Frame")
+				FlyAnywayProgressBarFrame.AnchorPoint = Vector2.new(0.5, 0)
+				FlyAnywayProgressBarFrame.Position = UDim2.new(0.5, 0, 1, -200)
+				FlyAnywayProgressBarFrame.Size = UDim2.new(0.2, 0, 0, 20)
+				FlyAnywayProgressBarFrame.BackgroundTransparency = 0.5
+				FlyAnywayProgressBarFrame.BorderSizePixel = 0
+				FlyAnywayProgressBarFrame.BackgroundColor3 = Color3.new(0, 0, 0)
+				FlyAnywayProgressBarFrame.Visible = Fly.Enabled
+				FlyAnywayProgressBarFrame.Parent = vape.gui
+				local FlyAnywayProgressBarFrame2 = FlyAnywayProgressBarFrame:Clone()
+				FlyAnywayProgressBarFrame2.AnchorPoint = Vector2.new(0, 0)
+				FlyAnywayProgressBarFrame2.Position = UDim2.new(0, 0, 0, 0)
+				FlyAnywayProgressBarFrame2.Size = UDim2.new(1, 0, 0, 20)
+				FlyAnywayProgressBarFrame2.BackgroundTransparency = 0
+				FlyAnywayProgressBarFrame2.Visible = true
+				FlyAnywayProgressBarFrame2.Parent = FlyAnywayProgressBarFrame
+				local FlyAnywayProgressBartext = Instance.new("TextLabel")
+				FlyAnywayProgressBartext.Text = "2s"
+				FlyAnywayProgressBartext.Font = Enum.Font.Gotham
+				FlyAnywayProgressBartext.TextStrokeTransparency = 0
+				FlyAnywayProgressBartext.TextColor3 =  Color3.new(0.9, 0.9, 0.9)
+				FlyAnywayProgressBartext.TextSize = 20
+				FlyAnywayProgressBartext.Size = UDim2.new(1, 0, 1, 0)
+				FlyAnywayProgressBartext.BackgroundTransparency = 1
+				FlyAnywayProgressBartext.Position = UDim2.new(0, 0, -1, 0)
+				FlyAnywayProgressBartext.Parent = FlyAnywayProgressBarFrame
+			else
+				if FlyAnywayProgressBarFrame then FlyAnywayProgressBarFrame:Destroy() FlyAnywayProgressBarFrame = nil end
+			end
+		end,
+		Tooltip = "show amount of Fly time",
+		Default = true
+	})
 	TP = Fly:CreateToggle({
 		Name = 'TP Down',
 		Default = true
+	})
+	MobileButtons = Fly:CreateToggle({
+		Name = "Mobile Buttons",
+		Function = function() 
+			if Fly.Enabled then
+				Fly:Toggle()
+				Fly:Toggle()
+			end
+		end
 	})
 end)
 	
@@ -6935,6 +7109,61 @@ run(function()
 		return nearest
 	end
 
+	local speed_was_disabled = nil
+
+	local function disableSpeed()
+		pcall(function()
+			if vape.Modules.Speed.Enabled then
+				vape.Modules.Speed:Toggle(false)
+				speed_was_disabled = true
+			else
+				speed_was_disabled = false
+			end	
+		end)
+	end
+
+	local function enableSpeed()
+		task.wait(3)
+		if speed_was_disabled then
+			pcall(function()
+				if not vape.Modules.Speed.Enabled then
+					vape.Modules.Speed:Toggle(false)
+				end
+				speed_was_disabled = nil
+			end)
+		end
+	end
+	
+	local function breakCannon(cannon, shootfunc)
+		local pos = cannon.Position
+		local res
+		task.delay(0, function()
+			local block, blockpos = getPlacedBlock(pos)
+			if block and block.Name == 'cannon' and (entitylib.character.RootPart.Position - block.Position).Magnitude < 20 then
+				local breaktype = bedwars.ItemMeta[block.Name].block.breakType
+				local tool = store.tools[breaktype]
+				if tool then
+					switchItem(tool.tool)
+				end
+	
+				local broken = 0.1
+				if bedwars.BlockController:calculateBlockDamage(lplr, {blockPosition = blockpos}) < block:GetAttribute('Health') then
+					broken = 0.4
+					bedwars.breakBlock(block, true, true)
+				end
+	
+				task.delay(broken, function()
+					if BetterDaveyAutojump.Enabled then
+						lplr.Character.Humanoid:ChangeState(3)
+					end
+					res = shootfunc()
+					bedwars.breakBlock(block.Position, true, getBestBreakSide(block.Position), true, true)
+					return res
+				end)
+			end
+		end)
+	end
+
 	BetterDavey = vape.Categories.Utility:CreateModule({
 		Name = 'BetterDavey',
 		Function = function(callback)
@@ -6942,22 +7171,23 @@ run(function()
 				local stopIndex = 0
 
 				CannonHandController.launchSelf = function(...)
-
-					if BetterDaveyAutojump.Enabled then
-						lplr.Character.Humanoid:ChangeState(3)
-					end
+					disableSpeed()
 
 					if BetterDaveyAutoBreak.Enabled then
 						local cannon = getNearestCannon()
 						if cannon then
-							local result = oldLaunchSelf(...)
-							for i = 1,2 do
-								bedwars.breakBlock(cannon, true, true)
-							end
+							local args = {...}
+							local result = breakCannon(cannon, function() return oldLaunchSelf(unpack(args)) end)
+							enableSpeed()
 							return result
 						end
 					else
-						return oldLaunchSelf(...)
+						if BetterDaveyAutojump.Enabled then
+							lplr.Character.Humanoid:ChangeState(3)
+						end
+						local res = oldLaunchSelf(...)
+						enableSpeed()
+						return res
 					end
 				end
 
@@ -6984,27 +7214,31 @@ run(function()
 				CannonController.stopAiming = oldStopAiming
 				CannonController.startAiming = oldStartAiming
 			end
-		end,
+		end
 	})
 	BetterDaveyAutojump = BetterDavey:CreateToggle({
 		Name = 'Auto jump',
 		Default = true,
-		Tooltip = 'Automatically jumps when launching from a cannon'
+		HoverText = 'Automatically jumps when launching from a cannon',
+		Function = function() end
 	})
 	BetterDaveyAutoLaunch = BetterDavey:CreateToggle({
 		Name = 'Auto launch',
 		Default = true,
-		Tooltip = 'Automatically launches you from a cannon when you finish aiming'
+		HoverText = 'Automatically launches you from a cannon when you finish aiming',
+		Function = function() end
 	})
 	BetterDaveyAutoBreak = BetterDavey:CreateToggle({
 		Name = 'Auto break',
 		Default = true,
-		Tooltip = 'Automatically breaks a cannon when you launch from it'
+		HoverText = 'Automatically breaks a cannon when you launch from it',
+		Function = function() end
 	})
 end)
 	
 run(function()
     local BedProtector
+	local Priority
 	local Layers
 	local CPS
     
@@ -7016,19 +7250,70 @@ run(function()
             end
         end
     end
-    
-    local function getBlocks()
+
+	local function isAllowed(block)
+		local allowed = {"wool", "stone_brick", "wood_plank_oak", "ceramic", "obsidian"}
+		for i,v in pairs(allowed) do
+			if string.find(string.lower(tostring(block)), v) then 
+				return true
+			end
+		end
+		return false
+	end
+
+	local function getBlocks()
         local blocks = {}
         for _, item in store.inventory.inventory.items do
             local block = bedwars.ItemMeta[item.itemType].block
-            if block then
-                table.insert(blocks, {item.itemType, block.health})
+            if block and isAllowed(item.itemType) then
+                table.insert(blocks, {itemType = item.itemType, health = block.health})
             end
         end
-        table.sort(blocks, function(a, b) 
-            return a[2] > b[2]
+
+        local priorityMap = {}
+        for i, v in pairs(Priority.ListEnabled) do
+			local core = v:split("/")
+            local blockType, layer = core[1], core[2]
+            if blockType and layer then
+                priorityMap[blockType] = tonumber(layer)
+            end
+        end
+
+        local prioritizedBlocks = {}
+        local fallbackBlocks = {}
+
+        for _, block in pairs(blocks) do
+			local prioLayer
+			for i,v in pairs(priorityMap) do
+				if string.find(string.lower(tostring(block.itemType)), string.lower(tostring(i))) then
+					prioLayer = v
+					break
+				end
+			end
+            if prioLayer then
+                table.insert(prioritizedBlocks, {itemType = block.itemType, health = block.health, layer = prioLayer})
+            else
+                table.insert(fallbackBlocks, {itemType = block.itemType, health = block.health})
+            end
+        end
+
+        table.sort(prioritizedBlocks, function(a, b)
+            return a.layer < b.layer
         end)
-        return blocks
+
+        table.sort(fallbackBlocks, function(a, b)
+            return a.health > b.health
+        end)
+
+        local finalBlocks = {}
+        for _, block in pairs(prioritizedBlocks) do
+            table.insert(finalBlocks, {block.itemType, block.health})
+        end
+        for _, block in pairs(fallbackBlocks) do
+            table.insert(finalBlocks, {block.itemType, block.health})
+        end
+
+        return finalBlocks
     end
     
     local function getPyramid(size, grid)
@@ -7126,7 +7411,7 @@ run(function()
                     
                     buildProtection(bedPos, blocks, Layers.Value, CPS.Value)
                 else
-                    notif('BedProtector', 'Unable to locate bed', 5)
+                    notif('BedProtector', 'Please get closer to your bed!', 5)
                     BedProtector:Toggle()
                 end
             else
@@ -7153,6 +7438,19 @@ run(function()
         Default = 50,
         Tooltip = "Blocks placed per second"
     })
+
+	Priority = BedProtector:CreateTextList({
+		Name = "Block/Layer",
+		Function = function() end,
+		TempText = "block/layer",
+		SortFunction = function(a, b)
+			local layer1 = a:split("/")
+			local layer2 = b:split("/")
+			layer1 = #layer1 and tonumber(layer1[2]) or 1
+			layer2 = #layer2 and tonumber(layer2[2]) or 1
+			return layer1 < layer2
+		end
+	})
 end)
 	
 run(function()

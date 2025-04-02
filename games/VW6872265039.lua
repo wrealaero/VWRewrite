@@ -994,7 +994,7 @@ end)--]]
     mainFrame.Position = UDim2.new(1, 0, 0.8, -250)
     mainFrame.AnchorPoint = Vector2.new(0, 0.5) 
     mainFrame.BackgroundTransparency = 1
-    mainFrame.Parent = shared.GuiLibrary.MainGui.ScaledGui
+    mainFrame.Parent = shared.vape.gui.ScaledGui
     shared.GuiLibrary.SelfDestructEvent.Event:Connect(function()
         mainFrame:Destroy()
     end)

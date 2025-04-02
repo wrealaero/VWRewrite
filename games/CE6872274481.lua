@@ -222,6 +222,101 @@ bedwars.Client = {}
 local cache = {} 
 local namespaceCache = {}
 
+local NetworkLogger = {
+    usageStats = {},
+    threshold = 20, 
+    warningCooldown = 5, 
+    lastWarning = {}
+}
+
+local function logRemoteUsage(remoteName, callType)
+	remoteName = tostring(remoteName)
+    local timeNow = tick()
+    local key = remoteName .. "_" .. callType
+    
+    if not NetworkLogger.usageStats[key] then
+        NetworkLogger.usageStats[key] = {
+            count = 0,
+            lastReset = timeNow,
+            peakRate = 0
+        }
+    end
+    
+    local stats = NetworkLogger.usageStats[key]
+    stats.count = stats.count + 1
+
+	if shared.VoidDev then
+		print(`Logged fire from {tostring(remoteName)} | {tostring(stats.count)}`)
+	end
+    
+    if timeNow - stats.lastReset >= 1 then
+        local rate = stats.count / (timeNow - stats.lastReset)
+        stats.peakRate = math.max(stats.peakRate, rate)
+        stats.count = 0
+        stats.lastReset = timeNow
+        
+        if rate > NetworkLogger.threshold then
+            if not NetworkLogger.lastWarning[key] or (timeNow - NetworkLogger.lastWarning[key] >= NetworkLogger.warningCooldown) then
+				if shared.VoidDev then
+					warn(string.format("[NetworkLogger] Excessive remote usage detected!\n" .."Remote: %s\nCallType: %s\nRate: %.2f calls/sec\nPeak: %.2f calls/sec", remoteName, callType, rate, stats.peakRate))
+					warningNotification("NetworkLogger", string.format("Excessive remote usage detected!\n" .."Remote: %s\nCallType: %s\nRate: %.2f calls/sec\nPeak: %.2f calls/sec", remoteName, callType, rate, stats.peakRate), 3)
+				end
+                NetworkLogger.lastWarning[key] = timeNow
+            end
+        end
+    end
+end
+
+local function decorateRemote(remote, src)
+	local isFunction = string.find(string.lower(remote.ClassName), "function")
+	local isEvent = string.find(string.lower(remote.ClassName), "remoteevent")
+	local isBindable = string.find(string.lower(remote.ClassName), "bindable")
+
+	if isFunction then
+		function src:CallServer(...)
+			local args = {...}
+			logRemoteUsage(remote, "InvokeServer")
+			return remote:InvokeServer(unpack(args))
+		end
+	elseif isEvent then
+		function src:CallServer(...)
+			local args = {...}
+			logRemoteUsage(remote, "FireServer")
+			return remote:FireServer(unpack(args))
+		end
+	elseif isBindable then
+		function src:CallServer(...)
+			local args = {...}
+			logRemoteUsage(remote, "BindableFire")
+			return remote:Fire(unpack(args))
+		end
+	end
+
+	function src:InvokeServer(...)
+		local args = {...}
+		src:CallServer(unpack(args))
+	end
+
+	function src:FireServer(...)
+		local args = {...}
+		src:CallServer(unpack(args))
+	end
+
+	function src:SendToServer(...)
+		local args = {...}
+		src:CallServer(unpack(...))
+	end
+
+	function src:CallServerAsync(...)
+		local args = {...}
+		src:CallServer(unpack(args))
+	end
+
+	src.instance = remote
+
+	return src
+end
+
 function bedwars.Client:Get(remName, customTable, resRequired)
     if cache[remName] then
         return cache[remName] 
@@ -231,7 +326,7 @@ function bedwars.Client:Get(remName, customTable, resRequired)
         if v.Name == remName or string.find(v.Name, remName) then  
             local remote
             if not resRequired then
-                remote = v
+                remote = decorateRemote(v, {})
             else
                 local tbl = {}
                 function tbl:InvokeServer()
@@ -242,6 +337,7 @@ function bedwars.Client:Get(remName, customTable, resRequired)
                     end
                     return tbl2
                 end
+				tbl = decorateRemote(v, tbl)
                 remote = tbl
             end
             
@@ -282,7 +378,7 @@ function bedwars.Client:WaitFor(remName)
 	local tbl = {}
 	function tbl:andThen(func)
 		repeat task.wait() until bedwars.Client:Get(remName)
-		func(bedwars.Client:Get(remName).OnClientEvent)
+		func(bedwars.Client:Get(remName).instance.OnClientEvent)
 	end
 	return tbl
 end
@@ -300,6 +396,7 @@ bedwars.ItemHandler.getItemMeta = function(item)
     return nil
 end
 bedwars.ItemTable = bedwars.ItemHandler.ItemMeta.items
+bedwars.ItemMeta = bedwars.ItemTable
 bedwars.KitMeta = decode(VoidwareFunctions.fetchCheatEngineSupportFile("KitMeta.json"))
 --decode(readfile("vape/CheatEngine/KitMeta.json"))
 bedwars.ProdAnimationsMeta = decode(VoidwareFunctions.fetchCheatEngineSupportFile("ProdAnimationsMeta.json"))
@@ -783,7 +880,10 @@ local function coreswitch(tool, ignore)
 end
 
 local function switchItem(tool, delayTime)
-	return coreswitch(tool, true)
+	local _tool = lplr.Character and lplr.Character:FindFirstChild('HandInvItem') and lplr.Character:FindFirstChild('HandInvItem').Value or nil
+	if _tool ~= nil and _tool ~= tool then
+		coreswitch(tool, true)
+	end
 end
 
 local switchitem = switchItem
@@ -1526,6 +1626,19 @@ table.insert(shared.StoreTable, function()
 end)
 
 store.blockRaycast.FilterType = Enum.RaycastFilterType.Include
+store.blocks = collectionService:GetTagged("block")
+store.blockRaycast.FilterDescendantsInstances = {store.blocks}
+table.insert(vapeConnections, collectionService:GetInstanceAddedSignal("block"):Connect(function(block)
+	table.insert(store.blocks, block)
+	store.blockRaycast.FilterDescendantsInstances = {store.blocks}
+end))
+table.insert(vapeConnections, collectionService:GetInstanceRemovedSignal("block"):Connect(function(block)
+	local index = table.find(store.blocks, block)
+	if index then
+		table.remove(store.blocks, index)
+		store.blockRaycast.FilterDescendantsInstances = {store.blocks}
+	end
+end))
 local AutoLeave = {Enabled = false}
 
 task.spawn(function()
@@ -1593,7 +1706,7 @@ local function downloadVapeAsset(path)
 			textlabel.Font = Enum.Font.SourceSans
 			textlabel.TextColor3 = Color3.new(1, 1, 1)
 			textlabel.Position = UDim2.new(0, 0, 0, -36)
-			textlabel.Parent = GuiLibrary.MainGui
+			textlabel.Parent = vape.gui
 			task.wait(0.1)
 			textlabel:Destroy()
 		end)
@@ -1691,7 +1804,7 @@ end
 local whitelist = shared.vapewhitelist
 local RunLoops = shared.RunLoops
 
-GuiLibrary.SelfDestructEvent.Event:Connect(function()
+vape:Clean(function()
 	vapeInjected = false
 	for i, v in pairs(vapeConnections) do
 		if v.Disconnect then pcall(function() v:Disconnect() end) continue end
@@ -2407,7 +2520,14 @@ run(function()
 		end)
 	end
 
-	entitylib.groundTick = tick()
+	task.spawn(function()
+		repeat
+			task.wait()
+			if entitylib.isAlive then
+				entitylib.groundTick = entitylib.character.Humanoid.FloorMaterial ~= Enum.Material.Air and tick() or entitylib.groundTick
+			end
+		until not shared.vape
+	end)
 
 	entitylib.start = function()
 		oldstart()
@@ -3676,7 +3796,7 @@ local autobankballoon = false
 				FlyAnywayProgressBarFrame.BorderSizePixel = 0
 				FlyAnywayProgressBarFrame.BackgroundColor3 = Color3.new(0, 0, 0)
 				FlyAnywayProgressBarFrame.Visible = Fly.Enabled
-				FlyAnywayProgressBarFrame.Parent = GuiLibrary.MainGui
+				FlyAnywayProgressBarFrame.Parent = vape.gui
 				local FlyAnywayProgressBarFrame2 = FlyAnywayProgressBarFrame:Clone()
 				FlyAnywayProgressBarFrame2.AnchorPoint = Vector2.new(0, 0)
 				FlyAnywayProgressBarFrame2.Position = UDim2.new(0, 0, 0, 0)
@@ -3718,6 +3838,7 @@ run(function()
 	local FlyAnywayProgressBar = {Enabled = false}
 	local FlyDamageAnimation = {Enabled = false}
 	local FlyTP = {Enabled = false}
+	local FlyMobileButtons = {Enabled = false}
 	local FlyAnywayProgressBarFrame
 	local olddeflate
 	local FlyUp = false
@@ -3727,6 +3848,54 @@ run(function()
 	local onground = false
 	local lastonground = false
 	local alternatelist = {"Normal", "AntiCheat A", "AntiCheat B"}
+	local mobileControls = {}
+
+	local function createMobileButton(name, position, icon)
+		local button = Instance.new("TextButton")
+		button.Name = name
+		button.Size = UDim2.new(0, 60, 0, 60)
+		button.Position = position
+		button.BackgroundTransparency = 0.2
+		button.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+		button.BorderSizePixel = 0
+		button.Text = icon
+		button.TextScaled = true
+		button.TextColor3 = Color3.fromRGB(255, 255, 255)
+		button.Font = Enum.Font.SourceSansBold
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0, 8)
+		corner.Parent = button
+		return button
+	end
+
+	local function cleanupMobileControls()
+		for _, control in pairs(mobileControls) do
+			if control then
+				control:Destroy()
+			end
+		end
+		mobileControls = {}
+	end
+
+	local function setupMobileControls()
+		cleanupMobileControls()
+		local gui = Instance.new("ScreenGui")
+		gui.Name = "FlyControls"
+		gui.ResetOnSpawn = false
+		gui.Parent = lplr.PlayerGui
+
+		local upButton = createMobileButton("UpButton", UDim2.new(0.9, -70, 0.7, -140), "↑")
+		local downButton = createMobileButton("DownButton", UDim2.new(0.9, -70, 0.7, -70), "↓")
+
+		mobileControls.UpButton = upButton
+		mobileControls.DownButton = downButton
+		mobileControls.ScreenGui = gui
+
+		upButton.Parent = gui
+		downButton.Parent = gui
+
+		return upButton, downButton
+	end
 
 	local function inflateBalloon()
 		if not Fly.Enabled then return end
@@ -3764,15 +3933,39 @@ run(function()
 						FlyDown = false
 					end
 				end))
+
+				local isMobile = inputService.TouchEnabled and not inputService.KeyboardEnabled and not inputService.MouseEnabled
+				if FlyMobileButtons.Enabled or isMobile then
+					local upButton, downButton = setupMobileControls()
+					
+					Fly:Clean(upButton.MouseButton1Down:Connect(function()
+						if FlyVertical.Enabled then FlyUp = true end
+					end))
+					Fly:Clean(upButton.MouseButton1Up:Connect(function()
+						FlyUp = false
+					end))
+					Fly:Clean(downButton.MouseButton1Down:Connect(function()
+						if FlyVertical.Enabled then FlyDown = true end
+					end))
+					Fly:Clean(downButton.MouseButton1Up:Connect(function()
+						FlyDown = false
+					end))
+				end
+
 				if inputService.TouchEnabled then
 					pcall(function()
 						local jumpButton = lplr.PlayerGui.TouchGui.TouchControlFrame.JumpButton
 						Fly:Clean(jumpButton:GetPropertyChangedSignal("ImageRectOffset"):Connect(function()
-							FlyUp = jumpButton.ImageRectOffset.X == 146
+							if not mobileControls.UpButton then 
+								FlyUp = jumpButton.ImageRectOffset.X == 146 and FlyVertical.Enabled
+							end
 						end))
-						FlyUp = jumpButton.ImageRectOffset.X == 146
+						if not mobileControls.UpButton then
+							FlyUp = jumpButton.ImageRectOffset.X == 146 and FlyVertical.Enabled
+						end
 					end)
 				end
+
 				Fly:Clean(vapeEvents.BalloonPopped.Event:Connect(function(poppedTable)
 					if poppedTable.inflatedBalloon and poppedTable.inflatedBalloon:GetAttribute("BalloonOwner") == lplr.UserId then
 						lastonground = not onground
@@ -3899,6 +4092,7 @@ run(function()
 				end
 				bedwars.BalloonController.deflateBalloon = olddeflate
 				olddeflate = nil
+				cleanupMobileControls()
 			end
 		end,
 		Tooltip = "Makes you go zoom (longer Fly discovered by exelys and Cqded)",
@@ -3929,6 +4123,43 @@ run(function()
 		Name = "Pop Balloon",
 		Function = function() end,
 		Tooltip = "Pops balloons when Fly is disabled."
+	})
+	FlyAnywayProgressBar = Fly:CreateToggle({
+		Name = "Progress Bar",
+		Function = function(callback)
+			if callback then
+				FlyAnywayProgressBarFrame = Instance.new("Frame")
+				FlyAnywayProgressBarFrame.AnchorPoint = Vector2.new(0.5, 0)
+				FlyAnywayProgressBarFrame.Position = UDim2.new(0.5, 0, 1, -200)
+				FlyAnywayProgressBarFrame.Size = UDim2.new(0.2, 0, 0, 20)
+				FlyAnywayProgressBarFrame.BackgroundTransparency = 0.5
+				FlyAnywayProgressBarFrame.BorderSizePixel = 0
+				FlyAnywayProgressBarFrame.BackgroundColor3 = Color3.new(0, 0, 0)
+				FlyAnywayProgressBarFrame.Visible = Fly.Enabled
+				FlyAnywayProgressBarFrame.Parent = vape.gui
+				local FlyAnywayProgressBarFrame2 = FlyAnywayProgressBarFrame:Clone()
+				FlyAnywayProgressBarFrame2.AnchorPoint = Vector2.new(0, 0)
+				FlyAnywayProgressBarFrame2.Position = UDim2.new(0, 0, 0, 0)
+				FlyAnywayProgressBarFrame2.Size = UDim2.new(1, 0, 0, 20)
+				FlyAnywayProgressBarFrame2.BackgroundTransparency = 0
+				FlyAnywayProgressBarFrame2.Visible = true
+				FlyAnywayProgressBarFrame2.Parent = FlyAnywayProgressBarFrame
+				local FlyAnywayProgressBartext = Instance.new("TextLabel")
+				FlyAnywayProgressBartext.Text = "2s"
+				FlyAnywayProgressBartext.Font = Enum.Font.Gotham
+				FlyAnywayProgressBartext.TextStrokeTransparency = 0
+				FlyAnywayProgressBartext.TextColor3 =  Color3.new(0.9, 0.9, 0.9)
+				FlyAnywayProgressBartext.TextSize = 20
+				FlyAnywayProgressBartext.Size = UDim2.new(1, 0, 1, 0)
+				FlyAnywayProgressBartext.BackgroundTransparency = 1
+				FlyAnywayProgressBartext.Position = UDim2.new(0, 0, -1, 0)
+				FlyAnywayProgressBartext.Parent = FlyAnywayProgressBarFrame
+			else
+				if FlyAnywayProgressBarFrame then FlyAnywayProgressBarFrame:Destroy() FlyAnywayProgressBarFrame = nil end
+			end
+		end,
+		Tooltip = "show amount of Fly time",
+		Default = true
 	})
 	local oldcamupdate
 	local camcontrol
@@ -3997,6 +4228,16 @@ run(function()
 		Name = "TP Down",
 		Function = function() end,
 		Default = true
+	})
+	FlyMobileButtons = Fly:CreateToggle({
+		Name = "Mobile Buttons",
+		Default = false,
+		Function = function(callback)
+			if Fly.Enabled then
+				Fly:Toggle()
+				Fly:Toggle()
+			end
+		end
 	})
 end)
 
@@ -5074,7 +5315,7 @@ run(function()
 	LongJumpacprogressbarframe.BorderSizePixel = 0
 	LongJumpacprogressbarframe.BackgroundColor3 = Color3.fromHSV(vape.GUIColor.Hue, vape.GUIColor.Sat, vape.GUIColor.Value)
 	LongJumpacprogressbarframe.Visible = LongJump.Enabled
-	LongJumpacprogressbarframe.Parent = GuiLibrary.MainGui
+	LongJumpacprogressbarframe.Parent = vape.gui
 	local LongJumpacprogressbarframe2 = LongJumpacprogressbarframe:Clone()
 	LongJumpacprogressbarframe2.AnchorPoint = Vector2.new(0, 0)
 	LongJumpacprogressbarframe2.Position = UDim2.new(0, 0, 0, 0)
@@ -5565,7 +5806,7 @@ run(function()
 	scaffoldtext.Position = UDim2.new(0.5, 0, 0.5, 30)
 	scaffoldtext.Text = "0"
 	scaffoldtext.Visible = false
-	scaffoldtext.Parent = GuiLibrary.MainGui
+	scaffoldtext.Parent = vape.gui
 	local ScaffoldExpand = {Value = 1}
 	local ScaffoldDiagonal = {Enabled = false}
 	local ScaffoldTower = {Enabled = false}
@@ -5996,7 +6237,7 @@ run(function()
 	local BedESP = {Enabled = false}
 	local BedESPFolder = Instance.new("Folder")
 	BedESPFolder.Name = "BedESPFolder"
-	BedESPFolder.Parent = GuiLibrary.MainGui
+	BedESPFolder.Parent = vape.gui
 	local BedESPTable = {}
 	local BedESPColor = {Value = 0.44}
 	local BedESPTransparency = {Value = 1}
@@ -6117,7 +6358,7 @@ run(function()
 
 	local BedPlatesFolder = Instance.new("Folder")
 	BedPlatesFolder.Name = "BedPlatesFolder"
-	BedPlatesFolder.Parent = GuiLibrary.MainGui
+	BedPlatesFolder.Parent = vape.gui
 	local BedPlatesTable = {}
 	local BedPlates = {Enabled = false}
 
@@ -6229,7 +6470,7 @@ run(function()
 
 	local ChestESPFolder = Instance.new('Folder')
 	ChestESPFolder.Name = 'ChestESPFolder'
-	ChestESPFolder.Parent = GuiLibrary.MainGui
+	ChestESPFolder.Parent = vape.gui
 	local ChestESP = {}
 	local ChestESPBackground = {}
 
@@ -9621,6 +9862,7 @@ end)
 
 run(function()
     local BedProtector
+	local Priority
 	local Layers
 	local CPS
     
@@ -9632,19 +9874,70 @@ run(function()
             end
         end
     end
-    
-    local function getBlocks()
+
+	local function isAllowed(block)
+		local allowed = {"wool", "stone_brick", "wood_plank_oak", "ceramic", "obsidian"}
+		for i,v in pairs(allowed) do
+			if string.find(string.lower(tostring(block)), v) then 
+				return true
+			end
+		end
+		return false
+	end
+
+	local function getBlocks()
         local blocks = {}
         for _, item in store.localInventory.inventory.items do
             local block = bedwars.ItemMeta[item.itemType].block
-            if block then
-                table.insert(blocks, {item.itemType, block.health})
+            if block and isAllowed(item.itemType) then
+                table.insert(blocks, {itemType = item.itemType, health = block.health})
             end
         end
-        table.sort(blocks, function(a, b) 
-            return a[2] > b[2]
+
+        local priorityMap = {}
+        for i, v in pairs(Priority.ListEnabled) do
+			local core = v:split("/")
+            local blockType, layer = core[1], core[2]
+            if blockType and layer then
+                priorityMap[blockType] = tonumber(layer)
+            end
+        end
+
+        local prioritizedBlocks = {}
+        local fallbackBlocks = {}
+
+        for _, block in pairs(blocks) do
+			local prioLayer
+			for i,v in pairs(priorityMap) do
+				if string.find(string.lower(tostring(block.itemType)), string.lower(tostring(i))) then
+					prioLayer = v
+					break
+				end
+			end
+            if prioLayer then
+                table.insert(prioritizedBlocks, {itemType = block.itemType, health = block.health, layer = prioLayer})
+            else
+                table.insert(fallbackBlocks, {itemType = block.itemType, health = block.health})
+            end
+        end
+
+        table.sort(prioritizedBlocks, function(a, b)
+            return a.layer < b.layer
         end)
-        return blocks
+
+        table.sort(fallbackBlocks, function(a, b)
+            return a.health > b.health
+        end)
+
+        local finalBlocks = {}
+        for _, block in pairs(prioritizedBlocks) do
+            table.insert(finalBlocks, {block.itemType, block.health})
+        end
+        for _, block in pairs(fallbackBlocks) do
+            table.insert(finalBlocks, {block.itemType, block.health})
+        end
+
+        return finalBlocks
     end
     
     local function getPyramid(size, grid)
@@ -9742,7 +10035,7 @@ run(function()
                     
                     buildProtection(bedPos, blocks, Layers.Value, CPS.Value)
                 else
-                    InfoNotification('BedProtector', 'Unable to locate bed', 5)
+                    InfoNotification('BedProtector', 'Please get closer to your bed!', 5)
                     BedProtector:Toggle()
                 end
             else
@@ -9769,6 +10062,19 @@ run(function()
         Default = 50,
         Tooltip = "Blocks placed per second"
     })
+
+	Priority = BedProtector:CreateTextList({
+		Name = "Block/Layer",
+		Function = function() end,
+		TempText = "block/layer",
+		SortFunction = function(a, b)
+			local layer1 = a:split("/")
+			local layer2 = b:split("/")
+			layer1 = #layer1 and tonumber(layer1[2]) or 1
+			layer2 = #layer2 and tonumber(layer2[2]) or 1
+			return layer1 < layer2
+		end
+	})
 end)
 
 run(function()
