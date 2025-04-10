@@ -41,16 +41,19 @@ task.spawn(function()
 
 		local function filterStackTrace(stackTrace)
 			stackTrace = stackTrace or "Unknown"
-			if type(stackTrace) ~= "string" then stackTrace = "INVALID \n"..tostring(stackTrace) end
-			if type(stackTrace) == "string" then
-				return string.split(stackTrace, "\n")
+			if type(stackTrace) ~= "string" then 
+				stackTrace = "INVALID: " .. tostring(stackTrace) 
 			end
+			if type(stackTrace) == "string" then
+				return string.split(stackTrace, "\n") or {stackTrace}
+			end
+			return {"Unknown"}
 		end
 
 		local function saveError(message, stackTrace)
 			stackTrace = stackTrace or ''
 			local errorLog = {
-				Message = message,
+				Message = tostring(message), 
 				StackTrace = filterStackTrace(stackTrace)
 			}
 			local S_Name = "CONSOLE"
@@ -60,9 +63,9 @@ task.spawn(function()
 				main = res or main
 			end
 			main["LogInfo"] = {
-				Version = "REWRITE",
+				Version = "Normal",
 				Executor = identifyexecutor and ({identifyexecutor()})[1] or "Unknown executor",
-				CheatEngineMode = shared.CheatEngineMode
+				CheatEngineMode = tostring(shared.CheatEngineMode or "Unknown") 
 			}
 			local function toTime(timestamp)
 				timestamp = timestamp or os.time()
@@ -79,14 +82,23 @@ task.spawn(function()
 			local function getExecutionTime()
 				return {["toTime"] = toTime(), ["toDate"] = toDate()}
 			end
-			main[toDate()] = main[toDate()] or {}
-			main[toDate()][tostring(game.PlaceId).." | "..tostring(game.JobId)] = main[toDate()][tostring(game.PlaceId).." | "..tostring(game.JobId)] or {}
-			main[toDate()][tostring(game.PlaceId).." | "..tostring(game.JobId)][S_Name] = main[toDate()][tostring(game.PlaceId).." | "..tostring(game.JobId)][S_Name] or {}
-			table.insert(main[toDate()][tostring(game.PlaceId).." | "..tostring(game.JobId)][S_Name], {
+			local dateKey = toDate()
+			local placeJobKey = tostring(game.PlaceId) .. " | " .. tostring(game.JobId)
+			main[dateKey] = main[dateKey] or {}
+			main[dateKey][placeJobKey] = main[dateKey][placeJobKey] or {}
+			main[dateKey][placeJobKey][S_Name] = main[dateKey][placeJobKey][S_Name] or {}
+			table.insert(main[dateKey][placeJobKey][S_Name], {
 				Time = getExecutionTime(),
 				Data = errorLog
 			})
-			writefile('VW_Error_Log.json', game:GetService("HttpService"):JSONEncode(main))
+			local success, jsonResult = pcall(function()
+				return httpService:JSONEncode(main)
+			end)
+			if success then
+				writefile('VW_Error_Log.json', jsonResult)
+			else
+				warn("Failed to encode JSON: " .. jsonResult)
+			end
 		end
 
 		if shared.DEBUGLOGGING then 
@@ -573,6 +585,34 @@ run(function() local CharacterOutline = {}
 			pcall(function() outline.OutlineColor = Color3.fromHSV(CharacterOutlineColor.Hue, CharacterOutlineColor.Sat, CharacterOutlineColor.Value) end)
 		end
 	})
+end)
+
+task.spawn(function()
+    pcall(function()
+        if not isfile("Local_VW_Update_Log.json") then
+            shared.UpdateLogBypass = true
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWExtra/main/VWUpdateLog.lua", true))()
+            shared.UpdateLogBypass = nil
+        end
+    end)
+end)
+
+run(function()
+	local ChangeLog = {Enabled = false}
+	ChangeLog = vape.Categories.World:CreateModule({
+		Name = ".ChangeLog ⭐",
+		Function = function(call)
+			if call then
+				ChangeLog:Toggle()
+                InfoNotification("ChangeLog", "Loading changelog...", 3)
+                shared.UpdateLogBypass = true
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWExtra/main/VWUpdateLog.lua", true))()
+			end
+		end
+	})
+	pcall(function()
+		ChangeLog.Object.TextSize = 20
+	end)
 end)
 
 run(function() local CloudMods = {}

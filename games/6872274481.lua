@@ -666,8 +666,6 @@ local function coreswitch(tool, ignore)
 		end
 	end)
 
-    corehotbarswitch()
-
     return true
 end
 
@@ -675,6 +673,7 @@ local function switchItem(tool, delayTime)
 	local _tool = lplr.Character and lplr.Character:FindFirstChild('HandInvItem') and lplr.Character:FindFirstChild('HandInvItem').Value or nil
 	if _tool ~= nil and _tool ~= tool then
 		coreswitch(tool, true)
+		corehotbarswitch()
 	end
 end
 
@@ -2485,7 +2484,7 @@ run(function()
 						playerMass = playerMass + (flyAllowed > 0 and 4 or 0) * (tick() % 0.4 < 0.2 and -1 or 1)
 
 						if FlyAnywayProgressBarFrame then
-							FlyAnywayProgressBarFrame.Visible = flyAllowed <= 0
+							FlyAnywayProgressBarFrame.Visible = Fly.Enabled and flyAllowed <= 0
 							FlyAnywayProgressBarFrame.BackgroundColor3 = Color3.fromHSV(vape.GUIColor.Hue, vape.GUIColor.Sat, vape.GUIColor.Value)
 							pcall(function()
 								FlyAnywayProgressBarFrame.Frame.BackgroundColor3 = Color3.fromHSV(vape.GUIColor.Hue, vape.GUIColor.Sat, vape.GUIColor.Value)
@@ -2508,7 +2507,10 @@ run(function()
 								end
 							end
 							if FlyAnywayProgressBarFrame then
-								FlyAnywayProgressBarFrame.TextLabel.Text = math.max(onground and 2.5 or math.floor((groundtime - tick()) * 10) / 10, 0).."s"
+								FlyAnywayProgressBarFrame.Visible = Fly.Enabled and groundtime ~= nil
+								if groundtime ~= nil then
+									FlyAnywayProgressBarFrame.TextLabel.Text = math.max(onground and 2.5 or math.floor((groundtime - tick()) * 10) / 10, 0).."s"
+								end
 							end
 							lastonground = onground
 						else
@@ -3299,18 +3301,20 @@ run(function()
 						end
 					end
 
-					for i, v in Boxes do
-						v.Adornee = attacked[i] and attacked[i].RootPart or nil
-						if v.Adornee then
-							v.Color3 = Color3.fromHSV(BoxColor.Hue, BoxColor.Sat, BoxColor.Value)
-							v.Transparency = 1 - BoxColor.Opacity
+					pcall(function()
+						for i, v in Boxes do
+							v.Adornee = attacked[i] and attacked[i].RootPart or nil
+							if v.Adornee then
+								v.Color3 = Color3.fromHSV(BoxColor.Hue, BoxColor.Sat, BoxColor.Value)
+								v.Transparency = 1 - BoxColor.Opacity
+							end
 						end
-					end
-
-					for i, v in Particles do
-						v.Position = attacked[i] and attacked[i].RootPart.Position or Vector3.new(9e9, 9e9, 9e9)
-						v.Parent = attacked[i] and gameCamera or nil
-					end
+	
+						for i, v in Particles do
+							v.Position = attacked[i] and attacked[i].RootPart.Position or Vector3.new(9e9, 9e9, 9e9)
+							v.Parent = attacked[i] and gameCamera or nil
+						end
+					end)
 
 					if Face.Enabled and attacked[1] then
 						local vec = attacked[1].RootPart.Position * Vector3.new(1, 0, 1)
@@ -4161,29 +4165,93 @@ run(function()
 	local TargetPart
 	local Targets
 	local FOV
+	local Range
 	local OtherProjectiles
 	local rayCheck = RaycastParams.new()
 	rayCheck.FilterType = Enum.RaycastFilterType.Include
 	rayCheck.FilterDescendantsInstances = {workspace:FindFirstChild('Map')}
 	local old
+	local selectedTarget = nil
+	local targetOutline = nil
+	
+	local UserInputService = game:GetService("UserInputService")
+	local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+	
+	local function updateOutline(target)
+		if targetOutline then
+			targetOutline:Destroy()
+			targetOutline = nil
+		end
+		if target then
+			targetOutline = Instance.new("Highlight")
+			targetOutline.FillTransparency = 1
+			targetOutline.OutlineColor = Color3.fromRGB(255, 0, 0)
+			targetOutline.OutlineTransparency = 0
+			targetOutline.Adornee = target.Character
+			targetOutline.Parent = target.Character
+		end
+	end
+
+	local CoreConnections = {}
+	
+	local function handlePlayerSelection()
+		local mouse = lplr:GetMouse()
+		local function selectTarget()
+			local target = mouse.Target
+			if target and target.Parent then
+				local plr = game.Players:GetPlayerFromCharacter(target.Parent)
+				if plr then
+					if selectedTarget == plr then
+						selectedTarget = nil
+						updateOutline(nil)
+					else
+						selectedTarget = plr
+						updateOutline(plr)
+					end
+				end
+			end
+		end
+		
+		if isMobile then
+			UserInputService.TouchTapInWorld:Connect(function(touchPos)
+				local ray = workspace.CurrentCamera:ScreenPointToRay(touchPos.X, touchPos.Y)
+				local result = workspace:Raycast(ray.Origin, ray.Direction * 1000)
+				if result and result.Instance then
+					mouse.Target = result.Instance
+					selectTarget()
+				end
+			end)
+		else
+			table.insert(CoreConnections, mouse.Button1Down:Connect(selectTarget))
+		end
+	end
 	
 	local ProjectileAimbot = vape.Categories.Blatant:CreateModule({
 		Name = 'ProjectileAimbot',
 		Function = function(callback)
 			if callback then
+				handlePlayerSelection()
 				old = bedwars.ProjectileController.calculateImportantLaunchValues
 				bedwars.ProjectileController.calculateImportantLaunchValues = function(...)
 					local self, projmeta, worldmeta, origin, shootpos = ...
-					local plr = entitylib.EntityMouse({
-						Part = 'RootPart',
-						Range = FOV.Value,
-						Players = Targets.Players.Enabled,
-						NPCs = Targets.NPCs.Enabled,
-						Wallcheck = Targets.Walls.Enabled,
-						Origin = entitylib.isAlive and (shootpos or entitylib.character.RootPart.Position) or Vector3.zero
-					})
+					local originPos = entitylib.isAlive and (shootpos or entitylib.character.RootPart.Position) or Vector3.zero
 					
-					if plr then
+					local plr
+					if selectedTarget and selectedTarget.Character and (selectedTarget.Character.PrimaryPart.Position - originPos).Magnitude <= Range.Value then
+						plr = selectedTarget
+					else
+						plr = entitylib.EntityMouse({
+							Part = 'RootPart',
+							Range = FOV.Value,
+							Players = Targets.Players.Enabled,
+							NPCs = Targets.NPCs.Enabled,
+							Wallcheck = Targets.Walls.Enabled,
+							Origin = originPos
+						})
+					end
+					updateOutline(plr)
+					
+					if plr and (plr.Character.PrimaryPart.Position - originPos).Magnitude <= Range.Value then
 						local pos = shootpos or self:getLaunchPosition(origin)
 						if not pos then
 							return old(...)
@@ -4212,8 +4280,7 @@ run(function()
 						if store.hand and store.hand.tool and store.hand.tool.Name:find("spellbook") then
 							local targetPos = plr.RootPart.Position
 							local selfPos = lplr.Character.PrimaryPart.Position
-
-							local expectedTime = (lplr.Character.PrimaryPart.Position - targetPos).Magnitude / 160
+							local expectedTime = (selfPos - targetPos).Magnitude / 160
 							targetPos += (plr.RootPart.Velocity * expectedTime)
 							return {
 								initialVelocity = (selfPos - targetPos).Unit * -160,
@@ -4225,8 +4292,7 @@ run(function()
 						elseif store.hand and store.hand.tool and store.hand.tool.Name:find("chakram") then
 							local targetPos = plr.RootPart.Position
 							local selfPos = lplr.Character.PrimaryPart.Position
-
-							local expectedTime = (lplr.Character.PrimaryPart.Position - targetPos).Magnitude / 80
+							local expectedTime = (selfPos - targetPos).Magnitude / 80
 							targetPos += (plr.RootPart.Velocity * expectedTime)
 							return {
 								initialVelocity = (selfPos - targetPos).Unit * -80,
@@ -4236,9 +4302,10 @@ run(function()
 								drawDurationSeconds = 5
 							}
 						end
-	
-						local newlook = CFrame.new(offsetpos, plr[TargetPart.Value].Position) * CFrame.new(projmeta.projectile == 'owl_projectile' and Vector3.zero or Vector3.new(bedwars.BowConstantsTable.RelX, bedwars.BowConstantsTable.RelY, bedwars.BowConstantsTable.RelZ))
-						local calc = prediction.SolveTrajectory(newlook.p, projSpeed, gravity, plr[TargetPart.Value].Position, projmeta.projectile == 'telepearl' and Vector3.zero or plr[TargetPart.Value].Velocity, playerGravity, plr.HipHeight, plr.Jumping and 42.6 or nil, rayCheck)
+						
+						TargetPart.Value = TargetPart.Value == "RootPart" and "PrimaryPart" or TargetPart.Value
+						local newlook = CFrame.new(offsetpos, plr.Character[TargetPart.Value].Position) * CFrame.new(projmeta.projectile == 'owl_projectile' and Vector3.zero or Vector3.new(bedwars.BowConstantsTable.RelX, bedwars.BowConstantsTable.RelY, bedwars.BowConstantsTable.RelZ))
+						local calc = prediction.SolveTrajectory(newlook.p, projSpeed, gravity, plr.Character[TargetPart.Value].Position, projmeta.projectile == 'telepearl' and Vector3.zero or plr.Character[TargetPart.Value].Velocity, playerGravity, plr.HipHeight, plr.Jumping and 42.6 or nil, rayCheck)
 						if calc then
 							targetinfo.Targets[plr] = tick() + 1
 							return {
@@ -4255,10 +4322,20 @@ run(function()
 				end
 			else
 				bedwars.ProjectileController.calculateImportantLaunchValues = old
+				if targetOutline then
+					targetOutline:Destroy()
+					targetOutline = nil
+				end
+				selectedTarget = nil
+				for i,v in pairs(CoreConnections) do
+					pcall(function() v:Disconnect() end)
+				end
+				table.clear(CoreConnections)
 			end
 		end,
-		Tooltip = 'Silently adjusts your aim towards the enemy'
+		Tooltip = 'Silently adjusts your aim towards the enemy. Click a player to lock onto them (red outline).'
 	})
+	
 	Targets = ProjectileAimbot:CreateTargets({
 		Players = true,
 		Walls = true
@@ -4272,6 +4349,13 @@ run(function()
 		Min = 1,
 		Max = 1000,
 		Default = 1000
+	})
+	Range = ProjectileAimbot:CreateSlider({
+		Name = 'Range',
+		Min = 10,
+		Max = 500,
+		Default = 100,
+		Tooltip = 'Maximum distance for target locking'
 	})
 	OtherProjectiles = ProjectileAimbot:CreateToggle({
 		Name = 'Other Projectiles',
@@ -6122,61 +6206,83 @@ run(function()
 end)
 	
 run(function()
-	local AutoPearl
-	local rayCheck = RaycastParams.new()
-	rayCheck.RespectCanCollide = true
-	local projectileRemote = {InvokeServer = function() end}
-	task.spawn(function()
-		projectileRemote = bedwars.Client:Get(remotes.FireProjectile).instance
-	end)
-	
-	local function firePearl(pos, spot, item)
-		switchItem(item.tool)
-		local meta = bedwars.ProjectileMeta.telepearl
-		local calc = prediction.SolveTrajectory(pos, meta.launchVelocity, meta.gravitationalAcceleration, spot, Vector3.zero, workspace.Gravity, 0, 0)
-	
-		if calc then
-			local dir = CFrame.lookAt(pos, calc).LookVector * meta.launchVelocity
-			bedwars.ProjectileController:createLocalProjectile(meta, 'telepearl', 'telepearl', pos, nil, dir, {drawDurationSeconds = 1})
-			projectileRemote:InvokeServer(item.tool, 'telepearl', 'telepearl', pos, pos, dir, httpService:GenerateGUID(true), {drawDurationSeconds = 1, shotId = httpService:GenerateGUID(false)}, workspace:GetServerTimeNow() - 0.045)
-		end
-	
-		if store.hand then
-			switchItem(store.hand.tool)
-		end
-	end
-	
-	AutoPearl = vape.Categories.Utility:CreateModule({
-		Name = 'AutoPearl',
-		Function = function(callback)
-			if callback then
-				local check
-				repeat
-					if entitylib.isAlive then
-						local root = entitylib.character.RootPart
-						local pearl = getItem('telepearl')
-						rayCheck.FilterDescendantsInstances = {lplr.Character, gameCamera, AntiVoidPart}
-						rayCheck.CollisionGroup = root.CollisionGroup
-	
-						if pearl and root.Velocity.Y < -100 and not workspace:Raycast(root.Position, Vector3.new(0, -200, 0), rayCheck) then
-							if not check then
-								check = true
-								local ground = getNearGround(20)
-	
-								if ground then
-									firePearl(root.Position, ground, pearl)
-								end
-							end
-						else
-							check = false
-						end
-					end
-					task.wait(0.1)
-				until not AutoPearl.Enabled
-			end
-		end,
-		Tooltip = 'Automatically throws a pearl onto nearby ground after\nfalling a certain distance.'
-	})
+    local AutoPearl
+    local rayCheck = RaycastParams.new()
+    rayCheck.RespectCanCollide = true
+    local projectileRemote = {InvokeServer = function() end}
+    task.spawn(function()
+        projectileRemote = bedwars.Client:Get(remotes.FireProjectile).instance
+    end)
+    
+    local function firePearl(pos, spot, item)
+        switchItem(item.tool)
+        local meta = bedwars.ProjectileMeta.telepearl
+        local calc = prediction.SolveTrajectory(pos, meta.launchVelocity, meta.gravitationalAcceleration, spot, Vector3.zero, workspace.Gravity, 0, 0)
+		
+        if calc then
+            local dir = CFrame.lookAt(pos, calc).LookVector * meta.launchVelocity
+            bedwars.ProjectileController:createLocalProjectile(meta, 'telepearl', 'telepearl', pos, nil, dir, {drawDurationSeconds = 1})
+            projectileRemote:InvokeServer(item.tool, 'telepearl', 'telepearl', pos, pos, dir, httpService:GenerateGUID(true), {drawDurationSeconds = 1, shotId = httpService:GenerateGUID(false)}, workspace:GetServerTimeNow() - 0.045)
+        end
+    
+        if store.hand then
+            switchItem(item.tool)
+        end
+    end
+
+    local function getMapLowestPoint()
+        local map = workspace:FindFirstChild("Map")
+        if not map then return -100 end 
+        
+        local lowestY = math.huge
+        for _, part in pairs(map:GetDescendants()) do
+            if part:IsA("BasePart") then
+                local y = part.Position.Y - (part.Size.Y / 2)
+                if y < lowestY then
+                    lowestY = y
+                end
+            end
+        end
+        return lowestY - 10 
+    end
+    
+    AutoPearl = vape.Categories.Utility:CreateModule({
+        Name = 'AutoPearl',
+        Function = function(callback)
+            if callback then
+                local check = false
+                local mapLowestY = getMapLowestPoint() 
+                
+                repeat
+                    if entitylib.isAlive then
+                        local root = entitylib.character.RootPart
+                        local pearl = getItem('telepearl')
+                        rayCheck.FilterDescendantsInstances = {lplr.Character, gameCamera, AntiVoidPart}
+                        rayCheck.CollisionGroup = root.CollisionGroup
+                        
+                        local isFalling = root.Velocity.Y < -50
+                        local belowMap = root.Position.Y < mapLowestY
+                        local noGroundBelow = not workspace:Raycast(root.Position, Vector3.new(0, -50, 0), rayCheck)
+                        
+                        if pearl and isFalling and (belowMap or noGroundBelow) then
+                            if not check then
+                                check = true
+                                local ground = getNearGround(20)
+    
+                                if ground then
+                                    firePearl(root.Position, ground, pearl)
+                                end
+                            end
+                        else
+                            check = false
+                        end
+                    end
+                    task.wait(0.1)
+                until not AutoPearl.Enabled
+            end
+        end,
+        Tooltip = 'Automatically throws a pearl onto nearby ground when falling under the map or into a void.'
+    })
 end)
 	
 run(function()
@@ -6642,6 +6748,7 @@ run(function()
 	local Downwards
 	local Diagonal
 	local LimitItem
+	local WoolOnly
 	local Mouse
 	local adjacent, lastpos, label = {}, Vector3.zero
 	
@@ -6694,9 +6801,11 @@ run(function()
 			if wool then
 				return wool, amount
 			else
-				for _, item in store.inventory.inventory.items do
-					if bedwars.ItemMeta[item.itemType].block then
-						return item.itemType, item.amount
+				if not WoolOnly.Enabled then
+					for _, item in store.inventory.inventory.items do
+						if bedwars.ItemMeta[item.itemType].block then
+							return item.itemType, item.amount
+						end
 					end
 				end
 			end
@@ -6783,6 +6892,7 @@ run(function()
 		Name = 'Diagonal',
 		Default = true
 	})
+	WoolOnly = Scaffold:CreateToggle({Name = "Wool Only"})
 	LimitItem = Scaffold:CreateToggle({Name = 'Limit to items'})
 	Mouse = Scaffold:CreateToggle({Name = 'Require mouse down'})
 	Count = Scaffold:CreateToggle({
@@ -7757,6 +7867,64 @@ run(function()
 		end
 	})
 end)
+
+run(function()
+    local AutoWhisper
+	local FlyWhisper
+	local HealWhisper
+
+    AutoWhisper = vape.Categories.World:CreateModule({
+        Name = 'AutoWhisper',
+        Function = function(callback)
+            if callback then
+				local isWhispering
+				local lowestpoint = math.huge
+				for _, v in store.blocks do
+					local point = (v.Position.Y - (v.Size.Y / 2)) - 50
+					if point < lowestpoint then 
+						lowestpoint = point 
+					end
+				end
+				AutoWhisper:Clean(bedwars.Client:Get("OwlSummoned"):Connect(function(data)
+					if data.user == lplr then
+						local target = data.target
+						local chr = target.Character
+						local hum = chr:FindFirstChild('Humanoid')
+						local root = chr:FindFirstChild('HumanoidRootPart')
+						isWhispering = true
+						repeat
+							if FlyWhisper.Enabled and root.Position.Y <= lowestpoint then
+								if bedwars.AbilityController:canUseAbility('OWL_LIFT') then
+									bedwars.AbilityController:useAbility('OWL_LIFT')
+								end
+							end
+							if HealWhisper.Enabled and (hum.MaxHealth - hum.Health) >= 20 then
+								if bedwars.AbilityController:canUseAbility('OWL_HEAL') then
+									bedwars.AbilityController:useAbility('OWL_HEAL')
+								end
+							end
+							task.wait(0.05)
+						until not isWhispering or not AutoWhisper.Enabled
+					end
+				end))
+				AutoWhisper:Clean(bedwars.Client:Get("OwlDeattached"):Connect(function(data)
+					if data.user == lplr then
+						isWhispering = false
+					end
+				end))
+			end
+        end,
+        Tooltip = "Automatically uses Whisper Kit's abilities. \n Thanks to nonamebetoo#0 for making it"
+    })
+	FlyWhisper = AutoWhisper:CreateToggle({
+		Name = 'Auto Fly',
+		Default = true
+	})
+	HealWhisper = AutoWhisper:CreateToggle({
+		Name = 'Auto Heal',
+		Default = true
+	})
+end)
 	
 run(function()
 	local ArmorSwitch
@@ -7857,6 +8025,7 @@ run(function()
 	local AutoBuyArmor = {Enabled = false}
 	local AutoBuySword = {Enabled = false}
 	local AutoBuyGen = {Enabled = false}
+	local AutoBuyAxolotl = {Enabled = false}
 	local AutoBuyProt = {Enabled = false}
 	local AutoBuySharp = {Enabled = false}
 	local AutoBuyDestruction = {Enabled = false}
@@ -7909,6 +8078,13 @@ run(function()
 		[3] = "iron_pickaxe",
 		[4] = "diamond_pickaxe"
 	}
+
+	local axolotls = {
+		[1] = "shield_axolotl",
+		[2] = "damage_axolotl",
+		[3] = "break_speed_axolotl",
+		[4] = "health_regen_axolotl"
+ 	}
 
 	task.spawn(function()
 		repeat task.wait() until store.matchState ~= 0 or not vapeInjected
@@ -7999,6 +8175,45 @@ run(function()
 		return nil
 	end
 
+	local function metafyAxolotl(name)
+		local data = {
+			["ShieldAxolotl"] = "shield_axolotl",
+			["DamageAxolotl"] = "damage_axolotl",
+			["BreakSpeedAxolotl"] = "break_speed_axolotl",
+			["HealthRegenAxolotl"] = "health_regen_axolotl"
+		}
+		return data[name] or ""
+	end
+
+	local function getAxolotls()
+		local res = {}
+		local data_folder = workspace:FindFirstChild("AxolotlModel")
+		if not data_folder then return res, true end
+
+		for i,v in pairs(data_folder:GetChildren()) do
+			if v.ClassName ~= "Model" then continue end
+			local owner = v:FindFirstChild("AxolotlData")
+			if not owner then continue end
+			if owner.ClassName ~= "ObjectValue" then continue end
+			if not owner.Value then continue end
+			if tostring(owner.Value) == lplr.Name.."_Axolotl" then
+				table.insert(res, {
+					axolotlType = v.Name,
+					name = metafyAxolotl(v.Name)
+				})
+			end
+		end
+
+		return res
+	end
+
+	local function getAxolotl(metaName, inv)
+		for i,v in pairs(inv) do
+			if v.name == metaName then return v end
+		end
+		return nil
+	end
+
 	local buyfunctions = {
 		Armor = function(inv, upgrades, shoptype)
 			local inv = store.localInventory.inventory
@@ -8046,7 +8261,40 @@ run(function()
 			if highestbuyable and (highestbuyable.ignoredByKit == nil or table.find(highestbuyable.ignoredByKit, store.equippedKit) == nil) then
 				buyItem(highestbuyable)
 			end
-		end
+		end,
+		Axolotl = function(inv, upgrades, shoptype)
+			if store.equippedKit ~= "axolotl" then return end
+			if not AutoBuyAxolotl.Enabled then return end
+
+			local inv = store.localInventory.inventory
+			local inv_axolotls, abort = getAxolotls()
+			if abort then return end
+
+			local tableToDo = axolotls
+
+			local axolotlindex = 0
+			for i,v in pairs(axolotls) do
+				if getAxolotl(v, inv_axolotls) then
+					axolotlindex = i
+				end
+			end
+			axolotlindex = axolotlindex + 1
+
+			local highestbuyable = nil
+			for i = axolotlindex, #tableToDo, 1 do
+				local shopitem = getShopItem(axolotls[i])
+				if shopitem and i == axolotlindex then
+					local currency = getItem(shopitem.currency, inv.items)
+					if currency and currency.amount >= shopitem.price then
+						highestbuyable = shopitem
+					end
+				end
+			end
+
+			if highestbuyable and (highestbuyable.ignoredByKit == nil or table.find(highestbuyable.ignoredByKit, store.equippedKit) == nil) then
+				buyItem(highestbuyable)
+			end
+		end	
 	}
 
 	AutoBuy = vape.Categories.Inventory:CreateModule({
@@ -8076,6 +8324,8 @@ run(function()
 								swords[5] = "infernal_saber"
 							elseif store.equippedKit == "lumen" then
 								swords[5] = "light_sword"
+							elseif store.equippedKit == "pyro" then
+								swords[6] = "flamethrower"
 							end
 							if (AutoBuyGui.Enabled == false or (bedwars.AppController:isAppOpen("BedwarsItemShopApp") or bedwars.AppController:isAppOpen("BedwarsTeamUpgradeApp"))) and (not enchant) then
 								for i,v in pairs(AutoBuyCustom.ObjectList) do
@@ -8130,6 +8380,16 @@ run(function()
 		Function = function() end,
 		Default = true
 	})
+	AutoBuyAxolotl = AutoBuy:CreateToggle({
+		Name = "Buy Axolotl",
+		Function = function() end,
+		Default = true
+	})
+	AutoBuyAxolotl.Object.Visible = false
+	task.spawn(function()
+		repeat task.wait() until store.equippedKit ~= ""
+		AutoBuyAxolotl.Object.Visible = store.equippedKit == "axolotl"
+	end)
 	AutoBuyGui = AutoBuy:CreateToggle({
 		Name = "Shop GUI Check",
 		Function = function() end,
@@ -9613,7 +9873,7 @@ run(function()
 end)
 	
 run(function()
-	vape.Legit:CreateModule({
+	vape.Categories.Combat:CreateModule({
 		Name = 'HitFix',
 		Function = function(callback)
 			debug.setconstant(bedwars.SwordController.swingSwordAtMouse, 23, callback and 'raycast' or 'Raycast')

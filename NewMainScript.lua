@@ -73,7 +73,7 @@ local function checkExecutor()
             return identifyexecutor()
         end)   
         --local blacklist = {'appleware', 'cryptic', 'delta', 'wave', 'codex', 'swift', 'solara', 'vega'}
-        local blacklist = {'solara', 'cryptic', 'xeno'}
+        local blacklist = {'solara', 'cryptic', 'xeno', 'ember', 'ronix'}
         local core_blacklist = {'solara', 'xeno'}
         if suc then
             for i,v in pairs(blacklist) do
@@ -90,6 +90,7 @@ local function checkExecutor()
     end
 end
 task.spawn(function() pcall(checkExecutor) end)
+task.spawn(function() pcall(function() if isfile("VW_API_KEY.txt") then delfile("VW_API_KEY.txt") end end) end)
 local function checkRequire()
     if CheatEngineMode then return end
     local bedwarsID = {
