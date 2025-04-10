@@ -792,7 +792,7 @@ run(function()
 	end
 
 	local function pDecode(data)
-		local suc, err = pcall(function() game:GetService("HttpService"):JSONDecode(data) end)
+		local suc, err = pcall(function() return game:GetService("HttpService"):JSONDecode(data) end)
 		return suc and err
 	end
 
