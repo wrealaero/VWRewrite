@@ -3914,7 +3914,7 @@ run(function()
 	})
 end)
 
-run(function()
+--[[run(function()
 	local AntiHit = {}
 	local physEngine = game:GetService("RunService")
 	local worldSpace = game.Workspace
@@ -4092,7 +4092,7 @@ run(function()
 		Suffix = function(v) return v == 1 and "span" or "spans" end,
 		Function = function(v) scanRad = v end
 	})
-end)
+end)--]]
 
 task.spawn(function()
     local tweenmodules = {"BedTP", "EmeraldTP", "DiamondTP", "MiddleTP", "Autowin", "PlayerTP"}
