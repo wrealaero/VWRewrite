@@ -4886,7 +4886,7 @@ run(function()
 							local localfacing = entitylib.character.RootPart.CFrame.LookVector * Vector3.new(1, 0, 1)
 
 							for _, v in plrs do
-								if not ({whitelist:get(v)})[2] then continue end
+								--if not ({whitelist:get(v)})[2] then continue end
 								if Targets.Walls.Enabled then
 									if not Wallcheck(lplr.Character, v.Character) then continue end
 								end
