@@ -3835,7 +3835,7 @@ run(function()
     })
 end)
 
---[[run(function()
+run(function()
 	function IsAlive(plr)
 		plr = plr or lplr
 		if not plr.Character then return false end
@@ -3912,7 +3912,7 @@ end)
 		Min = 1,
 		Max = 25
 	})
-end)--]]
+end)
 
 run(function()
 	local AntiHit = {}
@@ -4061,8 +4061,9 @@ run(function()
 	end
 	
 	AntiHit_core = vape.Categories.Blatant:CreateModule({
-		Name = "AntiHit/Godmode",
+		Name = "AntiHit V2",
 		Function = function(active)
+			if active then warningNotification("Antihit V2", "Warnining this is still experimental!", 3) end
 			task.spawn(function()
 				repeat task.wait() until store.matchState > 0 or not AntiHit_core.Enabled
 				if not AntiHit_core.Enabled then return end
@@ -4071,7 +4072,7 @@ run(function()
 		end,
 		Tooltip = "Dodges attacks."
 	})
-	GodMode = AntiHit_core
+	--GodMode = AntiHit_core
 	
 	AntiHit_core:CreateTargets({
 		Players = true,
