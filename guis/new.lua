@@ -5695,6 +5695,56 @@ function mainapi:Remove(obj)
 	end
 end
 
+local function notifyError(err)
+	if errorNotification ~= nil and type(errorNotification) == "function" then
+		pcall(function()
+			errorNotification("Voidware", tostring(err), 5)
+		end)
+	end
+end
+
+local function saveSavingError(data)
+	local errorLog = data
+	local S_Name = "SAVING"
+	local main = {}
+	if isfile('VW_Error_Log.json') then
+		local res = loadJson('VW_Error_Log.json')
+		main = res or main
+	end
+	local function toTime(timestamp)
+		timestamp = timestamp or os.time()
+		local dateTable = os.date("*t", timestamp)
+		local timeString = string.format("%02d:%02d:%02d", dateTable.hour, dateTable.min, dateTable.sec)
+		return timeString
+	end
+	local function toDate(timestamp)
+		timestamp = timestamp or os.time()
+		local dateTable = os.date("*t", timestamp)
+		local dateString = string.format("%02d/%02d/%02d", dateTable.day, dateTable.month, dateTable.year % 100)
+		return dateString
+	end
+	local function getExecutionTime()
+		return {["toTime"] = toTime(), ["toDate"] = toDate()}
+	end
+	local dateKey = toDate()
+	local placeJobKey = tostring(game.PlaceId) .. " | " .. tostring(game.JobId)
+	main[dateKey] = main[dateKey] or {}
+	main[dateKey][placeJobKey] = main[dateKey][placeJobKey] or {}
+	main[dateKey][placeJobKey][S_Name] = main[dateKey][placeJobKey][S_Name] or {}
+	table.insert(main[dateKey][placeJobKey][S_Name], {
+		Time = getExecutionTime(),
+		Data = errorLog
+	})
+	local success, jsonResult = pcall(function()
+		return httpService:JSONEncode(main)
+	end)
+	if success then
+		writefile('VW_Error_Log.json', jsonResult)
+	else
+		warn("Failed to encode JSON: " .. jsonResult)
+	end
+end
+
 function mainapi:Save(newprofile)
 	local suc, err = pcall(function()
 		if not self.Loaded then return end
@@ -5723,6 +5773,12 @@ function mainapi:Save(newprofile)
 		end
 	
 		for i, v in self.Modules do
+			local suc_1, data_1 = pcall(function() return mainapi:SaveOptions(v, true) end)
+			if not suc_1 then notifyError("Failure saving data for "..tostring(i)); continue end
+			if suc_1 and type(data_1) == "table" and data_1.ErrorLog then
+				notifyError("Failure saving data for "..tostring(i))
+				saveSavingError(data_1.ErrorLog)
+			end
 			savedata.Modules[i] = {
 				Enabled = v.Enabled,
 				Bind = v.Bind.Button and {Mobile = true, X = v.Bind.Button.Position.X.Offset, Y = v.Bind.Button.Position.Y.Offset} or v.Bind,
@@ -5742,6 +5798,10 @@ function mainapi:Save(newprofile)
 		writefile('vape/profiles/'..self.Profile..self.Place..'.txt', httpService:JSONEncode(savedata))
 	end)
 	if not suc then
+		saveSavingError({
+			message = tostring(err),
+			data = debug.traceback(tostring(err))
+		})
 		if errorNotification ~= nil and type(errorNotification) == "function" then
 			pcall(function()
 				errorNotification("Voidware", "Failure saving your profile!", 3)
@@ -5753,9 +5813,17 @@ end
 function mainapi:SaveOptions(object, savedoptions)
 	if not savedoptions then return end
 	savedoptions = {}
-	for _, v in object.Options do
+	for i, v in object.Options do
 		if not v.Save then continue end
-		v:Save(savedoptions)
+		local suc, err = pcall(function() return v:Save(savedoptions) end)
+		if not suc then 
+			savedoptions.ErrorLog = savedoptions.ErrorLog or {}
+			savedoptions.ErrorLog[tostring(i)] = savedoptions.ErrorLog[tostring(i)] or {}
+			table.insert(savedoptions.ErrorLog[tostring(i)], {
+				message = tostring(err),
+				data = debug.traceback(tostring(err))
+			})
+		end
 	end
 	return savedoptions
 end
