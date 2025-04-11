@@ -5872,7 +5872,7 @@ gui.Name = randomString()
 gui.DisplayOrder = 9999999
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 gui.IgnoreGuiInset = true
-gui.OnTopOfCoreBlur = true
+pcall(function() gui.OnTopOfCoreBlur = true end)
 if mainapi.ThreadFix then
 	gui.Parent = cloneref(game:GetService('CoreGui'))--(gethui and gethui()) or cloneref(game:GetService('CoreGui'))
 else
@@ -6657,6 +6657,7 @@ VapeLabelSorter.Parent = VapeLabelHolder
 local targetinfo
 local targetinfoobj
 local targetinfobcolor
+local targetinfofollow
 targetinfoobj = mainapi:CreateOverlay({
 	Name = 'Target Info',
 	Icon = getcustomasset('vape/assets/new/targetinfoicon.png'),
@@ -6667,7 +6668,16 @@ targetinfoobj = mainapi:CreateOverlay({
 		if callback then
 			task.spawn(function()
 				repeat
-					targetinfo:UpdateInfo()
+					local suc, err = pcall(function()
+						local target = targetinfo:UpdateInfo()
+						if target ~= nil and targetinfofollow and targetinfofollow.Enabled then
+							local vec, screen = workspace.CurrentCamera:WorldToScreenPoint(target.Position)
+							if screen then
+								targetinfobkg.Parent.Parent.Position = UDim2.fromOffset(vec.X, vec.Y)
+							end
+						end
+					end)
+					if not suc and shared.VoidDev then warn("[TargetInfo Error]: "..tostring(err)) end
 					task.wait()
 				until not targetinfoobj.Button or not targetinfoobj.Button.Enabled
 			end)
@@ -6774,6 +6784,10 @@ local targetinfobackgroundtransparency = {
 local targetinfodisplay = targetinfoobj:CreateToggle({
 	Name = 'Use Displayname',
 	Default = true
+})
+targetinfofollow = targetinfoobj:CreateToggle({
+	Name = 'Follow Player',
+	Function = function() end
 })
 targetinfoobj:CreateToggle({
 	Name = 'Render Background',
