@@ -5777,6 +5777,7 @@ function mainapi:Save(newprofile)
 			if not suc_1 then notifyError("Failure saving data for "..tostring(i)); continue end
 			if suc_1 and type(data_1) == "table" and data_1.ErrorLog then
 				notifyError("Failure saving data for "..tostring(i))
+				warn("[SAVING] - "..tostring(i).." : "..tostring(data_1))
 				saveSavingError(data_1.ErrorLog)
 			end
 			savedata.Modules[i] = {
