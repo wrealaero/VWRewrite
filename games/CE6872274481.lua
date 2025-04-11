@@ -1299,6 +1299,11 @@ function bedwars.SoundManager:playSound(soundId)
         sound:Destroy()
     end)
 end
+bedwars.QueryUtil = {}
+function bedwars.QueryUtil:setQueryIgnored(object, status)
+	if status == nil then status = true end
+	object:SetAttribute("gamecore_GameQueryIgnore", status)
+end
 bedwars.MatchController = {}
 function bedwars.MatchController:fetchPlayerTeam(plr)
 	return tostring(plr.Team)
@@ -6968,8 +6973,8 @@ run(function()
 				part2.Parent = game.Workspace
 				game:GetService("Debris"):AddItem(part, 0.5)
 				game:GetService("Debris"):AddItem(part2, 0.5)
-				--bedwars.QueryUtil:setQueryIgnored(part, true)
-				--bedwars.QueryUtil:setQueryIgnored(part2, true)
+				bedwars.QueryUtil:setQueryIgnored(part, true)
+				bedwars.QueryUtil:setQueryIgnored(part2, true)
 				if i == 0 then
 					local soundpart = Instance.new("Part")
 					soundpart.Transparency = 1
@@ -6977,7 +6982,7 @@ run(function()
 					soundpart.Size = Vector3.zero
 					soundpart.Position = startcf
 					soundpart.Parent = game.Workspace
-					--bedwars.QueryUtil:setQueryIgnored(soundpart, true)
+					bedwars.QueryUtil:setQueryIgnored(soundpart, true)
 					local sound = Instance.new("Sound")
 					sound.SoundId = "rbxassetid://6993372814"
 					sound.Volume = 2
