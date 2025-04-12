@@ -447,14 +447,18 @@ function bedwars.BlockController:isBlockBreakable() return true end
 function bedwars.BlockController:getBlockPosition(block)
     local RayParams = RaycastParams.new()
     RayParams.FilterType = Enum.RaycastFilterType.Exclude
-    RayParams.FilterDescendantsInstances = {game:GetService("Players").LocalPlayer.Character}
+	local ignoreTable = bedwars.QueryUtil.queryIgnored
+	if lplr.Character then
+		table.insert(ignoreTable, lplr.Character)
+	end
+    RayParams.FilterDescendantsInstances = ignoreTable
     RayParams.IgnoreWater = true
     local RayRes = game.Workspace:Raycast(type(block) == "userdata" and block.Position or block + Vector3.new(0, 30, 0), Vector3.new(0, -35, 0), RayParams)
     local targetBlock
     if RayRes then
         targetBlock = RayRes.Instance or type(block) == "userdata" and black or nil		
         local function resolvePos(pos) return Vector3.new(math.round(pos.X / 3), math.round(pos.Y / 3), math.round(pos.Z / 3)) end
-        return resolvePos(targetBlock.Position)
+        return resolvePos(targetBlock.Position), targetBlock
     else
         return false
     end
@@ -486,6 +490,7 @@ end
 local function getBestTool(block)
 	local tool = nil
 	local blockmeta = bedwars.ItemTable[block]
+	if not blockmeta then return end
 	local blockType = blockmeta.block and blockmeta.block.breakType
 	if blockType then
 		local best = 0
@@ -501,6 +506,7 @@ local function getBestTool(block)
 end
 function bedwars.BlockController:calculateBlockDamage(plr, posTbl)
 	local tool = getBestTool(tostring(posTbl.block))
+	if not tool then return 0 end
 	local tooldmg = bedwars.ItemTable[tostring(tool.itemType)].breakBlock
 	if table.find(tooldmg, tostring(tool)) then tooldmg = tooldmg[tostring(tool)] else
 		for i,v in pairs(tooldmg) do tooldmg = v break end
@@ -545,6 +551,7 @@ local function getPlacedBlock(pos, strict)
     local centerParts = game.Workspace:FindPartsInRegion3(centerRegion, nil, math.huge)
     for _, part in pairs(centerParts) do
         if part and part.ClassName == "Part" and part.Parent then
+			if bedwars.QueryUtil:isQueryIgnored(part) then continue end
             if strict then
                 if part.Parent.Name == 'Blocks' and part.Parent.ClassName == "Folder" then
                     table.insert(nearbyParts, part)
@@ -562,6 +569,7 @@ local function getPlacedBlock(pos, strict)
         
         for _, part in pairs(parts) do
             if part and part.ClassName == "Part" and part.Parent then
+				if bedwars.QueryUtil:isQueryIgnored(part) then continue end
                 if strict then
                     if part.Parent.Name == 'Blocks' and part.Parent.ClassName == "Folder" then
                         table.insert(nearbyParts, part)
@@ -890,19 +898,6 @@ VoidwareFunctions.GlobaliseObject("switchItem", switchItem)
 local function switchToAndUseTool(block, legit)
 	local tool = getBestTool(block.Name)
 	if tool and (entityLibrary.isAlive and lplr.Character:FindFirstChild("HandInvItem") and lplr.Character.HandInvItem.Value ~= tool.tool) then
-		--[[if legit then
-			if getHotbarSlot(tool.itemType) then
-				bedwars.ClientStoreHandler:dispatch({
-					type = "InventorySelectHotbarSlot",
-					slot = getHotbarSlot(tool.itemType)
-				})
-				vapeEvents.InventoryChanged.Event:Wait()
-				updateitem:Fire(inputobj)
-				return true
-			else
-				return false
-			end
-		end--]]
 		switchItem(tool.tool)
 	end
 end
@@ -1299,36 +1294,46 @@ function bedwars.SoundManager:playSound(soundId)
         sound:Destroy()
     end)
 end
-bedwars.QueryUtil = {}
-function bedwars.QueryUtil:setQueryIgnored(object, status)
-	if status == nil then status = true end
-	object:SetAttribute("gamecore_GameQueryIgnore", status)
-end
-bedwars.MatchController = {}
-function bedwars.MatchController:fetchPlayerTeam(plr)
-	return tostring(plr.Team)
-end
-function bedwars.MatchController:fetchGameTime()
-	local time, timeTable, suc = 0, {seconds = 0, minutes = 0}, false
-	local window = game:GetService("Players").LocalPlayer.PlayerGui:FindFirstChild("TopBarAppGui")
-	if window then
-		local frame = window:FindFirstChild("TopBarApp")
-		if frame then
-			for i,v in pairs(frame:GetChildren()) do
-				if v.ClassName == "Frame" and v:FindFirstChild("4") and v:FindFirstChild("5") then
-					if v:FindFirstChild("4").ClassName == "ImageLabel" and v:FindFirstChild("5").ClassName == "TextLabel" then
-						time, timeTable, suc = extractTime(v:FindFirstChild("5").Text):toSeconds(), {
-							seconds = extractTime(v:FindFirstChild("5").Text).seconds,
-							minutes = extractTime(v:FindFirstChild("5").Text).minutes
-						}, true
-						break
+bedwars.QueryUtil = {
+	queryIgnored = {},
+	setQueryIgnored = function(self, object, status)
+		if status == nil then status = true end
+		if status == true then table.insert(self.queryIgnored, object) else 
+			local index = table.find(self.queryIgnored, object) 
+			if index then table.remove(self.queryIgnored, index) end
+		end
+		object:SetAttribute("gamecore_GameQueryIgnore", status)
+	end,
+	isQueryIgnored = function(self, object)
+		return object:GetAttribute("gamecore_GameQueryIgnore")
+	end
+}
+bedwars.MatchController = {
+	fetchPlayerTeam = function(self, plr)
+		return tostring(plr.Team)
+	end,
+	fetchGameTime = function(self)
+		local time, timeTable, suc = 0, {seconds = 0, minutes = 0}, false
+		local window = game:GetService("Players").LocalPlayer.PlayerGui:FindFirstChild("TopBarAppGui")
+		if window then
+			local frame = window:FindFirstChild("TopBarApp")
+			if frame then
+				for i,v in pairs(frame:GetChildren()) do
+					if v.ClassName == "Frame" and v:FindFirstChild("4") and v:FindFirstChild("5") then
+						if v:FindFirstChild("4").ClassName == "ImageLabel" and v:FindFirstChild("5").ClassName == "TextLabel" then
+							time, timeTable, suc = extractTime(v:FindFirstChild("5").Text):toSeconds(), {
+								seconds = extractTime(v:FindFirstChild("5").Text).seconds,
+								minutes = extractTime(v:FindFirstChild("5").Text).minutes
+							}, true
+							break
+						end
 					end
 				end
 			end
 		end
+		return time, timeTable, suc
 	end
-	return time, timeTable, suc
-end
+}
 local lastTime, timeMoving = 0, true
 task.spawn(function()
 	repeat 
@@ -1619,6 +1624,119 @@ function bedwars.KaidaController:request(target)
 	--end
 end
 bedwars.DaoController = {chargingMaid = nil}
+local CustomRoact = {}
+local function createElement(elementType, props, children)
+    local element = {Type = elementType, Props = props or {}, Children = children or {}}
+    if props and props[CustomRoact.Ref] then
+        element.Ref = props[CustomRoact.Ref]
+        props[CustomRoact.Ref] = nil
+    end
+    return element
+end
+CustomRoact.createElement = createElement
+
+function CustomRoact.Ref()
+    local ref = {Value = nil}
+    function ref:getValue()
+        return self.Value
+    end
+    return ref
+end
+
+local function applyProps(instance, props)
+    for prop, value in next, props do
+        if prop ~= "Parent" and prop ~= "Adornee" then
+            instance[prop] = value
+        end
+    end
+    if props.Adornee then
+        instance.Adornee = props.Adornee
+    end
+    if props.Parent then
+        instance.Parent = props.Parent
+    end
+end
+
+local function createInstanceFromElement(element)
+    local instance
+    if element.Type == "BillboardGui" then
+        instance = Instance.new("BillboardGui")
+    elseif element.Type == "Frame" then
+        instance = Instance.new("Frame")
+    elseif element.Type == "UICorner" then
+        instance = Instance.new("UICorner")
+    elseif element.Type == "ImageLabel" then
+        instance = Instance.new("ImageLabel")
+    elseif element.Type == "TextLabel" then
+        instance = Instance.new("TextLabel")
+    else
+        return nil
+    end
+    applyProps(instance, element.Props)
+    if element.Ref then
+        element.Ref.Value = instance
+    end
+    for _, child in next, element.Children do
+        local childInstance = createInstanceFromElement(child)
+        if childInstance then
+            childInstance.Parent = instance
+        end
+    end
+    return instance
+end
+
+function CustomRoact.mount(element, parent)
+    local instance = createInstanceFromElement(element)
+    if instance then
+        instance.Parent = parent
+    end
+    return {Instance = instance}
+end
+
+function CustomRoact.unmount(mounted)
+    if mounted and mounted.Instance then
+        mounted.Instance:Destroy()
+    end
+end
+
+bedwars.Roact = CustomRoact
+
+local CustomPromise = {}
+function CustomPromise.new(executor)
+    local promise = {Status = "Pending", Callbacks = {}}
+    function promise:andThen(callback)
+        if self.Status == "Fulfilled" then
+            task.spawn(callback)
+        elseif self.Status == "Pending" then
+            table.insert(self.Callbacks, callback)
+        end
+        return self
+    end
+    local function resolve()
+        if promise.Status == "Pending" then
+            promise.Status = "Fulfilled"
+            for _, callback in next, promise.Callbacks do
+                task.spawn(callback)
+            end
+            promise.Callbacks = {}
+        end
+    end
+    task.spawn(function()
+        pcall(function() executor(resolve) end)
+    end)
+    return promise
+end
+
+function CustomPromise.delay(seconds)
+    return CustomPromise.new(function(resolve)
+        task.wait(seconds)
+        resolve()
+    end)
+end
+
+bedwars.RuntimeLib = bedwars.RuntimeLib or {}
+bedwars.RuntimeLib.Promise = CustomPromise
+
 bedwars.StoreController = {}
 function bedwars.StoreController:fetchLocalHand()
 	repeat task.wait() until game:GetService("Players").LocalPlayer.Character
@@ -10271,6 +10389,300 @@ run(function()
 end)
 
 run(function()
+	bedwars.BlockBreaker = {
+		healthbarMaid = {
+			DoCleaning = function(self)
+				self._tasks = self._tasks or {}
+				for i,v in pairs(self._tasks) do
+					if type(v) == "function" then pcall(v) end
+				end
+				table.clear(self._tasks)
+			end,
+			GiveTask = function(self, task)
+				self._tasks = self._tasks or {}
+				table.insert(self._tasks, task)
+			end
+		},
+		breakEffect = {
+			playBreak = function(self, blockName, blockPosition, plr) end,
+			playHit = function(self, blockName, blockPosition, plr) end
+		}
+	}
+	local blockCache = {}
+	local function customHealthbar(self, blockRef, health, maxHealth, changeHealth, block)
+		if block:GetAttribute('NoHealthbar') then return end
+		if not bedwars.ItemMeta[block.Name] then return end
+		if not self.healthbarPart or not self.healthbarBlockRef or self.healthbarBlockRef.blockPosition ~= blockRef.blockPosition then
+			self.healthbarMaid:DoCleaning()
+			self.healthbarBlockRef = blockRef
+			local create = bedwars.Roact.createElement
+			local suc, res = pcall(function() return math.clamp(health / maxHealth, 0, 1) end)
+			local percent = suc and res or 0.5
+			local cleanCheck = true
+			local part = Instance.new('Part')
+			part.Size = Vector3.one
+			part.CFrame = CFrame.new(blockRef.blockPosition*3)
+			part.Transparency = 1
+			part.Anchored = true
+			part.CanCollide = false
+			part.Parent = workspace
+			self.healthbarPart = part
+			bedwars.QueryUtil:setQueryIgnored(self.healthbarPart, true)
+	
+			local mounted = bedwars.Roact.mount(create('BillboardGui', {
+				Size = UDim2.fromOffset(249, 102),
+				StudsOffset = Vector3.new(0, 2.5, 0),
+				Adornee = part,
+				MaxDistance = 40,
+				AlwaysOnTop = true
+			}, {
+				create('Frame', {
+					Size = UDim2.fromOffset(160, 50),
+					Position = UDim2.fromOffset(44, 32),
+					BackgroundColor3 = Color3.new(),
+					BackgroundTransparency = 0.5
+				}, {
+					create('UICorner', {CornerRadius = UDim.new(0, 5)}),
+					create('ImageLabel', {
+						Size = UDim2.new(1, 89, 1, 52),
+						Position = UDim2.fromOffset(-48, -31),
+						BackgroundTransparency = 1,
+						Image = "rbxassetid://14898786664",
+						ScaleType = Enum.ScaleType.Slice,
+						SliceCenter = Rect.new(52, 31, 261, 502)
+					}),
+					create('TextLabel', {
+						Size = UDim2.fromOffset(145, 14),
+						Position = UDim2.fromOffset(13, 12),
+						BackgroundTransparency = 1,
+						Text = bedwars.ItemMeta[block.Name].displayName or block.Name,
+						TextXAlignment = Enum.TextXAlignment.Left,
+						TextYAlignment = Enum.TextYAlignment.Top,
+						TextColor3 = Color3.new(),
+						TextScaled = true,
+						Font = Enum.Font.Arial
+					}),
+					create('TextLabel', {
+						Size = UDim2.fromOffset(145, 14),
+						Position = UDim2.fromOffset(12, 11),
+						BackgroundTransparency = 1,
+						Text = bedwars.ItemMeta[block.Name].displayName or block.Name,
+						TextXAlignment = Enum.TextXAlignment.Left,
+						TextYAlignment = Enum.TextYAlignment.Top,
+						TextColor3 = color.Dark(uipallet.Text, 0.16),
+						TextScaled = true,
+						Font = Enum.Font.Arial
+					}),
+					create('Frame', {
+						Size = UDim2.fromOffset(138, 4),
+						Position = UDim2.fromOffset(12, 32),
+						BackgroundColor3 = uipallet.Main
+					}, {
+						create('UICorner', {CornerRadius = UDim.new(1, 0)}),
+						create('Frame', {
+							[bedwars.Roact.Ref] = self.healthbarProgressRef,
+							Size = UDim2.fromScale(percent, 1),
+							BackgroundColor3 = Color3.fromHSV(math.clamp(percent / 2.5, 0, 1), 0.89, 0.75)
+						}, {create('UICorner', {CornerRadius = UDim.new(1, 0)})})
+					})
+				})
+			}), part)
+	
+			self.healthbarMaid:GiveTask(function()
+				cleanCheck = false
+				self.healthbarBlockRef = nil
+				bedwars.Roact.unmount(mounted)
+				if self.healthbarPart then
+					self.healthbarPart:Destroy()
+				end
+				self.healthbarPart = nil
+			end)
+	
+			bedwars.RuntimeLib.Promise.delay(5):andThen(function()
+				if cleanCheck then
+					self.healthbarMaid:DoCleaning()
+				end
+			end)
+		end
+		self.healthbarPart.CFrame = CFrame.new(blockRef.blockPosition*3)
+		local newpercent = math.clamp((health - changeHealth) / maxHealth, 0, 1)
+		tweenService:Create(self.healthbarPart:WaitForChild("BillboardGui"):WaitForChild("Frame"):WaitForChild("Frame"):WaitForChild("Frame"), TweenInfo.new(0.3), {
+			Size = UDim2.fromScale(newpercent, 1), BackgroundColor3 = Color3.fromHSV(math.clamp(newpercent / 2.5, 0, 1), 0.89, 0.75)
+		}):Play()
+	end
+
+	local healthbarblocktable = {
+		blockHealth = -1,
+		breakingBlockPosition = Vector3.zero
+	}
+
+	local function getLastCovered(pos, normal)
+		local lastfound, lastpos = nil, nil
+		for i = 1, 20 do
+			local blockpos = (pos + (Vector3.FromNormalId(normal) * (i * 3)))
+			local extrablock, extrablockpos = getPlacedBlock(blockpos)
+			local covered = isBlockCovered(blockpos)
+			if extrablock then
+				lastfound, lastpos = extrablock, extrablockpos
+				if not covered then
+					break
+				end
+			else
+				break
+			end
+		end
+		return lastfound, lastpos
+	end
+
+	local function get(block, att)
+		local suc, err = pcall(function() return block:GetAttribute(att) end)
+		return suc and err or ""
+	end
+
+	local function isblockbreakable(block, plr)
+		if tostring(block) == "Part" then return false end
+		if get(block, "NoBreak") ~= "true" and get(block, "PlacedByUserId") ~= tostring(lplr.UserId) then 
+			return true 
+		else 
+			return false 
+		end
+	end
+
+	local VisualizerHighlight = nil
+    local LastBlock = nil
+    local VisualizerTimeout = 1
+    local LastBreakTime = 0
+    local IsBreaking = false
+
+	local function updateVisualizer(block, isBreaking)
+        local currentTime = tick()
+
+        if not isBreaking and not block then
+            if VisualizerHighlight then
+                VisualizerHighlight:Destroy()
+                VisualizerHighlight = nil
+            end
+            LastBlock = nil
+            LastBreakTime = 0
+            IsBreaking = false
+            return
+        end
+
+        if block then
+            local blockKey = tostring(block.Position) 
+
+            if blockKey ~= LastBlock or not VisualizerHighlight or not VisualizerHighlight.Parent then
+                if VisualizerHighlight then
+                    VisualizerHighlight:Destroy()
+                end
+
+                VisualizerHighlight = Instance.new("Highlight")
+                VisualizerHighlight.Adornee = block
+                VisualizerHighlight.FillTransparency = 1
+                VisualizerHighlight.OutlineTransparency = 0.3 
+                VisualizerHighlight.Parent = workspace
+
+                VisualizerHighlight.OutlineColor = (blockKey ~= LastBlock) and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 165, 0)
+                LastBlock = blockKey
+            end
+
+            IsBreaking = isBreaking
+            LastBreakTime = currentTime
+
+            task.spawn(function()
+                while VisualizerHighlight and VisualizerHighlight.Parent and (tick() - LastBreakTime < VisualizerTimeout) and IsBreaking do
+                    task.wait(0.1)
+                end
+                if VisualizerHighlight and VisualizerHighlight.Parent then
+                    VisualizerHighlight:Destroy()
+                    VisualizerHighlight = nil
+                    LastBlock = nil
+                    IsBreaking = false
+                end
+            end)
+        end
+    end
+
+	local breakBlock = function(pos, effects, normal, bypass, anim)
+		if vape.Modules.InfiniteFly and vape.Modules.InfiniteFly.Enabled then
+			return
+		end
+		if lplr:GetAttribute("DenyBlockBreak") then
+			return
+		end
+		local block, blockpos = nil, nil
+		if not bypass then block, blockpos = getLastCovered(pos, normal) end
+		if not block then block, blockpos = getPlacedBlock(bedwars.BlockController:getBlockPosition(pos)) end
+		if not block then blockpos, block = bedwars.BlockController:getBlockPosition(pos) end
+		updateVisualizer(block, true)
+		if not isblockbreakable(block, lplr) then blockpos, block = nil, nil end
+		if blockpos and block then
+			--[[if bedwars.BlockEngineClientEvents.DamageBlock:fire(block.Name, blockpos, block):isCancelled() then
+				return
+			end--]]
+			local blockhealthbarpos = {blockPosition = Vector3.zero}
+			local blockdmg = 0
+			if block and block.Parent ~= nil then
+				if ((entityLibrary.LocalPosition or entityLibrary.character.HumanoidRootPart.Position) - (blockpos * 3)).magnitude > 30 then return end
+				store.blockPlace = tick() + 0.1
+				switchToAndUseTool(block)
+				blockhealthbarpos = {
+					blockPosition = blockpos
+				}
+				task.spawn(function()
+					bedwars.ClientDamageBlock:Get("DamageBlock"):CallServerAsync({
+						blockRef = blockhealthbarpos,
+						hitPosition = blockpos * 3,
+						hitNormal = Vector3.FromNormalId(normal)
+					}):andThen(function(result)
+						if result ~= "failed" then
+							failedBreak = 0
+							if healthbarblocktable.blockHealth == -1 or blockhealthbarpos.blockPosition ~= healthbarblocktable.breakingBlockPosition then
+								local blockhealth = block:GetAttribute("Health")
+								healthbarblocktable.blockHealth = blockhealth
+								healthbarblocktable.breakingBlockPosition = blockhealthbarpos.blockPosition
+							end
+							healthbarblocktable.blockHealth = result == "destroyed" and 0 or healthbarblocktable.blockHealth
+							blockhealthbarpos.block = block
+							blockdmg = bedwars.BlockController:calculateBlockDamage(lplr, blockhealthbarpos)
+							if not healthbarblocktable.blockHealth then 
+								healthbarblocktable.blockHealth = block:GetAttribute("Health")
+							end
+							if not healthbarblocktable.blockHealth then healthbarblocktable.blockHealth = blockdmg*3 end
+							healthbarblocktable.blockHealth = math.max(healthbarblocktable.blockHealth - blockdmg, 0)
+							if effects then
+								bedwars.BlockBreaker.healthbarBlockRef = blockhealthbarpos
+								--bedwars.BlockBreaker.healthbarPart = block
+								customHealthbar(bedwars.BlockBreaker, blockhealthbarpos, healthbarblocktable.blockHealth, block:GetAttribute("MaxHealth"), blockdmg, block)
+								--bedwars.BlockBreaker:updateHealthbar(blockhealthbarpos, healthbarblocktable.blockHealth, block:GetAttribute("MaxHealth"), blockdmg, block)
+								if healthbarblocktable.blockHealth <= 0 then
+									bedwars.BlockBreaker.breakEffect:playBreak(block.Name, blockhealthbarpos.blockPosition, lplr)
+									bedwars.BlockBreaker.healthbarMaid:DoCleaning()
+									healthbarblocktable.breakingBlockPosition = Vector3.zero
+								else
+									bedwars.BlockBreaker.breakEffect:playHit(block.Name, blockhealthbarpos.blockPosition, lplr)
+								end
+							end
+							local animation
+							if anim then
+								animation = bedwars.AnimationUtil:playAnimation(lplr, bedwars.BlockController:getAnimationController():getAssetId(1))
+								bedwars.ViewmodelController:playAnimation(15)
+							end
+							task.wait(0.3)
+							if animation ~= nil then
+								animation:Stop()
+								animation:Destroy()
+							end
+						else
+							failedBreak = failedBreak + 1
+						end
+					end)
+				end)
+				task.wait(physicsUpdate)
+			end
+		end
+	end
+
 	local Nuker = {Enabled = false}
 	local nukerrange = {Value = 1}
 	local nukerslowmode = {Value = 0.2}
@@ -10283,44 +10695,24 @@ run(function()
 	local nukerironore = {Enabled = false}
 	local nukerbeds = {Enabled = false}
 	local nukercustom = {RefreshValues = function() end, ObjectList = {}}
-	local InstantBreak = {Enabled = false}
 	local luckyblocktable = {}
 
-	local hit = 0
-	local customlist, parts = {}, {}
-
-	Nuker = vape.Categories.World:CreateModule({
+	Nuker = vape.Categories.Minigames:CreateModule({
 		Name = "Nuker",
 		Function = function(callback)
 			if callback then
-				for _ = 1, 30 do
-					local part = Instance.new('Part')
-					part.Anchored = true
-					part.CanQuery = false
-					part.CanCollide = false
-					part.Transparency = 1
-					part.Parent = gameCamera
-					local highlight = Instance.new('BoxHandleAdornment')
-					highlight.Size = Vector3.one
-					highlight.AlwaysOnTop = true
-					highlight.ZIndex = 1
-					highlight.Transparency = 0.5
-					highlight.Adornee = part
-					highlight.Parent = part
-					table.insert(parts, part)
-				end
-
+				bedwars.ItemTable = bedwars.ItemTable or bedwars.ItemMeta
 				for i,v in pairs(store.blocks) do
 					if table.find(nukercustom.ObjectList, v.Name) or (nukerluckyblock.Enabled and v.Name:find("lucky")) or (nukerironore.Enabled and v.Name == "iron_ore") then
 						table.insert(luckyblocktable, v)
 					end
 				end
-				Nuker:Clean(collectionService:GetInstanceAddedSignal("block"):Connect(function(v)
+				table.insert(Nuker.Connections, collectionService:GetInstanceAddedSignal("block"):Connect(function(v)
 					if table.find(nukercustom.ObjectList, v.Name) or (nukerluckyblock.Enabled and v.Name:find("lucky")) or (nukerironore.Enabled and v.Name == "iron_ore") then
 						table.insert(luckyblocktable, v)
 					end
 				end))
-				Nuker:Clean(collectionService:GetInstanceRemovedSignal("block"):Connect(function(v)
+				table.insert(Nuker.Connections, collectionService:GetInstanceRemovedSignal("block"):Connect(function(v)
 					if table.find(nukercustom.ObjectList, v.Name) or (nukerluckyblock.Enabled and v.Name:find("lucky")) or (nukerironore.Enabled and v.Name == "iron_ore") then
 						table.remove(luckyblocktable, table.find(luckyblocktable, v))
 					end
@@ -10332,27 +10724,19 @@ run(function()
 							local tool = (not nukerlegit.Enabled) and {Name = "wood_axe"} or store.localHand.tool
 							if nukerbeds.Enabled then
 								for i, obj in pairs(collectionService:GetTagged("bed")) do
-									if isWhitelistedBed(obj) then continue end
 									if broke then break end
 									if obj.Parent ~= nil then
-										if tostring(obj:GetAttribute("TeamId")) == tostring(lplr:GetAttribute("Team")) then continue end 
+										if obj.Name == "bed" and tostring(obj:GetAttribute("TeamId")) == tostring(lplr:GetAttribute("Team")) then continue end
 										if obj:GetAttribute("BedShieldEndTime") then
 											if obj:GetAttribute("BedShieldEndTime") > game.Workspace:GetServerTimeNow() then continue end
 										end
 										if ((entityLibrary.LocalPosition or entityLibrary.character.HumanoidRootPart.Position) - obj.Position).magnitude <= nukerrange.Value then
-											if tool and bedwars.ItemTable[tool.Name].breakBlock then
-												local target, path, endpos = bedwars.breakBlock2(obj, nukeranimation.Enabled)
-												if path then
-													local currentnode = target
-													for _, part in parts do
-														part.Position = currentnode or Vector3.zero
-														if currentnode then
-															part.BoxHandleAdornment.Color3 = currentnode == endpos and Color3.new(1, 0.2, 0.2) or currentnode == target and Color3.new(0.2, 0.2, 1) or Color3.new(0.2, 1, 0.2)
-														end
-														currentnode = path[currentnode]
-													end
-												end
-												task.wait(nukerslowmode.Value == 0 and (store.damageBlockFail > tick() and 4.5 or 0) or 0.25)
+											if tool and bedwars.ItemTable[tool.Name].breakBlock and bedwars.BlockController:isBlockBreakable({blockPosition = obj.Position / 3}, lplr) then
+												local res, amount = getBestBreakSide(obj.Position)
+												local res2, amount2 = getBestBreakSide(obj.Position + Vector3.new(0, 0, 3))
+												broke = true
+												breakBlock((amount < amount2 and obj.Position or obj.Position + Vector3.new(0, 0, 3)), nukereffects.Enabled, (amount < amount2 and res or res2), false, nukeranimation.Enabled)
+												task.wait(nukerslowmode.Value ~= 0 and nukerslowmode.Value/10 or 0)
 												break
 											end
 										end
@@ -10365,8 +10749,9 @@ run(function()
 								if entityLibrary.isAlive then
 									if obj and obj.Parent ~= nil then
 										if ((entityLibrary.LocalPosition or entityLibrary.character.HumanoidRootPart.Position) - obj.Position).magnitude <= nukerrange.Value and (nukerown.Enabled or obj:GetAttribute("PlacedByUserId") ~= lplr.UserId) then
-											if tool and bedwars.ItemTable[tool.Name].breakBlock then
-												bedwars.breakBlock2(obj, nukeranimation.Enabled)
+											if tool and bedwars.ItemTable[tool.Name].breakBlock and bedwars.BlockController:isBlockBreakable({blockPosition = obj.Position / 3}, lplr) then
+												breakBlock(obj.Position, nukereffects.Enabled, getBestBreakSide(obj.Position), true, nukeranimation.Enabled)
+												task.wait(nukerslowmode.Value ~= 0 and nukerslowmode.Value/10 or 0)
 												break
 											end
 										end
@@ -10379,20 +10764,16 @@ run(function()
 				end)
 			else
 				luckyblocktable = {}
-				for _, v in parts do
-					v:ClearAllChildren()
-					v:Destroy()
-				end
-				table.clear(parts)
 			end
 		end,
 		Tooltip = "Automatically destroys beds & luckyblocks around you."
 	})
-	InstantBreak = Nuker:CreateToggle({
-		Name = "Instant Break",
-		Function = function(call)
-			if call then nukerslowmode.Value = 0 else nukerslowmode.Value = 2.5 end
-		end
+	nukerslowmode = Nuker:CreateSlider({
+		Name = "Break Slowmode",
+		Min = 0,
+		Max = 10,
+		Function = function() end,
+		Default = 2
 	})
 	nukerrange = Nuker:CreateSlider({
 		Name = "Break range",
@@ -10405,7 +10786,7 @@ run(function()
 		Name = "Hand Check",
 		Function = function() end
 	})
-	--[[nukereffects = Nuker:CreateToggle({
+	nukereffects = Nuker:CreateToggle({
 		Name = "Show HealthBar & Effects",
 		Function = function(callback)
 			if not callback then
@@ -10413,7 +10794,7 @@ run(function()
 			end
 		 end,
 		Default = true
-	})--]]
+	})
 	nukeranimation = Nuker:CreateToggle({
 		Name = "Break Animation",
 		Function = function() end

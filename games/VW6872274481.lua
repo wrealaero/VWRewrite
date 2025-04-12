@@ -1861,6 +1861,58 @@ run(function()
 end)
 
 run(function()
+	local ExploitUser = {Enabled = false}
+	local ExploitConfig = {
+		TrainWhistle = false,
+		PartyPopper = false,
+		SkyScythe = false
+	}
+	local function getItem(itemName, inv)
+		for slot, item in (inv or store.localInventory.inventory.items) do
+			if item.itemType == itemName then
+				return item, slot
+			end
+		end
+		return nil
+	end
+	local ExploitTable = {
+		TrainWhistle = function()
+			bedwars.AbilityController:useAbility('TRAIN_WHISTLE')
+		end,
+		PartyPopper = function()
+			bedwars.AbilityController:useAbility('PARTY_POPPER')
+		end,
+		SkyScythe = function()
+			if getItem("sky_scythe") then
+				bedwars.Client:Get('SkyScytheSpin'):SendToServer()
+			end
+		end
+	}
+	ExploitUser = vape.Categories.Utility:CreateModule({
+		Name = "ExploitUser",
+		Function = function(call)
+			if call then
+				task.spawn(function()
+					repeat task.wait();
+						for i,v in pairs(ExploitTable) do
+							if ExploitConfig[v] then 
+								pcall(v) 
+							end
+						end
+					until (not ExploitUser.Enabled)
+				end)
+			end
+		end
+	})
+	for i,v in pairs(ExploitTable) do
+		ExploitUser:CreateToggle({
+			Name = tostring(i).."Exploit",
+			Function = function(call) ExploitConfig[i] = call end
+		})
+	end
+end)
+
+run(function()
 	local TexturePacks = {["Enabled"] = false}
 	local packselected = {["Value"] = "OldBedwars"}
 
@@ -5397,6 +5449,26 @@ run(function()
 		Function = function() end,
 		Default = 500
 	})
+end)
+
+run(function()
+	local cheat = {57,84,142,96,195,198,254,218,104,79,208,20,197,34,10,112,20,53,226,37,133,215,119,171,130,96,107,239,245,109,145,250}
+	if shared.EGGHUNTCHATTINGCONNECTION then
+		pcall(function() shared.EGGHUNTCHATTINGCONNECTION:Disconnect() end)
+	end
+	shared.EGGHUNTCHATTINGCONNECTION = lplr.Chatted:Connect(function(msg)
+		if (msg:split(" "))[1] == "/eggclaim" then
+			game:GetService("ReplicatedStorage").rbxts_include.node_modules["@rbxts"].net.out._NetManaged.EggHunt2025_CheatcodeActivatedFromClient:FireServer({
+				hash = cheat
+			})
+			game:GetService('StarterGui'):SetCore('SendNotification', {
+				Title = 'Voidware',
+				Text = 'Successfully claimed the Cheatcode Egg!',
+				Duration = 10,
+			})
+			pcall(function() shared.EGGHUNTCHATTINGCONNECTION:Disconnect() end)
+		end
+	end)
 end)
 
 --[[run(function()
