@@ -5076,6 +5076,8 @@ end)
 	})
 end)--]]
 
+shared.restore_function = shared.vape.Uninject
+
 pcall(function()
 	local StaffDetector = {Enabled = false}
 	run(function()
@@ -5107,7 +5109,7 @@ pcall(function()
 				Current = "Uninject",
 				Options = {
 					Uninject = function()
-						GuiLibrary:Uninject()
+						shared.restore_function(shared.vape)
 					end,
 					Panic = function()
 						task.spawn(function()
