@@ -1429,7 +1429,7 @@ bedwars.ShopItemsMeta = decode(VoidwareFunctions.fetchCheatEngineSupportFile("Sh
 bedwars.ShopItems = bedwars.ShopItemsMeta.ShopItems
 local bowConstants = {}
 local function getBowConstants()
-	pcall(function()
+	--[[local suc, err = pcall(function()
 		repeat task.wait() until entityLibrary.character.HumanoidRootPart
 		local characterPosition = entityLibrary.character.HumanoidRootPart.Position
 		targetPosition = Vector3.new(0, -60, 0) -- :)
@@ -1444,6 +1444,14 @@ local function getBowConstants()
 			RelZ = relZ
 		}
 	end)
+	return suc and err or {RelX = 0, RelY = 0, RelZ = 0}--]]
+	return {
+		RelZ = 0,
+		RelX = 0.8,
+		RelY = -0.6,
+		CameraMultiplier = 10,
+		BeamGrowthMultiplier = 0.08
+	}
 end
 bowConstants = getBowConstants()
 bedwars.BowConstantsTable = bowConstants
@@ -1744,6 +1752,7 @@ function bedwars.StoreController:fetchLocalHand()
 end
 function bedwars.StoreController:updateLocalInventory()
 	store.localInventory.inventory = bedwars.getInventory(game:GetService("Players").LocalPlayer)
+	store.inventory = store.localInventory
 end
 function bedwars.StoreController:updateEquippedKit()
 	store.equippedKit = bedwars.getKit(game:GetService("Players").LocalPlayer)
@@ -10174,8 +10183,12 @@ end)
 run(function()
     local BedProtector
 	local Priority
-	local Layers
-	local CPS
+	local Layers 
+	local CPS 
+
+	local BlockTypeCheck 
+	local AutoSwitch 
+	local HandCheck 
     
     local function getBedNear()
         local localPosition = entitylib.isAlive and entitylib.character.RootPart.Position or Vector3.zero
@@ -10187,6 +10200,7 @@ run(function()
     end
 
 	local function isAllowed(block)
+		if not BlockTypeCheck.Enabled then return true end
 		local allowed = {"wool", "stone_brick", "wood_plank_oak", "ceramic", "obsidian"}
 		for i,v in pairs(allowed) do
 			if string.find(string.lower(tostring(block)), v) then 
@@ -10198,10 +10212,10 @@ run(function()
 
 	local function getBlocks()
         local blocks = {}
-        for _, item in store.localInventory.inventory.items do
+		for _, item in store.inventory.inventory.items do
             local block = bedwars.ItemMeta[item.itemType].block
             if block and isAllowed(item.itemType) then
-                table.insert(blocks, {itemType = item.itemType, health = block.health})
+                table.insert(blocks, {itemType = item.itemType, health = block.healt, tool = item.tool})
             end
         end
 
@@ -10226,9 +10240,9 @@ run(function()
 				end
 			end
             if prioLayer then
-                table.insert(prioritizedBlocks, {itemType = block.itemType, health = block.health, layer = prioLayer})
+                table.insert(prioritizedBlocks, {itemType = block.itemType, health = block.health, layer = prioLayer, tool = block.tool})
             else
-                table.insert(fallbackBlocks, {itemType = block.itemType, health = block.health})
+                table.insert(fallbackBlocks, {itemType = block.itemType, health = block.health, tool = block.tool})
             end
         end
 
@@ -10298,6 +10312,10 @@ run(function()
                 return
             end
 
+			if AutoSwitch.Enabled then
+				switchItem(block.tool)
+			end
+
             local positions = getPyramid(blockIndex - 1, 3) 
             if posIndex > #positions then
                 blockIndex = blockIndex + 1
@@ -10318,17 +10336,26 @@ run(function()
         placeNextBlock()
     end
     
-    BedProtector = vape.Categories.World:CreateModule({
+	BedProtector = vape.Categories.World:CreateModule({
         Name = 'BedProtector',
         Function = function(callback)
             if callback then
                 local bed = getBedNear()
                 local bedPos = bed and bed.Position
                 if bedPos then
+
+					if HandCheck.Enabled and not AutoSwitch.Enabled then
+						if not (store.hand and store.hand.toolType == "block") then
+							errorNotification("BedProtector | Hand Check", "You aren't holding a block!", 1.5)
+							BedProtector:Toggle()
+							return
+						end
+					end
+
                     local blocks = getBlocks()
                     if #blocks == 0 then 
                         warningNotification("BedProtector", "No blocks for bed defense found!", 3) 
-                        BedProtector:Toggle(false) 
+						BedProtector:Toggle()
                         return 
                     end
                     
@@ -10346,7 +10373,7 @@ run(function()
                     
                     buildProtection(bedPos, blocks, Layers.Value, CPS.Value)
                 else
-                    InfoNotification('BedProtector', 'Please get closer to your bed!', 5)
+                    notif('BedProtector', 'Please get closer to your bed!', 5)
                     BedProtector:Toggle()
                 end
             else
@@ -10362,7 +10389,7 @@ run(function()
         Min = 1,
         Max = 10,
         Default = 2,
-        Tooltip = "Number of protective layers around the bed"
+    	Tooltip = "Number of protective layers around the bed"
     })
 
     CPS = BedProtector:CreateSlider({
@@ -10371,8 +10398,25 @@ run(function()
         Min = 5,
         Max = 50,
         Default = 50,
-        Tooltip = "Blocks placed per second"
+       	Tooltip = "Blocks placed per second"
     })
+
+	AutoSwitch = BedProtector:CreateToggle({
+		Name = "Auto Switch",
+		Function = function() end,
+		Default = true
+	})
+
+	HandCheck = BedProtector:CreateToggle({
+		Name = "Hand Check",
+		Function = function() end
+	})
+
+	BlockTypeCheck = BedProtector:CreateToggle({
+		Name = "Block Type Check",
+		Function = function() end,
+		Default = true
+	})
 
 	Priority = BedProtector:CreateTextList({
 		Name = "Block/Layer",
@@ -11505,6 +11549,355 @@ run(function()
 		Name = 'Owl check',
 		Default = true,
 		Tooltip = 'Refuses to drop items if being picked up by an owl'
+	})
+end)
+
+run(function()
+	local ProjectileAura
+	local Targets
+	local Range
+	local List
+	local rayCheck = RaycastParams.new()
+	rayCheck.FilterType = Enum.RaycastFilterType.Include
+
+	local projectileRemote = {InvokeServer = function() end}
+	local FireDelays = {}
+	task.spawn(function()
+		projectileRemote = bedwars.Client:Get(bedwars.ProjectileRemote)
+	end)
+
+	local function getAmmo(check, item)
+		if not check.ammoItemTypes then return item.itemType end
+		for _, item in store.inventory.inventory.items do
+			if check.ammoItemTypes and table.find(check.ammoItemTypes, item.itemType) then
+				return item.itemType
+			end
+		end
+	end
+
+	local function projectileType(item, ammo)
+		local res
+		if not ammo then ammo = "" end
+		ammo = tostring(ammo)
+		local meta = bedwars.ItemMeta[item.itemType]
+		if not (item ~= nil and type(item) == "table" and item.itemType ~= nil and meta ~= nil and type(meta) == "table" and meta.displayName ~= nil) then return res end
+		if meta.displayName == "Crossbow" and ammo == "arrow" then
+			res = "crossbow_arrow"
+		elseif item.itemType == "snowball" then
+			res = "snowball"
+		elseif item.itemType == "wood_bow" then
+			res = "arrow"
+		else
+			res = item.itemType.."_"..ammo
+		end
+		return res
+	end
+	
+	local function getProjectiles()
+		local items = {}
+		for _, item in store.inventory.inventory.items do
+			if item and item.itemType == "mage_spellbook" then
+				table.insert(items, {
+					item,
+					nil, 
+					nil,
+					0.3
+				})
+				continue
+			end
+			if item and item.itemType == "owl_orb" then
+				table.insert(items, {
+					item,
+					nil, 
+					nil,
+					0.3
+				})
+				continue
+			end
+			if item and item.itemType == "light_sword" then
+				table.insert(items, {
+					item,
+					nil, 
+					nil,
+					0.3
+				})
+			end
+			local proj = bedwars.ItemMeta[item.itemType].projectileSource
+			local ammo = proj and getAmmo(proj, item)
+			if not table.find(List.ListEnabled, 'sword_wave1') then table.insert(List.ListEnabled, 'sword_wave1') end
+			if not table.find(List.ListEnabled, 'ninja_chakram_4') then table.insert(List.ListEnabled, 'ninja_chakram_4') end
+			if ammo and table.find(List.ListEnabled, ammo) then
+				local res = projectileType(item, ammo)
+				if res then
+					table.insert(items, {
+						item,
+						ammo,
+						res,
+						proj
+					})
+				end
+			end
+		end
+		return items
+	end
+
+	local HttpService = game:GetService("HttpService")
+	local httpService = HttpService
+
+	local function specialGUID()
+		return string.upper((tostring(HttpService:GenerateGUID(false)):split("-"))[1])
+	end
+	
+	local function selfPosition()
+		return lplr.Character and lplr.Character.PrimaryPart and lplr.Character.PrimaryPart.Position
+	end
+
+	local handle = {
+		Lumen = function(ent, item, ammo, projectile, itemMeta)
+			if not item.tool then return end
+			if not ent then return end
+			local selfPos = selfPosition()
+			if not selfPos then return end
+	
+			local vec = ent.RootPart.Position * Vector3.new(1, 0, 1)
+			lplr.Character.PrimaryPart.CFrame = CFrame.lookAt(lplr.Character.PrimaryPart.Position, Vector3.new(vec.X, lplr.Character.PrimaryPart.Position.Y + 0.001, vec.Z))
+	
+			local mag = lplr.Character.PrimaryPart.CFrame.LookVector*80
+	
+			projectileRemote:InvokeServer(
+				item.tool,
+				"light_sword",
+				"sword_wave1",
+				Vector3.new(selfPos.X, selfPos.Y + 2, selfPos.Z),
+				selfPos,
+				mag,
+				specialGUID(),
+				{
+					["shotId"] = specialGUID(),
+					["drawDurationSec"] = 0
+				},
+				workspace:GetServerTimeNow() - 0.045
+			)
+
+			targetinfo.Targets[ent] = tick() + 1
+			
+			pcall(function()
+				FireDelays[item.itemType] = tick() + itemMeta.fireDelaySec
+			end)
+		end,
+		Umeko = function(ent, item, ammo, projectile, itemMeta)
+			if not item.tool then return end
+			if not ent then return end
+			local selfPos = selfPosition()
+			if not selfPos then return end
+	
+			local vec = ent.RootPart.Position * Vector3.new(1, 0, 1)
+			lplr.Character.PrimaryPart.CFrame = CFrame.lookAt(lplr.Character.PrimaryPart.Position, Vector3.new(vec.X, lplr.Character.PrimaryPart.Position.Y + 0.001, vec.Z))
+	
+			switchItem(item.tool)
+
+			local targetPos = ent.RootPart.Position
+
+			local expectedTime = (selfPos - targetPos).Magnitude / 160
+			targetPos += (ent.RootPart.Velocity * expectedTime)
+
+			targetinfo.Targets[ent] = tick() + 1
+
+			projectileRemote:InvokeServer(
+				item.tool,
+				nil,
+				"ninja_chakram_4",
+				selfPos + Vector3.new(0, 2, 0),
+				selfPos,
+				(selfPos - targetPos).Unit * -160,
+				specialGUID(),
+				{
+					["shotId"] = specialGUID(),
+					["drawDurationSec"] = 1
+				},
+				workspace:GetServerTimeNow() - 0.045
+			)
+			
+			pcall(function()
+				FireDelays[item.itemType] = tick() + itemMeta.fireDelaySec
+			end)
+		end,
+		Whim = function(ent, item, ammo, projectile, itemMeta)
+			if not item.tool then return end
+			if not ent then return end
+			local selfPos = selfPosition()
+			if not selfPos then return end
+	
+			local vec = ent.RootPart.Position * Vector3.new(1, 0, 1)
+			lplr.Character.PrimaryPart.CFrame = CFrame.lookAt(lplr.Character.PrimaryPart.Position, Vector3.new(vec.X, lplr.Character.PrimaryPart.Position.Y + 0.001, vec.Z))
+	
+			switchItem(item.tool)
+
+			local targetPos = ent.RootPart.Position
+
+			local expectedTime = (selfPos - targetPos).Magnitude / 160
+			targetPos += (ent.RootPart.Velocity * expectedTime)
+
+			targetinfo.Targets[ent] = tick() + 1
+
+			projectileRemote:InvokeServer(
+				item.tool,
+				nil,
+				"mage_spell_base",
+				selfPos + Vector3.new(0, 2, 0),
+				selfPos,
+				(selfPos - targetPos).Unit * -160,
+				specialGUID(),
+				{
+					["shotId"] = specialGUID(),
+					["drawDurationSec"] = 1
+				},
+				workspace:GetServerTimeNow() - 0.045
+			)
+			
+			pcall(function()
+				FireDelays[item.itemType] = tick() + itemMeta.fireDelaySec
+			end)
+		end,
+		Whisper = function(ent, item, ammo, projectile, itemMeta)
+			local function getPlayerFromUserId(userId)
+				if not userId then return nil end
+				local suc = pcall(function()
+					userId = tonumber(userId)
+				end)
+				if not suc then return nil end
+				for i,v in pairs(game:GetService("Players"):GetPlayers()) do
+					if v.UserId == userId then return v end
+				end
+			end
+			local function getOwl()
+				local owl = Filter(game.Workspace:GetChildren(), function(v)
+					if v.ClassName and v.ClassName == "Model" and v.Name and v.Name == "ServerOwl" and tostring(v:GetAttribute("Owner")) == tostring(lplr.UserId) and getPlayerFromUserId(tostring(v:GetAttribute("Target"))) then 
+						return true
+					else
+						return false
+					end
+				end)
+				if not owl then return end
+
+				if not item.tool then return end
+				if not ent then return end
+				local selfPos = selfPosition()
+				if not selfPos then return end
+
+				local targetPosition = ent.RootPart.Position
+				local direction = (targetPosition - lplr.Character.HumanoidRootPart.Position).unit
+
+				local target = getPlayerFromUserId(tostring(owl:GetAttribute("Target")))
+				local ProjectileRefId, direction, fromPosition, initialVelocity = specialGUID(), direction, nil, direction
+				local suc = pcall(function()
+					fromPosition = target.Character.HumanoidRootPart.Position
+				end)
+				if not suc then return end
+
+				bedwars.Client:Get("OwlFireProjectile"):InvokeServer({
+					ProjectileRefId = ProjectileRefId,
+					direction = direction,
+					fromPosition = fromPosition,
+					initialVelocity = initialVelocity
+				})
+			end
+		end
+	}
+	
+	ProjectileAura = vape.Categories.Blatant:CreateModule({
+		Name = 'ProjectileAura',
+		Function = function(callback)
+			if callback then
+				task.spawn(function()
+					repeat
+						if (workspace:GetServerTimeNow() - bedwars.SwordController.lastAttack) > 0.5 then
+							task.spawn(function()
+								local ent = entitylib.EntityPosition({
+									Range = Range.Value,
+									Part = 'RootPart',
+									Players = true,
+									NPCs = true
+								})
+								if ent then
+									if Targets.Walls.Enabled then
+										if not Wallcheck(lplr.Character, ent.Character) then return end
+									end
+									local pos = entitylib.character.RootPart.Position
+									for _, data in getProjectiles() do
+										local item, ammo, projectile, itemMeta = unpack(data)
+										if (FireDelays[item.itemType] or 0) < tick() then
+											if item.itemType == "light_sword" then
+												handle.Lumen(ent, unpack(data))
+												continue
+											elseif item.itemType == "ninja_chakram_4" then
+												handle.Umeko(ent, unpack(data))
+												continue
+											elseif item.itemType == "mage_spellbook" then
+												handle.Whim(ent, unpack(data))
+												continue
+											elseif item.itemType == "owl_orb" then
+												handle.Whisper(ent, unpack(data))
+												continue
+											end
+											rayCheck.FilterDescendantsInstances = {workspace.Map}
+											local meta = bedwars.ProjectileMeta[projectile]
+											if not meta then continue end
+											local projSpeed, gravity = meta.launchVelocity, meta.gravitationalAcceleration or 196.2
+											local calc = prediction.SolveTrajectory(pos, projSpeed, gravity, ent.RootPart.Position, ent.RootPart.Velocity, workspace.Gravity, ent.HipHeight, ent.Jumping and 42.6 or nil, rayCheck)
+											if calc then
+												targetinfo.Targets[ent] = tick() + 1
+												local switched = switchItem(item.tool)
+			
+												task.spawn(function()
+													local dir, id = CFrame.lookAt(pos, calc).LookVector, httpService:GenerateGUID(true)
+													local shootPosition = (CFrame.new(pos, calc) * CFrame.new(Vector3.new(-bedwars.BowConstantsTable.RelX, -bedwars.BowConstantsTable.RelY, -bedwars.BowConstantsTable.RelZ))).Position
+													--bedwars.ProjectileController:createLocalProjectile(meta, ammo, projectile, shootPosition, id, dir * projSpeed, {drawDurationSeconds = 1})
+													local res = projectileRemote:InvokeServer(item.tool, ammo, projectile, shootPosition, pos, dir * projSpeed, id, {drawDurationSeconds = 1, shotId = httpService:GenerateGUID(false)}, workspace:GetServerTimeNow() - 0.045)
+													if not res then
+														FireDelays[item.itemType] = tick()
+													else
+														local shoot = itemMeta.launchSound
+														shoot = shoot and shoot[math.random(1, #shoot)] or nil
+														if shoot then
+															bedwars.SoundManager:playSound(shoot)
+														end
+													end
+												end)
+			
+												FireDelays[item.itemType] = tick() + itemMeta.fireDelaySec
+												if switched then
+													task.wait(0.05)
+												end
+											end
+										end
+									end
+								end
+							end)
+						end
+						task.wait(0.1)
+					until not ProjectileAura.Enabled
+				end)
+			end
+		end,
+		Tooltip = 'Shoots people around you'
+	})
+	Targets = ProjectileAura:CreateTargets({
+		Players = true,
+		Walls = true
+	})
+	List = ProjectileAura:CreateTextList({
+		Name = 'Projectiles',
+		Default = {'arrow', 'snowball'}
+	})
+	Range = ProjectileAura:CreateSlider({
+		Name = 'Range',
+		Min = 1,
+		Max = 50,
+		Default = 50,
+		Suffix = function(val)
+			return val == 1 and 'stud' or 'studs'
+		end
 	})
 end)
 
