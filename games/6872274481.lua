@@ -8013,96 +8013,70 @@ end)
 
 run(function()
     local AutoWhisper = {Enabled = false}
-    local FlyWhisper = {Enabled = false}
-    local HealWhisper = {Enabled = false}
-    local BelowMapThreshold = {Enabled = false, Value = -50}
-    local rayCheck = RaycastParams.new()
-    rayCheck.RespectCanCollide = true
+	local FlyWhisper = {Enabled = false}
+	local HealWhisper = {Enabled = false}
+	local rayCheck = RaycastParams.new()
+	rayCheck.RespectCanCollide = true
 
-    local CoreConnections = {}
-    local function clean(con)
-        table.insert(CoreConnections, con)
-    end
+	local CoreConnections = {}
+	local function clean(con)
+		table.insert(CoreConnections, con)
+	end
 
     AutoWhisper = vape.Categories.World:CreateModule({
         Name = 'AutoWhisper',
         Function = function(callback)
             if callback then
-                local isWhispering
-                clean(bedwars.Client:Get("OwlSummoned"):Connect(function(data)
-                    if data.user == lplr then
-                        local target = data.target
-                        local chr = target.Character
-                        local hum = chr:FindFirstChild('Humanoid')
-                        local root = chr:FindFirstChild('HumanoidRootPart')
-                        isWhispering = true
-                        local mapHeight = workspace:FindFirstChild("Map") and workspace.Map.Position.Y or 0 
-                        repeat
-                            rayCheck.FilterDescendantsInstances = {lplr.Character, gameCamera, AntiVoidPart}
-                            rayCheck.CollisionGroup = root.CollisionGroup
+				local isWhispering
+				clean(bedwars.Client:Get("OwlSummoned"):Connect(function(data)
+					if data.user == lplr then
+						local target = data.target
+						local chr = target.Character
+						local hum = chr:FindFirstChild('Humanoid')
+						local root = chr:FindFirstChild('HumanoidRootPart')
+						isWhispering = true
+						repeat
+							rayCheck.FilterDescendantsInstances = {lplr.Character, gameCamera, AntiVoidPart}
+							rayCheck.CollisionGroup = root.CollisionGroup
 
-                            if FlyWhisper.Enabled then
-                                local isFalling = root.Velocity.Y < -10 
-                                local noGround = not workspace:Raycast(root.Position, Vector3.new(0, -15, 0), rayCheck) 
-                                local belowMap = BelowMapThreshold.Enabled and root.Position.Y < (mapHeight + -BelowMapThreshold.Value)
-                                if (isFalling and noGround) or belowMap then
-                                    if bedwars.AbilityController:canUseAbility('OWL_LIFT') then
-                                        bedwars.AbilityController:useAbility('OWL_LIFT')
-                                    end
-                                end
-                            end
-                            if HealWhisper.Enabled and (hum.MaxHealth - hum.Health) >= 20 then
-                                if bedwars.AbilityController:canUseAbility('OWL_HEAL') then
-                                    bedwars.AbilityController:useAbility('OWL_HEAL')
-                                end
-                            end
-                            task.wait(0.05)
-                        until not isWhispering or not AutoWhisper.Enabled
-                    end
-                end))
-                clean(bedwars.Client:Get("OwlDeattached"):Connect(function(data)
-                    if data.user == lplr then
-                        isWhispering = false
-                    end
-                end))
-            else
-                for i, v in pairs(CoreConnections) do
-                    pcall(function() v:Disconnect() end)
-                end
-                table.clear(CoreConnections)
-            end
+							if FlyWhisper.Enabled and root.Velocity.Y <= -85 and not workspace:Raycast(root.Position, Vector3.new(0, -100, 0), rayCheck) then
+								if bedwars.AbilityController:canUseAbility('OWL_LIFT') then
+									bedwars.AbilityController:useAbility('OWL_LIFT')
+								end
+							end
+							if HealWhisper.Enabled and (hum.MaxHealth - hum.Health) >= 20 then
+								if bedwars.AbilityController:canUseAbility('OWL_HEAL') then
+									bedwars.AbilityController:useAbility('OWL_HEAL')
+								end
+							end
+							task.wait(0.05)
+						until not isWhispering or not AutoWhisper.Enabled
+					end
+				end))
+				clean(bedwars.Client:Get("OwlDeattached"):Connect(function(data)
+					if data.user == lplr then
+						isWhispering = false
+					end
+				end))
+			else
+				for i,v in pairs(CoreConnections) do
+					pcall(function() v:Disconnect() end)
+				end
+				table.clear(CoreConnections)
+			end
         end,
-        Tooltip = "Automatically uses Whisper Kit's abilities.\nThanks to nonamebetoo#0 for making it"
+        Tooltip = "Automatically uses Whisper Kit's abilities. \n Thanks to nonamebetoo#0 for making it"
     })
-
-    FlyWhisper = AutoWhisper:CreateToggle({
-        Name = 'Auto Fly',
-        Default = true,
-        Function = function() end
-    })
-
-    HealWhisper = AutoWhisper:CreateToggle({
-        Name = 'Auto Heal',
-        Default = true,
-        Function = function() end
-    })
-
-    AutoWhisper:CreateToggle({
-        Name = 'Below Map Trigger',
-        Default = false,
-        Function = function(call)
-			BelowMapThreshold.Enabled = call
-		end
-    })
-
-    AutoWhisper:CreateSlider({
-        Name = 'Map Threshold',
-        Min = 10,
-        Max = 100,
-        Default = 50,
-        Suffix = function(v) return v == 1 and "stud" or "studs" end,
-        Function = function(v) BelowMapThreshold.Value = v end
-    })
+	FlyWhisper = AutoWhisper:CreateToggle({
+		Name = 'Auto Fly',
+		Default = true,
+		Function = function() end
+	})
+	HealWhisper = AutoWhisper:CreateToggle({
+		Name = 'Auto Heal',
+		Default = true,
+		Function = function() end
+	})
 end)
 	
 run(function()
