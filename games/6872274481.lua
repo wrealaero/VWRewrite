@@ -1829,6 +1829,48 @@ for _, v in {'AntiRagdoll', 'TriggerBot', 'SilentAim', 'AutoRejoin', 'Rejoin', '
 end
 
 run(function()
+	local Players = game:GetService("Players")
+	function getColor3FromDecimal(decimal)
+		if not decimal then return false end
+		local r = math.floor(decimal / (256 * 256)) % 256
+		local g = math.floor(decimal / 256) % 256
+		local b = decimal % 256
+		
+		return Color3.new(r / 255, g / 255, b / 255)
+	end
+	vape:Clean(vapeEvents.EntityDeathEvent.Event:Connect(function(deathTable)
+        local killer = playersService:GetPlayerFromCharacter(deathTable.fromEntity)
+        local killed = playersService:GetPlayerFromCharacter(deathTable.entityInstance)
+        if not killed or not killer then return end
+		shared.custom_notify("kill", killer, killed, deathTable.finalKill)
+    end))
+	vape:Clean(vapeEvents.BedwarsBedBreak.Event:Connect(function(bedTable)
+		if not (bedTable ~= nil and type(bedTable) == "table" and bedTable.brokenBedTeam ~= nil and type(bedTable.brokenBedTeam) == "table" and bedTable.brokenBedTeam.id ~= nil) then return end
+		local team = bedwars.QueueMeta[store.queueType].teams[tonumber(bedTable.brokenBedTeam.id)]
+		local destroyer = Players:GetPlayerByUserId(tonumber(bedTable.player.UserId)) or {Name = "Unknown player"}
+		if not destroyer then destroyer = "Unknown player" end
+		shared.custom_notify("bedbreak", destroyer, nil, nil, {
+			Name = team and team.displayName:upper() or 'WHITE',
+			Color = team and team.colorHex and getColor3FromDecimal(tonumber(team.colorHex)) or Color3.fromRGB(255, 255, 255)
+		})
+	end))
+	vape:Clean(vapeEvents.MatchEndEvent.Event:Connect(function(winTable)
+		local team = bedwars.QueueMeta[store.queueType].teams[tonumber(winTable.winningTeamId)]
+		if winTable.winningTeamId == lplr:GetAttribute('Team') then
+			shared.custom_notify("win", nil, nil, false, {
+				Name = team and team.displayName:upper() or 'WHITE',
+				Color = team and team.colorHex and getColor3FromDecimal(tonumber(team.colorHex)) or Color3.fromRGB(255, 255, 255)
+			})
+		else
+			shared.custom_notify("defeat", nil, nil, false, {
+				Name = team and team.displayName:upper() or 'WHITE',
+				Color = team and team.colorHex and getColor3FromDecimal(tonumber(team.colorHex)) or Color3.fromRGB(255, 255, 255)
+			})
+		end
+    end))
+end)
+
+run(function()
 	local function isFirstPerson()
 		if not (lplr.Character and lplr.Character:FindFirstChild("Head")) then return nil end
 		return (lplr.Character.Head.Position - gameCamera.CFrame.Position).Magnitude < 2
@@ -6770,6 +6812,7 @@ run(function()
 	local Diagonal
 	local LimitItem
 	local WoolOnly
+	local AutoSwitch
 	local Mouse
 	local adjacent, lastpos, label = {}, Vector3.zero
 	
@@ -6864,6 +6907,9 @@ run(function()
 						end
 	
 						if wool then
+							if AutoSwitch.Enabled then
+								pcall(function() switchItem(wool) end)
+							end
 							local root = entitylib.character.RootPart
 							if Tower.Enabled and inputService:IsKeyDown(Enum.KeyCode.Space) and (not inputService:GetFocusedTextBox()) then
 								root.Velocity = Vector3.new(root.Velocity.X, 38, root.Velocity.Z)
@@ -6920,6 +6966,7 @@ run(function()
 	WoolOnly = Scaffold:CreateToggle({Name = "Wool Only"})
 	LimitItem = Scaffold:CreateToggle({Name = 'Limit to items'})
 	Mouse = Scaffold:CreateToggle({Name = 'Require mouse down'})
+	AutoSwitch = Scaffold:CreateToggle({Name = "Auto Switch"})
 	Count = Scaffold:CreateToggle({
 		Name = 'Block Count',
 		Function = function(callback)
@@ -9700,6 +9747,8 @@ run(function()
 	local nukercustom = {RefreshValues = function() end, ObjectList = {}}
 	local luckyblocktable = {}
 
+	local nearbed = false
+
 	Nuker = vape.Categories.Minigames:CreateModule({
 		Name = "Nuker",
 		Function = function(callback)
@@ -9722,6 +9771,7 @@ run(function()
 				end))
 				task.spawn(function()
 					repeat
+						nearbed = false
 						if (not nukernofly.Enabled or not vape.Modules.Fly.Enabled) then
 							local broke = not entityLibrary.isAlive
 							local tool = (not nukerlegit.Enabled) and {Name = "wood_axe"} or store.localHand.tool
@@ -9735,6 +9785,7 @@ run(function()
 										end
 										if ((entityLibrary.LocalPosition or entityLibrary.character.HumanoidRootPart.Position) - obj.Position).magnitude <= nukerrange.Value then
 											if tool and bedwars.ItemTable[tool.Name].breakBlock and bedwars.BlockController:isBlockBreakable({blockPosition = obj.Position / 3}, lplr) then
+												nearbed = true
 												local res, amount = getBestBreakSide(obj.Position)
 												local res2, amount2 = getBestBreakSide(obj.Position + Vector3.new(0, 0, 3))
 												broke = true
@@ -9749,6 +9800,7 @@ run(function()
 							broke = broke and not entityLibrary.isAlive
 							for i, obj in pairs(luckyblocktable) do
 								if broke then break end
+								if nearbed then break end
 								if entityLibrary.isAlive then
 									if obj and obj.Parent ~= nil then
 										if ((entityLibrary.LocalPosition or entityLibrary.character.HumanoidRootPart.Position) - obj.Position).magnitude <= nukerrange.Value and (nukerown.Enabled or obj:GetAttribute("PlacedByUserId") ~= lplr.UserId) then

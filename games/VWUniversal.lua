@@ -239,60 +239,1008 @@ run(function()
 end)
 
 run(function()
-	local WeatherMods = {Enabled = false}
-	local WeatherMode = {Value = "Snow"}
-	local SnowSpread = {Value = 35}
-	local SnowRate = {Value = 28}
-	local SnowHigh = {Value = 100}
-	WeatherMods = vape.Categories.Misc:CreateModule({
-		Name = 'WeatherMods',
-		Tooltip = 'Changes the weather',
-		Function = function(callback) 
-			if callback then
-				task.spawn(function()
-					local snowpart = Instance.new("Part")
-					snowpart.Size = Vector3.new(240,0.5,240)
-					snowpart.Name = "SnowParticle"
-					snowpart.Transparency = 1
-					snowpart.CanCollide = false
-					snowpart.Position = Vector3.new(0,120,286)
-					snowpart.Anchored = true
-					snowpart.Parent = game.Workspace
-					local snow = Instance.new("ParticleEmitter")
-					snow.RotSpeed = NumberRange.new(300)
-					snow.VelocitySpread = SnowSpread.Value
-					snow.Rate = SnowRate.Value
-					snow.Texture = "rbxassetid://8158344433"
-					snow.Rotation = NumberRange.new(110)
-					snow.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0,0.16939899325371,0),NumberSequenceKeypoint.new(0.23365999758244,0.62841498851776,0.37158501148224),NumberSequenceKeypoint.new(0.56209099292755,0.38797798752785,0.2771390080452),NumberSequenceKeypoint.new(0.90577298402786,0.51912599802017,0),NumberSequenceKeypoint.new(1,1,0)})
-					snow.Lifetime = NumberRange.new(8,14)
-					snow.Speed = NumberRange.new(8,18)
-					snow.EmissionDirection = Enum.NormalId.Bottom
-					snow.SpreadAngle = Vector2.new(35,35)
-					snow.Size = NumberSequence.new({NumberSequenceKeypoint.new(0,0,0),NumberSequenceKeypoint.new(0.039760299026966,1.3114800453186,0.32786899805069),NumberSequenceKeypoint.new(0.7554469704628,0.98360699415207,0.44038599729538),NumberSequenceKeypoint.new(1,0,0)})
-					snow.Parent = snowpart
-					local windsnow = Instance.new("ParticleEmitter")
-					windsnow.Acceleration = Vector3.new(0,0,1)
-					windsnow.RotSpeed = NumberRange.new(100)
-					windsnow.VelocitySpread = SnowSpread.Value
-					windsnow.Rate = SnowRate.Value
-					windsnow.Texture = "rbxassetid://8158344433"
-					windsnow.EmissionDirection = Enum.NormalId.Bottom
-					windsnow.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0,0.16939899325371,0),NumberSequenceKeypoint.new(0.23365999758244,0.62841498851776,0.37158501148224),NumberSequenceKeypoint.new(0.56209099292755,0.38797798752785,0.2771390080452),NumberSequenceKeypoint.new(0.90577298402786,0.51912599802017,0),NumberSequenceKeypoint.new(1,1,0)})
-					windsnow.Lifetime = NumberRange.new(8,14)
-					windsnow.Speed = NumberRange.new(8,18)
-					windsnow.Rotation = NumberRange.new(110)
-					windsnow.SpreadAngle = Vector2.new(35,35)
-					windsnow.Size = NumberSequence.new({NumberSequenceKeypoint.new(0,0,0),NumberSequenceKeypoint.new(0.039760299026966,1.3114800453186,0.32786899805069),NumberSequenceKeypoint.new(0.7554469704628,0.98360699415207,0.44038599729538),NumberSequenceKeypoint.new(1,0,0)})
-					windsnow.Parent = snowpart
-					repeat task.wait(); if entityLibrary.isAlive then snowpart.Position = entityLibrary.character.HumanoidRootPart.Position + Vector3.new(0,SnowHigh.Value,0) end until not shared.VapeExecuted
+    local WeatherMods = { Enabled = false }
+    local WeatherMode = { Value = "Snow" }
+    local ParticleSpread = { Value = 35 }
+    local ParticleRate = { Value = 28 }
+    local ParticleHigh = { Value = 100 }
+
+    WeatherMods = vape.Categories.Misc:CreateModule({
+        Name = "WeatherMods",
+        Tooltip = "Changes the weather (Snow or Rain)",
+        Function = function(callback)
+            if callback then
+                task.spawn(function()
+                    local weatherPart = Instance.new("Part")
+                    weatherPart.Size = Vector3.new(240, 0.5, 240)
+                    weatherPart.Name = "WeatherParticle"
+                    weatherPart.Transparency = 1
+                    weatherPart.CanCollide = false
+                    weatherPart.Position = Vector3.new(0, 120, 286)
+                    weatherPart.Anchored = true
+                    weatherPart.Parent = game.Workspace
+
+                    local particleEmitter = Instance.new("ParticleEmitter")
+                    particleEmitter.VelocitySpread = ParticleSpread.Value
+                    particleEmitter.Rate = ParticleRate.Value
+                    particleEmitter.EmissionDirection = Enum.NormalId.Bottom
+                    particleEmitter.SpreadAngle = Vector2.new(35, 35)
+                    particleEmitter.Lifetime = NumberRange.new(8, 14)
+                    particleEmitter.Speed = NumberRange.new(12, 20) 
+                    particleEmitter.Parent = weatherPart
+
+                    if WeatherMode.Value == "Rain" then
+                        particleEmitter.Texture = "rbxassetid://257489726" 
+                        particleEmitter.Size = NumberSequence.new({
+                            NumberSequenceKeypoint.new(0, 0.2, 0),
+                            NumberSequenceKeypoint.new(0.5, 0.3, 0.1),
+                            NumberSequenceKeypoint.new(1, 0, 0)
+                        })
+                        particleEmitter.Transparency = NumberSequence.new({
+                            NumberSequenceKeypoint.new(0, 0.3, 0),
+                            NumberSequenceKeypoint.new(0.5, 0.5, 0),
+                            NumberSequenceKeypoint.new(1, 1, 0)
+                        })
+                        particleEmitter.RotSpeed = NumberRange.new(0) 
+                        particleEmitter.Rotation = NumberRange.new(0)
+                        particleEmitter.Acceleration = Vector3.new(0, -5, 0) 
+                    else
+                        particleEmitter.Texture = "rbxassetid://8158344433"
+                        particleEmitter.Size = NumberSequence.new({
+                            NumberSequenceKeypoint.new(0, 0, 0),
+                            NumberSequenceKeypoint.new(0.039760299026966, 1.3114800453186, 0.32786899805069),
+                            NumberSequenceKeypoint.new(0.7554469704628, 0.98360699415207, 0.44038599729538),
+                            NumberSequenceKeypoint.new(1, 0, 0)
+                        })
+                        particleEmitter.Transparency = NumberSequence.new({
+                            NumberSequenceKeypoint.new(0, 0.16939899325371, 0),
+                            NumberSequenceKeypoint.new(0.23365999758244, 0.62841498851776, 0.37158501148224),
+                            NumberSequenceKeypoint.new(0.56209099292755, 0.38797798752785, 0.2771390080452),
+                            NumberSequenceKeypoint.new(0.90577298402786, 0.51912599802017, 0),
+                            NumberSequenceKeypoint.new(1, 1, 0)
+                        })
+                        particleEmitter.RotSpeed = NumberRange.new(300)
+                        particleEmitter.Rotation = NumberRange.new(110)
+                        particleEmitter.Acceleration = Vector3.new(0, 0, 0) 
+                    end
+
+                    if WeatherMode.Value == "Snow" then
+                        local windEmitter = Instance.new("ParticleEmitter")
+                        windEmitter.Acceleration = Vector3.new(0, 0, 1)
+                        windEmitter.RotSpeed = NumberRange.new(100)
+                        windEmitter.VelocitySpread = ParticleSpread.Value
+                        windEmitter.Rate = ParticleRate.Value
+                        windEmitter.Texture = "rbxassetid://8158344433"
+                        windEmitter.EmissionDirection = Enum.NormalId.Bottom
+                        windEmitter.Transparency = NumberSequence.new({
+                            NumberSequenceKeypoint.new(0, 0.16939899325371, 0),
+                            NumberSequenceKeypoint.new(0.23365999758244, 0.62841498851776, 0.37158501148224),
+                            NumberSequenceKeypoint.new(0.56209099292755, 0.38797798752785, 0.2771390080452),
+                            NumberSequenceKeypoint.new(0.90577298402786, 0.51912599802017, 0),
+                            NumberSequenceKeypoint.new(1, 1, 0)
+                        })
+                        windEmitter.Lifetime = NumberRange.new(8, 14)
+                        windEmitter.Speed = NumberRange.new(8, 18)
+                        windEmitter.Rotation = NumberRange.new(110)
+                        windEmitter.SpreadAngle = Vector2.new(35, 35)
+                        windEmitter.Size = NumberSequence.new({
+                            NumberSequenceKeypoint.new(0, 0, 0),
+                            NumberSequenceKeypoint.new(0.039760299026966, 1.3114800453186, 0.32786899805069),
+                            NumberSequenceKeypoint.new(0.7554469704628, 0.98360699415207, 0.44038599729538),
+                            NumberSequenceKeypoint.new(1, 0, 0)
+                        })
+                        windEmitter.Parent = weatherPart
+                    end
+
+                    repeat
+                        task.wait()
+                        if entityLibrary.isAlive then
+                            weatherPart.Position = entityLibrary.character.HumanoidRootPart.Position + Vector3.new(0, ParticleHigh.Value, 0)
+                        end
+                    until not shared.VapeExecuted
+                end)
+            else
+                for _, v in next, game.Workspace:GetChildren() do
+                    if v.Name == "WeatherParticle" then
+                        v:Remove()
+                    end
+                end
+            end
+        end
+    })
+
+    ParticleSpread = WeatherMods:CreateSlider({
+        Name = "Particle Spread",
+        Min = 1,
+        Max = 100,
+        Function = function(val)
+            ParticleSpread.Value = val
+            for _, v in next, game.Workspace:GetChildren() do
+                if v.Name == "WeatherParticle" then
+                    for _, emitter in next, v:GetChildren() do
+                        if emitter:IsA("ParticleEmitter") then
+                            emitter.VelocitySpread = val
+                        end
+                    end
+                end
+            end
+        end,
+        Default = 35
+    })
+
+    ParticleRate = WeatherMods:CreateSlider({
+        Name = "Particle Rate",
+        Min = 1,
+        Max = 100,
+        Function = function(val)
+            ParticleRate.Value = val
+            for _, v in next, game.Workspace:GetChildren() do
+                if v.Name == "WeatherParticle" then
+                    for _, emitter in next, v:GetChildren() do
+                        if emitter:IsA("ParticleEmitter") then
+                            emitter.Rate = val
+                        end
+                    end
+                end
+            end
+        end,
+        Default = 28
+    })
+
+    ParticleHigh = WeatherMods:CreateSlider({
+        Name = "Particle Height",
+        Min = 1,
+        Max = 200,
+        Function = function(val)
+            ParticleHigh.Value = val
+        end,
+        Default = 100
+    })
+
+    WeatherMode = WeatherMods:CreateDropdown({
+        Name = "Weather Mode",
+        List = {"Snow", "Rain"},
+        Function = function(val)
+            WeatherMode.Value = val
+            if WeatherMods.Enabled then
+                WeatherMods:Toggle()
+                WeatherMods:Toggle()
+            end
+        end,
+        Default = "Snow"
+    })
+end)
+
+local Maid = {}
+Maid.__index = Maid
+
+function Maid.new()
+    return setmetatable({Tasks = {}}, Maid)
+end
+
+function Maid:Add(task)
+    if typeof(task) == "RBXScriptConnection" or (typeof(task) == "Instance" and task.Destroy) or typeof(task) == "function" then
+        table.insert(self.Tasks, task)
+    end
+    return task
+end
+
+function Maid:Clean()
+    for _, task in ipairs(self.Tasks) do
+		pcall(function()
+			if typeof(task) == "RBXScriptConnection" then
+				task:Disconnect()
+			elseif typeof(task) == "Instance" then
+				task:Destroy()
+			elseif typeof(task) == "function" then
+				task()
+			end
+		end)
+    end
+	table.clear(self.Tasks)
+    self.Tasks = {}
+end
+
+local Services = setmetatable({}, {
+	__index = function(self, key)
+		local suc, service = pcall(game.GetService, game, key)
+		if suc and service then
+			self[key] = service
+			return service
+		else
+			warn(`[Services] Warning: "{key}" is not a valid Roblox service.`)
+			return nil
+		end
+	end
+})
+
+run(function()
+    local maid = Maid.new()
+    local CustomChat = {Enabled = false}
+    local Config = {
+        Kill = false,
+        ["Bed Break"] = false,
+        ["Final Kill"] = false,
+        Win = false,
+        Defeat = false,
+        TypeWrite = false,
+        DragEnabled = false,
+        CleanOld = false,
+        Transparency = 1,
+        MaxMessages = 50 
+    }
+    local scale
+    local Players
+    local guiService
+    local StarterGui
+    local RunService
+    local TweenService
+    local inputService
+    local TextChatService
+    local UserInputService
+
+    local function brickColorToRGB(brickColor)
+        local color3 = brickColor.Color
+        return math.floor(color3.R * 255), math.floor(color3.G * 255), math.floor(color3.B * 255)
+    end
+
+    local function makeDraggable(gui, window)
+        inputService = inputService or Services.UserInputService
+        guiService = guiService or Services.GuiService
+        scale = scale or vape.gui.ScaledGui:FindFirstChildOfClass("UIScale")
+        if not scale then scale = {Scale = 1} end
+        local con = gui.InputBegan:Connect(function(inputObj)
+            if window and not window.Visible then return end
+            if
+                (inputObj.UserInputType == Enum.UserInputType.MouseButton1 or inputObj.UserInputType == Enum.UserInputType.Touch)
+                and (inputObj.Position.Y - gui.AbsolutePosition.Y < 40 or window)
+            then
+                local dragPosition = Vector2.new(
+                    gui.AbsolutePosition.X - inputObj.Position.X,
+                    gui.AbsolutePosition.Y - inputObj.Position.Y + guiService:GetGuiInset().Y
+                ) / scale.Scale
+
+                local changed = inputService.InputChanged:Connect(function(input)
+                    if not Config.DragEnabled then return end
+                    if input.UserInputType == (inputObj.UserInputType == Enum.UserInputType.MouseButton1 and Enum.UserInputType.MouseMovement or Enum.UserInputType.Touch) then
+                        local position = input.Position
+                        if inputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+                            dragPosition = (dragPosition // 3) * 3
+                            position = (position // 3) * 3
+                        end
+                        gui.Position = UDim2.fromOffset((position.X / scale.Scale) + dragPosition.X, (position.Y / scale.Scale) + dragPosition.Y)
+                    end
+                end)
+
+                local ended
+                ended = inputObj.Changed:Connect(function()
+                    if inputObj.UserInputState == Enum.UserInputState.End then
+                        if changed then
+                            changed:Disconnect()
+                        end
+                        if ended then
+                            ended:Disconnect()
+                        end
+                    end
+                end)
+            end
+        end)
+        return con
+    end
+
+    local addMessage
+
+    local function typewrite(object, text)
+        if not Config.TypeWrite then object.Text = text; return end
+        if not object or not text then return end
+        if not object:IsA("TextLabel") and not object:IsA("TextBox") then
+            warn("typewrite: Object must be a TextLabel or TextBox")
+            return
+        end
+
+        local function parseChars(str)
+            local chars = {}
+            local i = 1
+            while i <= #str do
+                if str:sub(i, i + 4) == "<font" then
+                    local tagEnd = str:find(">", i)
+                    if tagEnd then
+                        table.insert(chars, str:sub(i, tagEnd))
+                        i = tagEnd + 1
+                    else
+                        table.insert(chars, str:sub(i, i))
+                        i = i + 1
+                    end
+                elseif str:sub(i, i + 6) == "</font>" then
+                    table.insert(chars, "</font>")
+                    i = i + 7
+                else
+                    table.insert(chars, str:sub(i, i))
+                    i = i + 1
+                end
+            end
+            return chars
+        end
+
+        object.Text = ""
+
+        local chars = parseChars(text)
+        RunService = RunService or Services.RunService
+        local index, total = 1, #chars
+        local con
+        con = RunService.RenderStepped:Connect(function()
+            local suc, err = pcall(function()
+                if index <= total then
+                    object.Text = table.concat(chars, "", 1, index)
+                    index = index + 1
+                else
+                    pcall(function()
+                        con:Disconnect()
+                    end)
+                end
+            end)
+            if not suc then
+                pcall(function()
+                    con:Disconnect()
+                end)
+            end
+        end)
+    end
+
+    local custom_notify = function(notifType, killerPlayer, killedPlayer, finalKill, data)
+        if not (CustomChat.Enabled and addMessage) then return end
+        local suc, res = pcall(function()
+            if notifType == "kill" then
+                if not Config.Kill then return end
+                local killedName = killedPlayer and killedPlayer.Name or "Unknown"
+                local killerName = killerPlayer and killerPlayer.Name or "Unknown"
+
+                local killedTeamColor = BrickColor.White()
+                local killerTeamColor = BrickColor.White()
+                if killedPlayer then
+                    local killedPlr = Players:GetPlayerByUserId(Players:GetUserIdFromNameAsync(killedName))
+                    killedTeamColor = killedPlr and killedPlr.TeamColor or BrickColor.White()
+                end
+                if killerPlayer then
+                    local killerPlr = Players:GetPlayerByUserId(Players:GetUserIdFromNameAsync(killerName))
+                    killerTeamColor = killerPlr and killerPlr.TeamColor or BrickColor.White()
+                end
+
+                local r1, g1, b1 = brickColorToRGB(killedTeamColor)
+                local r2, g2, b2 = brickColorToRGB(killerTeamColor)
+                local formattedKilled = string.format('<font color="rgb(%d,%d,%d)">%s</font>', r1, g1, b1, killedName)
+                local formattedKiller = string.format('<font color="rgb(%d,%d,%d)">%s</font>', r2, g2, b2, killerName)
+
+                local message = string.format("%s was killed by %s", formattedKilled, formattedKiller)
+
+                if finalKill and Config["Final Kill"] then
+                    message = message .. " <font color=\"rgb(0,255,255)\">FINAL KILL!</font>"
+                end
+
+                addMessage(message, nil, true)
+
+            elseif notifType == "bedbreak" then
+                if not Config["Bed Break"] then return end
+                local killerName = killerPlayer and killerPlayer.Name or "Unknown"
+                local bedName, bedColor = "Unknown", nil
+                if data then
+                    bedName = data.Name
+                    bedColor = data.Color
+                end
+
+                local killerTeamColor = BrickColor.White()
+                if killerPlayer then
+                    local killerPlr = Players:GetPlayerByUserId(Players:GetUserIdFromNameAsync(killerName))
+                    killerTeamColor = killerPlr and killerPlr.TeamColor or BrickColor.White()
+                end
+
+                local r, g, b = brickColorToRGB(killerTeamColor)
+                local formattedKiller = string.format('<font color="rgb(%d,%d,%d)">%s</font>', r, g, b, killerName)
+
+                local bedR, bedG, bedB = 255, 255, 255
+                if bedColor then
+                    if typeof(bedColor) == "BrickColor" then
+                        bedR, bedG, bedB = brickColorToRGB(bedColor)
+                    elseif typeof(bedColor) == "Color3" then
+                        bedR, bedG, bedB = math.floor(bedColor.R * 255), math.floor(bedColor.G * 255), math.floor(bedColor.B * 255)
+                    end
+                end
+
+                local formattedBed = string.format('<font color="rgb(%d,%d,%d)">%s BED</font>', bedR, bedG, bedB, bedName)
+
+                local message = string.format('<font size="18">BED DESTRUCTION > </font>» %s was destroyed by %s', formattedBed, formattedKiller)
+                addMessage(message, nil, true)
+
+            elseif notifType == "win" then
+                if not Config.Win then return end
+                local teamName = data and data.Name or "Unknown"
+                local teamColor = data and data.Color or BrickColor.White()
+
+                local teamR, teamG, teamB = 255, 255, 255
+                if teamColor then
+                    if typeof(teamColor) == "BrickColor" then
+                        teamR, teamG, teamB = brickColorToRGB(teamColor)
+                    elseif typeof(teamColor) == "Color3" then
+                        teamR, teamG, teamB = math.floor(teamColor.R * 255), math.floor(teamColor.G * 255), math.floor(teamColor.B * 255)
+                    end
+                end
+
+                teamName = teamName.." TEAM"
+                local formattedTeam = string.format('<font color="rgb(%d,%d,%d)">%s</font>', teamR, teamG, teamB, teamName)
+                local message = string.format('<font size="20" color="rgb(255,255,0)">🏆 VICTORY! %s has won the game!</font>', formattedTeam)
+                addMessage(message, nil, true)
+
+            elseif notifType == "defeat" then
+                if not Config.Defeat then return end
+                local teamName = data and data.Name or "Unknown"
+                local teamColor = data and data.Color or BrickColor.White()
+
+                local teamR, teamG, teamB = 255, 255, 255
+                if teamColor then
+                    if typeof(teamColor) == "BrickColor" then
+                        teamR, teamG, teamB = brickColorToRGB(teamColor)
+                    elseif typeof(teamColor) == "Color3" then
+                        teamR, teamG, teamB = math.floor(teamColor.R * 255), math.floor(bedColor.G * 255), math.floor(bedColor.B * 255)
+                    end
+                end
+
+                teamName = teamName.." TEAM"
+                local formattedTeam = string.format('<font color="rgb(%d,%d,%d)">%s</font>', teamR, teamG, teamB, teamName)
+                local message = string.format('<font size="20" color="rgb(128,128,128)">💔 DEFEAT! %s has lost the game.</font>', formattedTeam)
+                addMessage(message, nil, true)
+            end
+        end)
+
+        if not suc then
+            warn("Error in custom_notify function: " .. res)
+            addMessage("Error in notification. Check console.", nil, true)
+        end
+    end
+
+	local updateChatVisibility = function() end
+
+    TextChatService = TextChatService or Services.TextChatService
+    local old1, old2, old3 = TextChatService.ChatWindowConfiguration.Enabled, TextChatService.ChatInputBarConfiguration.Enabled, TextChatService.ChannelTabsConfiguration.Enabled
+    shared.custom_notify = custom_notify
+
+    CustomChat = vape.Categories.World:CreateModule({
+        Name = "CustomChat",
+        Function = function(call)
+            if call then
+                Players = Players or Services.Players
+                RunService = RunService or Services.RunService
+                StarterGui = StarterGui or Services.StarterGui
+                TweenService = TweenService or Services.TweenService
+                UserInputService = UserInputService or Services.UserInputService
+
+                local core = {
+                    font = Enum.Font.SourceSans
+                }
+
+                local player = Players.LocalPlayer
+                shared.TagRegister = shared.TagRegister or {}
+                shared.TagRegister[player] = "<font color='rgb(255,105,180)'>[MEOW]</font>"
+
+                maid:Add(function()
+                    TextChatService.ChatWindowConfiguration.Enabled = old1
+                    TextChatService.ChatInputBarConfiguration.Enabled = old2
+                    TextChatService.ChannelTabsConfiguration.Enabled = old3
+                end)
+
+                TextChatService.ChatWindowConfiguration.Enabled = false
+                TextChatService.ChatInputBarConfiguration.Enabled = false
+                TextChatService.ChannelTabsConfiguration.Enabled = false
+
+                local playerGui = player:WaitForChild("PlayerGui")
+
+                local screenGui = Instance.new("ScreenGui")
+                screenGui.Name = "CustomChatGui"
+                screenGui.Parent = playerGui
+                screenGui.ResetOnSpawn = false
+                screenGui.Enabled = true
+
+                maid:Add(screenGui)
+
+                local chatFrame = Instance.new("Frame")
+                chatFrame.Size = UDim2.new(0.29, 0, 0.4, 0)
+                chatFrame.AnchorPoint = Vector2.new(0, 0.2)
+                chatFrame.Position = UDim2.new(0, 5, 0.4, 0)
+                chatFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+                chatFrame.BackgroundTransparency = Config.Transparency/10
+                chatFrame.BorderSizePixel = 0
+                chatFrame.Parent = screenGui
+
+                local chatFrameCorner = Instance.new("UICorner")
+                chatFrameCorner.CornerRadius = UDim.new(0, 8)
+                chatFrameCorner.Parent = chatFrame
+
+                local scrollingFrame = Instance.new("ScrollingFrame")
+                scrollingFrame.Size = UDim2.new(1, -10, 1, -10)
+                scrollingFrame.Position = UDim2.new(0, 5, 0, 5)
+                scrollingFrame.BackgroundTransparency = 1
+                scrollingFrame.BorderSizePixel = 0
+                scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+                scrollingFrame.ScrollBarThickness = 0
+                scrollingFrame.Parent = chatFrame
+
+                local uiListLayout = Instance.new("UIListLayout")
+                uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+                uiListLayout.Padding = UDim.new(0, 2)
+                uiListLayout.Parent = scrollingFrame
+
+                local inputBox = Instance.new("TextBox")
+                inputBox.Size = UDim2.new(0.29, 0, 0, 20)
+                inputBox.Position = UDim2.new(0, 5, 0.73, 0)
+                inputBox.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
+                inputBox.BackgroundTransparency = Config.Transparency/10
+                inputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+                inputBox.PlaceholderText = "Message in Public..."
+                inputBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+                inputBox.Text = ""
+                inputBox.TextSize = 14
+                inputBox.Font = Enum.Font.SourceSans
+                inputBox.ClearTextOnFocus = true
+                inputBox.Parent = screenGui
+
+                maid:Add(makeDraggable(chatFrame, inputBox))
+
+                local inputBoxCorner = Instance.new("UICorner")
+                inputBoxCorner.CornerRadius = UDim.new(0, 8)
+                inputBoxCorner.Parent = inputBox
+
+                local isChatActive = false
+                local fadeTimer = 0
+                local FADE_DELAY = 5
+
+                updateChatVisibility = function()
+                    if isChatActive then
+                        TweenService:Create(chatFrame, TweenInfo.new(0.5), {BackgroundTransparency = Config.Transparency/10}):Play()
+                        TweenService:Create(inputBox, TweenInfo.new(0.5), {BackgroundTransparency = Config.Transparency/10, TextTransparency = 0}):Play()
+                    else
+                        TweenService:Create(chatFrame, TweenInfo.new(1), {BackgroundTransparency = 1}):Play()
+                        TweenService:Create(inputBox, TweenInfo.new(1), {BackgroundTransparency = 1, TextTransparency = 1}):Play()
+                    end
+                end
+
+                local function resetFadeTimer()
+                    fadeTimer = 0
+                    isChatActive = true
+                    updateChatVisibility()
+                end
+
+                maid:Add(RunService.Heartbeat:Connect(function(deltaTime)
+                    if not isChatActive then return end
+                    fadeTimer = fadeTimer + deltaTime
+                    if fadeTimer >= FADE_DELAY and not inputBox:IsFocused() then
+                        isChatActive = false
+                        updateChatVisibility()
+                    end
+                end))
+
+                addMessage = function(message, senderName, isSystem, teamColor, noSeparator)
+                    local suc, res = pcall(function()
+                        local messages = scrollingFrame:GetChildren()
+                        local messageCount = 0
+                        for _, child in ipairs(messages) do
+                            if child:IsA("Frame") then
+                                messageCount = messageCount + 1
+                            end
+                        end
+                        if messageCount >= Config.MaxMessages then
+                            for _, child in ipairs(messages) do
+                                if child:IsA("Frame") then
+                                    child:Destroy()
+                                    break 
+                                end
+                            end
+                        end
+
+                        local messageFrame = Instance.new("Frame")
+                        messageFrame.Size = UDim2.new(1, -10, 0, 20)
+                        messageFrame.Position = UDim2.new(0, 0, 0, 0)
+                        messageFrame.BackgroundTransparency = 1
+                        messageFrame.Parent = scrollingFrame
+
+                        local senderLabel = Instance.new("TextLabel")
+                        senderLabel.Name = "Sender"
+                        senderLabel.Size = UDim2.new(0, 0, 1, 0)
+                        senderLabel.Position = UDim2.new(0, 0, 0, 0)
+                        senderLabel.BackgroundTransparency = 1
+                        senderLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        senderLabel.TextSize = 16
+                        senderLabel.Font = core.font
+                        senderLabel.TextXAlignment = Enum.TextXAlignment.Left
+                        senderLabel.RichText = true
+                        senderLabel.TextTransparency = 1
+                        senderLabel.Parent = messageFrame
+
+                        local separatorLabel = Instance.new("TextLabel")
+                        separatorLabel.Name = "Separator"
+                        separatorLabel.Size = UDim2.new(0, 20, 0, 20)
+                        separatorLabel.Position = UDim2.new(0, 0, 0, 0)
+                        separatorLabel.BackgroundTransparency = 1
+                        separatorLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        senderLabel.TextSize = 16
+                        separatorLabel.TextSize = 14
+                        separatorLabel.Font = core.font
+                        separatorLabel.TextXAlignment = Enum.TextXAlignment.Left
+                        separatorLabel.RichText = true
+                        separatorLabel.Text = "»"
+                        separatorLabel.TextTransparency = 1
+                        separatorLabel.Parent = messageFrame
+
+                        local messageLabel = Instance.new("TextLabel")
+                        messageLabel.Name = "Message"
+                        messageLabel.Size = UDim2.new(0, 0, 1, 0)
+                        messageLabel.Position = UDim2.new(0, 0, 0, 0)
+                        messageLabel.BackgroundTransparency = 1
+                        messageLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        messageLabel.TextSize = 15
+                        messageLabel.Font = Enum.Font.FredokaOne
+                        messageLabel.TextXAlignment = Enum.TextXAlignment.Left
+                        messageLabel.RichText = true
+                        messageLabel.TextTransparency = 1
+                        messageLabel.Parent = messageFrame
+
+                        for _, child in ipairs(messageFrame:GetChildren()) do
+                            if child:IsA("TextLabel") then
+                                TweenService:Create(child, TweenInfo.new(0.5), {TextTransparency = 0}):Play()
+                            end
+                        end
+
+                        task.spawn(function()
+                            task.wait(10)
+                            if messageFrame and messageFrame.Parent and not isChatActive and Config.CleanOld then
+                                for _, child in ipairs(messageFrame:GetChildren()) do
+                                    if child:IsA("TextLabel") then
+                                        TweenService:Create(child, TweenInfo.new(1), {TextTransparency = 1}):Play()
+                                    end
+                                end
+                                task.wait(1)
+                                if messageFrame and messageFrame.Parent then
+                                    messageFrame:Destroy()
+                                end
+                            end
+                        end)
+
+                        local final_message, formatted_message
+
+                        if isSystem then
+                            senderLabel.Text = ""
+                            separatorLabel.Text = "»"
+                            final_message = message
+                        else
+                            local r, g, b = brickColorToRGB(teamColor or BrickColor.White())
+                            local formattedSender = string.format('<font color="rgb(%d,%d,%d)">%s</font>', r, g, b, senderName)
+                            local formattedMessage = string.format('<font size="12">%s</font>', message)
+
+                            local tagText = ""
+                            TagRegister = shared.TagRegister or {}
+                            local senderPlayer = Players:GetPlayerByUserId(Players:GetUserIdFromNameAsync(senderName))
+                            if senderPlayer then
+                                local tags = {}
+                                if TagRegister[senderPlayer] then
+                                    table.insert(tags, TagRegister[senderPlayer])
+                                end
+
+                                local tagsFolder = senderPlayer:FindFirstChild("Tags")
+                                if tagsFolder and tagsFolder:IsA("Folder") then
+                                    local folderContents = tagsFolder:GetChildren()
+                                    local validTags = {}
+                                    for _, child in ipairs(folderContents) do
+                                        if child:IsA("StringValue") then
+                                            table.insert(validTags, {Name = child.Name, Value = child.Value})
+                                        end
+                                    end
+
+                                    table.sort(validTags, function(a, b)
+                                        local aNum, bNum = tonumber(a.Name), tonumber(b.Name)
+                                        if aNum and bNum then
+                                            return aNum < bNum
+                                        else
+                                            return a.Name < b.Name
+                                        end
+                                    end)
+
+                                    for _, tag in ipairs(validTags) do
+                                        table.insert(tags, tag.Value)
+                                    end
+                                end
+
+                                if #tags > 0 then
+                                    tagText = table.concat(tags, " ") .. " "
+                                end
+                            end
+
+                            senderLabel.Text = tagText .. formattedSender
+                            separatorLabel.Text = "»"
+                            final_message = message
+                            formatted_message = formattedMessage
+                        end
+                        if noSeparator then separatorLabel.Text = '' end
+
+                        senderLabel.TextWrapped = false
+                        messageLabel.TextWrapped = true
+
+                        local senderBounds = senderLabel.TextBounds
+                        senderLabel.Size = UDim2.new(0, senderBounds.X, 1, 0)
+
+                        separatorLabel.Position = UDim2.new(0, senderBounds.X + 5, 0, 0)
+
+                        local separatorBounds = separatorLabel.TextBounds
+                        messageLabel.Position = UDim2.new(0, senderBounds.X + separatorBounds.X + 10, 0.07, 0)
+                        messageLabel.Size = UDim2.new(1, -(senderBounds.X + separatorBounds.X), 1, 0)
+
+                        local messageBounds = messageLabel.TextBounds
+                        local totalHeight = math.max(20, math.max(senderBounds.Y, messageBounds.Y))
+                        messageFrame.Size = UDim2.new(1, -10, 0, totalHeight)
+
+                        local totalHeightCanvas = uiListLayout.AbsoluteContentSize.Y
+                        scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, totalHeightCanvas)
+                        scrollingFrame.CanvasPosition = Vector2.new(0, math.max(0, totalHeightCanvas - scrollingFrame.AbsoluteSize.Y))
+
+                        typewrite(messageLabel, final_message)
+                        if formatted_message then
+                            messageLabel.Text = formatted_message
+                        end
+
+                        resetFadeTimer()
+                    end)
+
+                    if not suc then
+                        warn("Error adding message: " .. res)
+                        local errorMessage = "Error displaying message. Check console for details."
+                        local errorFrame = Instance.new("Frame")
+                        errorFrame.Size = UDim2.new(1, -10, 0, 20)
+                        errorFrame.BackgroundTransparency = 1
+                        errorFrame.Parent = scrollingFrame
+
+                        local errorSeparator = Instance.new("TextLabel")
+                        errorSeparator.Size = UDim2.new(0, 20, 0, 20)
+                        errorSeparator.Position = UDim2.new(0, 0, 0, 0)
+                        errorSeparator.BackgroundTransparency = 1
+                        errorSeparator.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        errorSeparator.TextSize = 10
+                        errorSeparator.Font = Enum.Font.SourceSans
+                        errorSeparator.TextXAlignment = Enum.TextXAlignment.Left
+                        errorSeparator.RichText = true
+                        errorSeparator.Text = "»"
+                        errorSeparator.Parent = errorFrame
+
+                        local errorLabel = Instance.new("TextLabel")
+                        errorLabel.Size = UDim2.new(1, -20, 1, 0)
+                        errorLabel.Position = UDim2.new(0, 20, 0, 0)
+                        errorLabel.BackgroundTransparency = 1
+                        errorLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+                        errorLabel.TextSize = 16
+                        errorLabel.Font = Enum.Font.SourceSans
+                        errorLabel.TextXAlignment = Enum.TextXAlignment.Left
+                        errorLabel.RichText = true
+                        errorLabel.Text = errorMessage
+                        errorLabel.TextWrapped = true
+                        errorLabel.Parent = errorFrame
+
+                        local errorBounds = errorLabel.TextBounds
+                        errorFrame.Size = UDim2.new(1, -10, 0, math.max(20, errorBounds.Y))
+                        errorSeparator.Position = UDim2.new(0, 0, 0, (errorBounds.Y - errorSeparator.TextSize) / 2)
+
+                        local totalHeight = uiListLayout.AbsoluteContentSize.Y
+                        scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, totalHeight)
+                        scrollingFrame.CanvasPosition = Vector2.new(0, math.max(0, totalHeight - scrollingFrame.AbsoluteSize.Y))
+                    end
+                end
+                shared.addMessage = addMessage
+
+                maid:Add(function()
+                    addMessage = nil
+                    shared.addMessage = nil
+                end)
+
+                local function focused()
+                    resetFadeTimer()
+                end
+
+                local function focusLost() end
+
+                maid:Add(chatFrame.MouseEnter:Connect(focused))
+                maid:Add(chatFrame.MouseLeave:Connect(focusLost))
+
+                maid:Add(inputBox.Focused:Connect(focused))
+                maid:Add(inputBox.FocusLost:Connect(focusLost))
+
+                maid:Add(function()
+                    StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, true)
+                end)
+
+                local textChannel = TextChatService:WaitForChild("TextChannels"):WaitForChild("RBXGeneral")
+
+                maid:Add(inputBox.FocusLost:Connect(function(enterPressed)
+                    if enterPressed and inputBox.Text ~= "" then
+                        local suc, res = pcall(function()
+                            local message = inputBox.Text
+                            if (message:split(""))[1] == "/" then
+                                task.spawn(function() textChannel:SendAsync(message) end)
+                            else
+                                textChannel:SendAsync(message)
+                            end
+                            inputBox.Text = ""
+                        end)
+
+                        if not suc then
+                            warn("Error sending message: " .. res)
+                            addMessage("Error sending message. Check console.", nil, true)
+                        end
+                    end
+                end))
+
+                maid:Add(TextChatService.MessageReceived:Connect(function(textChatMessage)
+                    local suc, res = pcall(function()
+                        local sender = textChatMessage.TextSource and Players:GetPlayerByUserId(textChatMessage.TextSource.UserId)
+                        local senderName = sender and sender.Name or "System"
+                        local teamColor = sender and sender.TeamColor or nil
+                        local message = textChatMessage.Text
+                        local isSystem = not textChatMessage.TextSource
+                        addMessage(message, senderName, isSystem, teamColor)
+                    end)
+
+                    if not suc then
+                        warn("Error handling received message: " .. res)
+                        addMessage("Error receiving message. Check console.", nil, true)
+                    end
+                end))
+
+                maid:Add(UserInputService.InputBegan:Connect(function(input, gameProcessed)
+                    if not gameProcessed and input.KeyCode == Enum.KeyCode.Slash then
+                        local suc, res = pcall(function()
+                            inputBox:CaptureFocus()
+                            inputBox.Text = ""
+                        end)
+
+                        if not suc then
+                            warn("Error focusing input box: " .. res)
+                            addMessage("Error focusing chat input. Check console.", nil, true)
+                        end
+                    end
+                end))
+
+                StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, false)
+
+                addMessage("Custom chat enabled successfully!", "System", true, Color3.fromRGB(255, 255, 255))
+            else
+                maid:Clean()
+            end
+        end
+    })
+
+    CustomChat:CreateToggle({
+        Name = "Typewrite",
+        Function = function(call) Config.TypeWrite = call end,
+        Default = true
+    })
+	if shared.VoidDev then
+		CustomChat:CreateToggle({
+			Name = "Draggable",
+			Function = function(call) Config.DragEnabled = call end
+		})
+	end
+    CustomChat:CreateToggle({
+        Name = "Clean Old Messages",
+        Function = function(call) Config.CleanOld = call end
+    })
+    CustomChat:CreateSlider({
+        Name = "Background Transparency",
+        Min = 0,
+        Max = 10,
+        Default = 1,
+        Function = function(val)
+            Config.Transparency = val
+            if CustomChat.Enabled then
+                updateChatVisibility()
+            end
+        end
+    })
+    CustomChat:CreateSlider({
+        Name = "Max Displayed Messages",
+        Min = 10,
+        Max = 100,
+        Round = 0,
+        Default = 50,
+        Function = function(val)
+            Config.MaxMessages = val
+        end
+    })
+    for i, v in pairs(Config) do
+        if i == "TypeWrite" or i == "DragEnabled" or i == "CleanOld" or i == "Transparency" or i == "MaxMessages" then continue end
+        CustomChat:CreateToggle({
+            Name = "Display "..tostring(i),
+            Function = function(call) Config[i] = call end,
+            Default = true
+        })
+    end
+end)
+
+run(function()
+	local maid = Maid.new()
+	local StreamerMode = {Enabled = false}
+	local Config = {
+		Name = "chasemaser",
+		DisplayName = "chase",
+		UserId = "22808138"
+	}
+	local Players
+	local RunService
+	StreamerMode = vape.Categories.World:CreateModule({
+		Name = "StreamerMode",
+		Function = function(call)
+			if call then
+				Players = Players or Services.Players
+				RunService = RunService or Services.RunService
+				local function plrthing(obj, property)
+					for i,v in pairs(Players:GetChildren()) do
+						if v == lplr then
+							obj[property] = obj[property]:gsub(v.Name, Config["Name"])
+							obj[property] = obj[property]:gsub(v.DisplayName, Config["DisplayName"])
+							obj[property] = obj[property]:gsub(v.UserId, Config["UserId"])
+							pcall(function()
+								obj.RichText = true
+							end)
+						else continue end
+					end
+				end
+				
+				local function newobj(v)
+					if v:IsA("TextLabel") or v:IsA("TextButton") then
+						plrthing(v, "Text")
+						maid:Add(v:GetPropertyChangedSignal("Text"):connect(function()
+							plrthing(v, "Text")
+						end))
+					end
+					if v:IsA("ImageLabel") then
+						plrthing(v, "Image")
+						maid:Add(v:GetPropertyChangedSignal("Image"):connect(function()
+							plrthing(v, "Image")
+						end))
+					end
+				end
+
+				--[[local index, total = game:GetDescendants()
+				local con
+				con = RunService.RenderStepped:Connect(function()
+					local suc, err = pcall(function()
+						if index <= #total then
+							newobj(total[index])
+							index = index + 1
+						else
+							pcall(function()
+								con:Disconnect()
+							end)
+						end
+					end)
+					if not suc then
+						pcall(function()
+							con:Disconnect()
+						end)
+					end
 				end)
-			else for _, v in next, game.Workspace:GetChildren() do if v.Name == "SnowParticle" then v:Remove() end end end
+				maid:Add(con)--]]
+				for i,v in pairs(game:GetDescendants()) do
+					newobj(v)
+				end
+				maid:Add(game.DescendantAdded:connect(newobj))
+			else
+				maid:Clean()
+			end
 		end
 	})
-	SnowSpread = WeatherMods:CreateSlider({Name = "Snow Spread", Min = 1, Max = 100, Function = function() end, Default = 35})
-	SnowRate = WeatherMods:CreateSlider({Name = "Snow Rate", Min = 1, Max = 100, Function = function() end, Default = 28})
-	SnowHigh = WeatherMods:CreateSlider({Name = "Snow High", Min = 1, Max = 200, Function = function() end, Default = 100})
+	for i,v in pairs(Config) do
+		StreamerMode:CreateTextBox({
+			Name = tostring(i),
+			Default = v,
+			Function = function(val)
+				Config[i] = tostring(val)
+			end
+		})
+	end
 end)
 
 run(function() 
