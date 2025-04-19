@@ -266,7 +266,7 @@ local function getSword()
 		end
 		local swordMeta = bedwars.ItemMeta[item.itemType].sword
 		if swordMeta then
-			local swordDamage = swordMeta.damage or 0
+			local swordDamage = swordmeta.baseDamage or 0
 			if not bestSword or swordDamage > bestSwordDamage then
 				bestSword, bestSwordSlot, bestSwordDamage = item, slot, swordDamage
 			end
@@ -2200,7 +2200,8 @@ run(function()
 							end
 						end
 					elseif store.hand.toolType == 'sword' and bedwars.DaoController.chargingMaid == nil then
-						bedwars.SwordController:swingSwordAtMouse()
+						bedwars.SwordController:stopCharging()
+ 						bedwars.SwordController:swingSwordAtMouse(0.25 + math.random() / 8)
 					end
 				end
 	
@@ -2389,7 +2390,7 @@ run(function()
 	
 							doAttack = doAttack or bedwars.SwordController:getTargetInRegion(attackRange or 3.8 * 3, 0)
 							if doAttack then 
-								bedwars.SwordController:swingSwordAtMouse()
+								bedwars.SwordController:swingSwordAtMouse(0.25 + math.random() / 8)
 							end
 						end
 					end
@@ -3371,6 +3372,8 @@ run(function()
 		return sword, meta
 	end
 
+	local ChargeRatio = {Value = 9}
+
 	Killaura = vape.Categories.Blatant:CreateModule({
 		Name = 'Killaura',
 		Function = function(callback)
@@ -3515,7 +3518,7 @@ run(function()
 									else
 										AttackRemote:FireServer({
 											weapon = sword.tool,
-											chargeRatio = meta.sword.chargedAttack and not meta.sword.chargedAttack.disableOnGrounded and 0.999 or 0,
+											chargeRatio = ChargeRatio.Value/10,
 											entityInstance = v.Character,
 											validate = {
 												raycast = {
@@ -3600,6 +3603,13 @@ run(function()
 		Suffix = function(val)
 			return val == 1 and 'stud' or 'studs'
 		end
+	})
+	ChargeRatio = Killaura:CreateSlider({
+		Name = "Charge Ratio",
+		Function = function() end,
+		Default = 9,
+		Max = 10,
+		Min = 0
 	})
 	RangeCircle = Killaura:CreateToggle({
 		Name = "Range Visualiser",
