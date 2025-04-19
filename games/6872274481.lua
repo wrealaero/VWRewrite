@@ -266,7 +266,7 @@ local function getSword()
 		end
 		local swordMeta = bedwars.ItemMeta[item.itemType].sword
 		if swordMeta then
-			local swordDamage = swordmeta.baseDamage or 0
+			local swordDamage = swordMeta.baseDamage or 0
 			if not bestSword or swordDamage > bestSwordDamage then
 				bestSword, bestSwordSlot, bestSwordDamage = item, slot, swordDamage
 			end
@@ -1291,11 +1291,45 @@ run(function()
             return itemmeta and showinv and itemmeta.image or ''
         end,
         getInventory = function(plr)
-            local suc, res = pcall(function()
-                return InventoryUtil.getInventory(plr)
-            end)
-            return suc and res or { items = {}, armor = {} }
-        end,
+			local inv = {
+				items = {},
+				armor = {}
+			}
+			local repInv = plr.Character and plr.Character:FindFirstChild("InventoryFolder") and plr.Character:FindFirstChild("InventoryFolder").Value
+			if repInv then
+				if repInv.ClassName and repInv.ClassName == "Folder" then
+					for i,v in pairs(repInv:GetChildren()) do
+						if not v:GetAttribute("CustomSpawned") then
+							table.insert(inv.items, {
+								tool = v,
+								itemType = tostring(v),
+								amount = v:GetAttribute("Amount")
+							})
+						end
+					end
+				end
+			end
+			local plrInvTbl = {
+				"ArmorInvItem_0",
+				"ArmorInvItem_1",
+				"ArmorInvItem_2"
+			}
+			local function allowed(char)
+				local state = true
+				for i,v in pairs(plrInvTbl) do if (not char:FindFirstChild(v)) then state = false end end
+				return state
+			end
+			local plrInv = plr.Character and allowed(plr.Character)
+			if plrInv then
+				for i,v in pairs(plrInvTbl) do
+					table.insert(inv.armor, tostring(plr.Character:FindFirstChild(v).Value) == "" and "empty" or tostring(plr.Character:FindFirstChild(v).Value) ~= "" and {
+						tool = v,
+						itemType = tostring(plr.Character:FindFirstChild(v).Value)
+					})
+				end
+			end
+			return inv
+		end,
         placeBlock = function(pos, item)
             if getItem(item) then
                 store.blockPlacer.blockType = item
@@ -1792,6 +1826,13 @@ run(function()
 		store.hand = store.localHand
 	end
 	
+	function bedwars.StoreController:updateQueueType()
+		local att = game:GetService("Workspace"):GetAttribute("QueueType")
+		if att then
+			store.queueType = att
+		end
+	end
+	
 	function bedwars.StoreController:updateStore()
 		task.spawn(function() pcall(function() self:updateLocalHand() end) end)
 		task.wait(0.1)
@@ -1807,8 +1848,10 @@ run(function()
 			task.wait(0.1)
 			task.spawn(function() pcall(function() self:updateZephyrOrb() end) end)
 		end
+		if store.queueType == "bedwars_test" then
+			task.spawn(function() pcall(function() self:updateQueueType() end) end)
+		end
 	end
-	pcall(function() bedwars.StoreController:updateStore() end)
 
 	if shared.CORE_TASK_UPDATING then
 		pcall(function()
@@ -7744,7 +7787,7 @@ run(function()
 		for _, item in store.inventory.inventory.items do
             local block = bedwars.ItemMeta[item.itemType].block
             if block and isAllowed(item.itemType) then
-                table.insert(blocks, {itemType = item.itemType, health = block.healt, tool = item.tool})
+                table.insert(blocks, {itemType = item.itemType, health = block.health, tool = item.tool})
             end
         end
 
