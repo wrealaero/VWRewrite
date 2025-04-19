@@ -141,6 +141,7 @@ local store = {
 	queueType = 'bedwars_test',
 	tools = {}
 }
+store.localInventory = store.inventory
 local TweenService = game:GetService("TweenService")
 local Reach = {}
 local HitBoxes = {}
@@ -266,7 +267,7 @@ local function getSword()
 		local swordMeta = bedwars.ItemMeta[item.itemType].sword
 		if swordMeta then
 			local swordDamage = swordMeta.damage or 0
-			if swordDamage > bestSwordDamage then
+			if not bestSword or swordDamage > bestSwordDamage then
 				bestSword, bestSwordSlot, bestSwordDamage = item, slot, swordDamage
 			end
 		end
@@ -1624,7 +1625,195 @@ run(function()
         table.insert(sides, Vector3.FromNormalId(v) * 3)
     end
 
-    local function updateStore(new, old)
+	local function extractTime(timeText)
+		local minutes, seconds = string.match(timeText, "(%d+):(%d%d)")
+		local tbl = {
+			minutes = tonumber(minutes),
+			seconds = tonumber(seconds)
+		}
+		function tbl:toSeconds()
+			return tonumber(minutes) and tonumber(seconds) and tonumber(minutes)*60 + tonumber(seconds)
+		end
+		return tbl
+	end
+
+	bedwars.MatchController = {
+		fetchPlayerTeam = function(self, plr)
+			return tostring(plr.Team)
+		end,
+		fetchGameTime = function(self)
+			local time, timeTable, suc = 0, {seconds = 0, minutes = 0}, false
+			local window = game:GetService("Players").LocalPlayer.PlayerGui:FindFirstChild("TopBarAppGui")
+			if window then
+				local frame = window:FindFirstChild("TopBarApp")
+				if frame then
+					for i,v in pairs(frame:GetChildren()) do
+						if v.ClassName == "Frame" and v:FindFirstChild("4") and v:FindFirstChild("5") then
+							if v:FindFirstChild("4").ClassName == "ImageLabel" and v:FindFirstChild("5").ClassName == "TextLabel" then
+								time, timeTable, suc = extractTime(v:FindFirstChild("5").Text):toSeconds(), {
+									seconds = extractTime(v:FindFirstChild("5").Text).seconds,
+									minutes = extractTime(v:FindFirstChild("5").Text).minutes
+								}, true
+								break
+							end
+						end
+					end
+				end
+			end
+			return time, timeTable, suc
+		end
+	}
+	local lastTime, timeMoving = 0, true
+	task.spawn(function()
+		repeat 
+			local time, timeTable, suc = bedwars.MatchController:fetchGameTime()
+			if time == lastTime then timeMoving = false else timeMoving = true end
+			lastTime = time
+			task.wait(2)
+		until (not shared.VapeExecuted)
+	end)
+	function bedwars.MatchController:fetchMatchState()
+		local matchState = 0
+	
+		local time, timeTable, suc
+		time, timeTable, suc = bedwars.MatchController:fetchGameTime()
+		if (not suc) then time, timeTable, suc = bedwars.MatchController:fetchGameTime() end
+		local plrTeam = bedwars.MatchController:fetchPlayerTeam(game:GetService("Players").LocalPlayer)
+	
+		if time > 0 then matchState = plrTeam == "Spectators" and 2 or 1 else matchState = 0 end
+		if (not timeMoving) and time > 0 then matchState = 2 end
+	
+		if (not suc) then warn("[bedwars.MatchController:fetchMatchState]: Failure getting valid time!"); matchState = 1 end
+	
+		return matchState
+	end
+
+	bedwars.getKit = function(plr)
+		return plr:GetAttribute("PlayingAsKit") or "none"
+	end
+
+	bedwars.getInventory = function(plr)
+		local inv = {
+			items = {},
+			armor = {}
+		}
+		local repInv = plr.Character and plr.Character:FindFirstChild("InventoryFolder") and plr.Character:FindFirstChild("InventoryFolder").Value
+		if repInv then
+			if repInv.ClassName and repInv.ClassName == "Folder" then
+				for i,v in pairs(repInv:GetChildren()) do
+					if not v:GetAttribute("CustomSpawned") then
+						table.insert(inv.items, {
+							tool = v,
+							itemType = tostring(v),
+							amount = v:GetAttribute("Amount")
+						})
+					end
+				end
+			end
+		end
+		local plrInvTbl = {
+			"ArmorInvItem_0",
+			"ArmorInvItem_1",
+			"ArmorInvItem_2"
+		}
+		local function allowed(char)
+			local state = true
+			for i,v in pairs(plrInvTbl) do if (not char:FindFirstChild(v)) then state = false end end
+			return state
+		end
+		local plrInv = plr.Character and allowed(plr.Character)
+		if plrInv then
+			for i,v in pairs(plrInvTbl) do
+				table.insert(inv.armor, tostring(plr.Character:FindFirstChild(v).Value) == "" and "empty" or tostring(plr.Character:FindFirstChild(v).Value) ~= "" and {
+					tool = v,
+					itemType = tostring(plr.Character:FindFirstChild(v).Value)
+				})
+			end
+		end
+		return inv
+	end
+
+	bedwars.StoreController = {}
+	function bedwars.StoreController:fetchLocalHand()
+		repeat task.wait() until game:GetService("Players").LocalPlayer.Character
+		return game:GetService("Players").LocalPlayer.Character:FindFirstChild("HandInvItem")
+	end
+	function bedwars.StoreController:updateLocalInventory()
+		store.localInventory.inventory = bedwars.getInventory(game:GetService("Players").LocalPlayer)
+		store.inventory = store.localInventory
+		local old, old2 = store.localInventory, store.localInventory.inventory.items
+		if old ~= store.localInventory then
+			return vapeEvents.InventoryChanged:Fire()
+		end
+		if old2 ~= store.localInventory.inventory and store.localInventory.inventory.items or {} then
+			vapeEvents.InventoryAmountChanged:Fire()
+		end
+		store.tools.sword = getSword()
+		for _, v in {'stone', 'wood', 'wool'} do
+			store.tools[v] = getTool(v)
+		end
+	end
+	function bedwars.StoreController:updateEquippedKit()
+		store.equippedKit = bedwars.getKit(game:GetService("Players").LocalPlayer)
+	end
+	function bedwars.StoreController:updateMatchState()
+		store.matchState = bedwars.MatchController:fetchMatchState()
+	end
+	function bedwars.StoreController:updateBowConstantsTable(targetPos)
+		--bedwars.BowConstantsTable = getBowConstants(targetPos)
+	end
+	function bedwars.StoreController:updateStoreBlocks()
+		store.blocks = collectionService:GetTagged("block")
+	end
+	function bedwars.StoreController:updateZephyrOrb()
+		if game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui") and game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui"):FindFirstChild("StatusEffectHudScreen") and game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui"):FindFirstChild("StatusEffectHudScreen"):FindFirstChild("StatusEffectHud") and game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui"):FindFirstChild("StatusEffectHudScreen"):FindFirstChild("StatusEffectHud"):FindFirstChild("WindWalkerEffect") and game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui"):FindFirstChild("StatusEffectHudScreen"):FindFirstChild("StatusEffectHud"):FindFirstChild("WindWalkerEffect"):FindFirstChild("EffectStack") and game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui"):FindFirstChild("StatusEffectHudScreen"):FindFirstChild("StatusEffectHud"):FindFirstChild("WindWalkerEffect"):FindFirstChild("EffectStack").ClassName and game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui"):FindFirstChild("StatusEffectHudScreen"):FindFirstChild("StatusEffectHud"):FindFirstChild("WindWalkerEffect"):FindFirstChild("EffectStack").ClassName == "TextLabel" then store.zephyrOrb = tonumber(game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui"):FindFirstChild("StatusEffectHudScreen"):FindFirstChild("StatusEffectHud"):FindFirstChild("WindWalkerEffect"):FindFirstChild("EffectStack").Text) end
+	end
+	function bedwars.StoreController:updateLocalHand()
+		local currentHand = bedwars.StoreController:fetchLocalHand()
+		if (not currentHand) then store.localHand = {} return end
+		local handType = ""
+		if currentHand and currentHand.Value and currentHand.Value ~= "" then
+			bedwars.ItemTable = bedwars.ItemTable or bedwars.ItemMeta
+			local handData = bedwars.ItemTable[tostring(currentHand.Value)]
+			handType = handData.sword and "sword" or handData.block and "block" or tostring(currentHand.Value):find("bow") and "bow"
+		end
+		store.localHand = {tool = currentHand and currentHand.Value, itemType = currentHand and currentHand.Value and tostring(currentHand.Value) or "", Type = handType, amount = currentHand and currentHand:GetAttribute("Amount") and type(currentHand:GetAttribute("Amount")) == "number" or 0}
+		store.localHand.toolType = store.localHand.Type
+		store.hand = store.localHand
+	end
+	
+	function bedwars.StoreController:updateStore()
+		task.spawn(function() pcall(function() self:updateLocalHand() end) end)
+		task.wait(0.1)
+		task.spawn(function() pcall(function() self:updateLocalInventory() end) end)
+		task.wait(0.1)
+		task.spawn(function() pcall(function() self:updateEquippedKit() end) end)
+		task.wait(0.1)
+		task.spawn(function() pcall(function() self:updateMatchState() end) end)
+		task.wait(0.1)
+		task.spawn(function() pcall(function() self:updateStoreBlocks() end) end)
+		task.wait(0.1)
+		if store.equippedKit == "wind_walker" then
+			task.wait(0.1)
+			task.spawn(function() pcall(function() self:updateZephyrOrb() end) end)
+		end
+	end
+	pcall(function() bedwars.StoreController:updateStore() end)
+
+	if shared.CORE_TASK_UPDATING then
+		pcall(function()
+			task.cancel(shared.CORE_TASK_UPDATING)
+		end)
+	end
+	shared.CORE_TASK_UPDATING = task.spawn(function()
+		local RunService = game:GetService("RunService")
+		repeat
+			RunService.Heartbeat:Wait()
+			pcall(function() bedwars.StoreController:updateStore() end)
+		until (not shared.vape)
+	end)
+
+    --[[local function updateStore(new, old)
         if new.Bedwars ~= old.Bedwars then
             store.equippedKit = new.Bedwars.kit ~= 'none' and new.Bedwars.kit or ''
         end
@@ -1665,7 +1854,7 @@ run(function()
     end
 
     local storeChanged = bedwars.Store.changed:connect(updateStore)
-    updateStore(bedwars.Store:getState(), {})
+    updateStore(bedwars.Store:getState(), {})--]]
 
     task.spawn(function()
         pcall(function()
@@ -3314,7 +3503,6 @@ run(function()
 										end
 									end
 								end
-								
 								local actualRoot = v.Character.PrimaryPart
 								if actualRoot then
 									local dir = CFrame.lookAt(selfpos, actualRoot.Position).LookVector
@@ -3327,7 +3515,7 @@ run(function()
 									else
 										AttackRemote:FireServer({
 											weapon = sword.tool,
-											chargedAttack = {chargeRatio = meta.sword.chargedAttack and not meta.sword.chargedAttack.disableOnGrounded and 0.999 or 0},
+											chargeRatio = meta.sword.chargedAttack and not meta.sword.chargedAttack.disableOnGrounded and 0.999 or 0,
 											entityInstance = v.Character,
 											validate = {
 												raycast = {
@@ -3380,8 +3568,8 @@ run(function()
 						lplr.PlayerGui.MobileUI['2'].Visible = true
 					end)
 				end
-				debug.setupvalue(bedwars.SwordController.playSwordEffect, 6, bedwars.Knit)
-				debug.setupvalue(bedwars.ScytheController.playLocalAnimation, 3, bedwars.Knit)
+				--debug.setupvalue(bedwars.SwordController.playSwordEffect, 6, bedwars.Knit)
+				--debug.setupvalue(bedwars.ScytheController.playLocalAnimation, 3, bedwars.Knit)
 				Attacking = false
 				if armC0 then
 					AnimTween = tweenService:Create(gameCamera.Viewmodel.RightHand.RightWrist, TweenInfo.new(AnimationTween.Enabled and 0.001 or 0.3, Enum.EasingStyle.Exponential), {
@@ -4440,7 +4628,7 @@ local function EntityNearPosition(distance, ignore, overridepos)
 			end
 		end
 		if not ignore then
-			for i, v in pairs(game.Workspace:GetChildren()) do
+			for i, v in pairs(collectionService:GetTagged("trainingRoomDummy")) do
 				if v.Name == "Void Enemy Dummy" or v.Name == "Emerald Enemy Dummy" or v.Name == "Diamond Enemy Dummy" or v.Name == "Leather Enemy Dummy" or v.Name == "Regular Enemy Dummy" or v.Name == "Iron Enemy Dummy" then
 					if v.PrimaryPart then
 						local mag = (entityLibrary.character.HumanoidRootPart.Position - v.PrimaryPart.Position).magnitude
@@ -10475,7 +10663,7 @@ run(function()
 	})
 end)
 	
-run(function()
+--[[run(function()
 	vape.Categories.Combat:CreateModule({
 		Name = 'HitFix',
 		Function = function(callback)
@@ -10484,9 +10672,9 @@ run(function()
 		end,
 		Tooltip = 'Changes the raycast function to the correct one'
 	})
-end)
+end)--]]
 	
-run(function()
+--[[run(function()
 	local Interface
 	local HotbarOpenInventory = require(lplr.PlayerScripts.TS.controllers.global.hotbar.ui['hotbar-open-inventory']).HotbarOpenInventory
 	local HotbarHealthbar = require(lplr.PlayerScripts.TS.controllers.global.hotbar.ui.healthbar['hotbar-healthbar']).HotbarHealthbar
@@ -10575,7 +10763,7 @@ run(function()
 			modifyconstant(func, 34, tonumber(Color3.fromHSV(hue, sat, math.clamp(val > 0.5 and val - 0.2 or val + 0.2, 0, 1)):ToHex(), 16))
 		end
 	})
-end)
+end)--]]
 	
 run(function()
 	local KillEffect
@@ -10948,7 +11136,7 @@ run(function()
 	})
 end)
 	
-run(function()
+--[[run(function()
 	local UICleanup
 	local OpenInv
 	local KillFeed
@@ -11099,7 +11287,7 @@ run(function()
 		end,
 		Default = true
 	})
-end)
+end)--]]
 	
 run(function()
 	local Viewmodel

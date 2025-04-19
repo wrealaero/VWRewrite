@@ -2180,7 +2180,7 @@ local function getSword()
 		local swordMeta = bedwars.ItemTable[item.itemType].sword
 		if swordMeta then
 			local swordDamage = swordMeta.damage or 0
-			if swordDamage > bestSwordDamage then
+			if not bestSword or swordDamage > bestSwordDamage then
 				bestSword, bestSwordSlot, bestSwordDamage = item, slot, swordDamage
 			end
 		end
@@ -2430,7 +2430,7 @@ local function EntityNearPosition(distance, ignore, overridepos)
 			end
 		end
 		if not ignore then
-			for i, v in pairs(game.Workspace:GetChildren()) do
+			for i, v in pairs(collectionService:GetTagged("trainingRoomDummy")) do
 				if v.Name == "Void Enemy Dummy" or v.Name == "Emerald Enemy Dummy" or v.Name == "Diamond Enemy Dummy" or v.Name == "Leather Enemy Dummy" or v.Name == "Regular Enemy Dummy" or v.Name == "Iron Enemy Dummy" then
 					if v.PrimaryPart then
 						local mag = (entityLibrary.character.HumanoidRootPart.Position - v.PrimaryPart.Position).magnitude
@@ -3004,19 +3004,19 @@ run(function()
 			end
 		end
 	end
-	for i, v in pairs(game.Workspace:GetChildren()) do
+	for i, v in pairs(collectionService:GetTagged("trainingRoomDummy")) do
 		check(v)
 	end
 	local con
 	local con2
-	con = game.Workspace.ChildAdded:Connect(function(v)
+	con = collectionService:GetInstanceAddedSignal("trainingRoomDummy"):Connect(function(v)
 		if not shared.vape then pcall(function()
 			con:Disconnect()
 			table.clear(checked)
 		end) end
 		check(v)
 	end)
-	con2 = game.Workspace.ChildRemoved:Connect(function(v)
+	con2 = collectionService:GetInstanceRemovedSignal("trainingRoomDummy"):Connect(function(v)
 		if not shared.vape then pcall(function()
 			con2:Disconnect()
 			table.clear(checked)
@@ -5123,7 +5123,7 @@ run(function()
 									else
 										AttackRemote:FireServer({
 											weapon = sword.tool,
-											chargedAttack = {chargeRatio = meta.sword.chargedAttack and not meta.sword.chargedAttack.disableOnGrounded and 0.999 or 0},
+											chargeRatio = meta.sword.chargedAttack and not meta.sword.chargedAttack.disableOnGrounded and 0.999 or 0,
 											entityInstance = v.Character,
 											validate = {
 												raycast = {
