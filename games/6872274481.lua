@@ -1647,12 +1647,14 @@ run(function()
 			if window then
 				local frame = window:FindFirstChild("TopBarApp")
 				if frame then
-					for i,v in pairs(frame:GetChildren()) do
-						if v.ClassName == "Frame" and v:FindFirstChild("4") and v:FindFirstChild("5") then
-							if v:FindFirstChild("4").ClassName == "ImageLabel" and v:FindFirstChild("5").ClassName == "TextLabel" then
-								time, timeTable, suc = extractTime(v:FindFirstChild("5").Text):toSeconds(), {
-									seconds = extractTime(v:FindFirstChild("5").Text).seconds,
-									minutes = extractTime(v:FindFirstChild("5").Text).minutes
+					for _, v in pairs(frame:GetChildren()) do
+						if v.ClassName == "Frame" then
+							local timeLabel = v:FindFirstChildOfClass("TextLabel")
+							local imageLabel = v:FindFirstChildOfClass("ImageLabel")
+							if timeLabel and imageLabel then
+								time, timeTable, suc = extractTime(timeLabel.Text):toSeconds(), {
+									seconds = extractTime(timeLabel.Text).seconds,
+									minutes = extractTime(timeLabel.Text).minutes
 								}, true
 								break
 							end
@@ -1663,27 +1665,35 @@ run(function()
 			return time, timeTable, suc
 		end
 	}
+	
 	local lastTime, timeMoving = 0, true
 	task.spawn(function()
-		repeat 
+		while shared.VapeExecuted do
 			local time, timeTable, suc = bedwars.MatchController:fetchGameTime()
-			if time == lastTime then timeMoving = false else timeMoving = true end
+			timeMoving = time ~= lastTime
 			lastTime = time
+			store.matchState = (timeMoving and 1) or ((not timeMoving) and lastTime > 0 and 2) or 0
 			task.wait(2)
-		until (not shared.VapeExecuted)
+		end
 	end)
+	
 	function bedwars.MatchController:fetchMatchState()
 		local matchState = 0
-	
-		local time, timeTable, suc
-		time, timeTable, suc = bedwars.MatchController:fetchGameTime()
-		if (not suc) then time, timeTable, suc = bedwars.MatchController:fetchGameTime() end
+		local time, timeTable, suc = bedwars.MatchController:fetchGameTime()
 		local plrTeam = bedwars.MatchController:fetchPlayerTeam(game:GetService("Players").LocalPlayer)
 	
-		if time > 0 then matchState = plrTeam == "Spectators" and 2 or 1 else matchState = 0 end
-		if (not timeMoving) and time > 0 then matchState = 2 end
+		if suc and time > 0 then
+			matchState = plrTeam == "Spectators" and 2 or 1
+			if not timeMoving then
+				matchState = 2
+			end
+		else
+			matchState = suc and 0 or 1
+		end
 	
-		if (not suc) then warn("[bedwars.MatchController:fetchMatchState]: Failure getting valid time!"); matchState = 1 end
+		if not suc then
+			warn("[bedwars.MatchController:fetchMatchState]: Failed to get valid time!")
+		end
 	
 		return matchState
 	end
