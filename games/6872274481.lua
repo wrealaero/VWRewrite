@@ -1767,7 +1767,7 @@ run(function()
 		store.equippedKit = bedwars.getKit(game:GetService("Players").LocalPlayer)
 	end
 	function bedwars.StoreController:updateMatchState()
-		store.matchState = bedwars.MatchController:fetchMatchState()
+		--store.matchState = bedwars.MatchController:fetchMatchState()
 	end
 	function bedwars.StoreController:updateBowConstantsTable(targetPos)
 		--bedwars.BowConstantsTable = getBowConstants(targetPos)
