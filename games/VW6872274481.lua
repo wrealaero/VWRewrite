@@ -3808,7 +3808,7 @@ run(function()
         Name = 'AdetundeExploit',
         Function = function(calling)
             if calling then 
-                task.spawn(function()
+                --[[task.spawn(function()
 					repeat task.wait() until store.equippedKit ~= ""
 					if store.equippedKit ~= "adetunde" then
 						warningNotification("AdetundeExploit", "Adetunde kit required!", 3)
@@ -3816,7 +3816,7 @@ run(function()
 							AdetundeExploit:Toggle()
 						end
 					end
-				end)
+				end)--]]
                 task.spawn(function()
                     repeat
                         local returning_table = adetunde_remotes[current_upgrador]()
