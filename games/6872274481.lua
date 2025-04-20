@@ -1277,6 +1277,7 @@ run(function()
         VisualizerUtils = function() return require(lplr.PlayerScripts.TS.lib.visualizer['visualizer-utils']).VisualizerUtils end,
         WeldTable = function() return require(replicatedStorage.TS.util['weld-util']).WeldUtil end,
         WinEffectMeta = function() return require(replicatedStorage.TS.locker['win-effect']['win-effect-meta']).WinEffectMeta end,
+		ZapNetworking = function() return require(lplr.PlayerScripts.TS.lib.network) end
     }
 
 	local calculatePath = function() end
@@ -1911,7 +1912,7 @@ run(function()
 
     task.spawn(function()
         pcall(function()
-            for _, event in {'MatchEndEvent', 'EntityDeathEvent', 'EntityDamageEvent', 'BedwarsBedBreak', 'BalloonPopped', 'AngelProgress', 'GrapplingHookFunctions'} do
+            for _, event in {'MatchEndEvent', 'EntityDeathEvent', 'BedwarsBedBreak', 'BalloonPopped', 'AngelProgress', 'GrapplingHookFunctions'} do
                 if not vape.Connections then return end
                 bedwars.Client:WaitFor(event):andThen(function(connection)
                     vape:Clean(connection:Connect(function(...)
@@ -1919,21 +1920,36 @@ run(function()
                     end))
                 end)
             end
+			vape:Clean(bedwars.ZapNetworking.EntityDamageEventZap.On(function(...)
+				vapeEvents.EntityDamageEvent:Fire({
+					entityInstance = ...,
+					damage = select(2, ...),
+					damageType = select(3, ...),
+					fromPosition = select(4, ...),
+					fromEntity = select(5, ...),
+					knockbackMultiplier = select(6, ...),
+					knockbackId = select(7, ...),
+					disableDamageHighlight = select(13, ...)
+				})
+			end))
             for _, event in {'PlaceBlockEvent', 'BreakBlockEvent'} do
-                bedwars.ClientDamageBlock:WaitFor(event):andThen(function(connection)
-                    if not vape.Connections then return end
-                    vape:Clean(connection:Connect(function(data)
-                        for i, v in cache do
-                            if ((data.blockRef.blockPosition * 3) - v[1]).Magnitude <= 30 then
-                                table.clear(v[3])
-                                table.clear(v)
-                                cache[i] = nil
-                            end
-                        end
-                        vapeEvents[event]:Fire(data)
-                    end))
-                end)
-            end
+				vape:Clean(bedwars.ZapNetworking[event..'Zap'].On(function(...)
+					local data = {
+						blockRef = {
+							blockPosition = ...,
+						},
+						player = select(5, ...)
+					}
+					for i, v in cache do
+						if ((data.blockRef.blockPosition * 3) - v[1]).Magnitude <= 30 then
+							table.clear(v[3])
+							table.clear(v)
+							cache[i] = nil
+						end
+					end
+					vapeEvents[event]:Fire(data)
+				end))
+			end
         end)
     end)
 
@@ -2134,7 +2150,7 @@ run(function()
 		Function = function(callback)
 			if callback then
 				AimAssist:Clean(runService.Heartbeat:Connect(function(dt)
-					if entitylib.isAlive and store.hand.toolType == 'sword' and ((not ClickAim.Enabled) or (tick() - bedwars.SwordController.lastSwing) < 0.4) then
+					if entitylib.isAlive and store.hand.toolType == 'sword' and ((not ClickAim.Enabled) or (os.clock() - bedwars.SwordController.lastSwing) < 0.4) then
 						local ent = KillauraTarget.Enabled and store.KillauraTarget or entitylib.EntityPosition({
 							Range = Distance.Value,
 							Part = 'RootPart',
@@ -2252,8 +2268,11 @@ run(function()
 								task.spawn(blockPlacer.placeBlock, blockPlacer, mouseinfo.placementPosition)
 							end
 						end
-					elseif store.hand.toolType == 'sword' and bedwars.DaoController.chargingMaid == nil then
-						bedwars.SwordController:stopCharging()
+					elseif store.hand.toolType == 'sword' then
+						if bedwars.SwordController:getChargeState() ~= 'IDLE' then
+							bedwars.SwordController:stopCharging(store.hand.tool.Name)
+							bedwars.SwordController.chargingMaid:DoCleaning()
+						end
  						bedwars.SwordController:swingSwordAtMouse(0.25 + math.random() / 8)
 					end
 				end
@@ -2304,8 +2323,8 @@ run(function()
 		Name = 'CPS',
 		Min = 1,
 		Max = 9,
-		DefaultMin = 7,
-		DefaultMax = 7
+		DefaultMin = 4,
+		DefaultMax = 4
 	})
 	AutoClicker:CreateToggle({
 		Name = 'Place Blocks',
@@ -2335,7 +2354,7 @@ run(function()
 			if callback then
 				old = bedwars.SwordController.isClickingTooFast
 				bedwars.SwordController.isClickingTooFast = function(self)
-					self.lastSwing = tick()
+					self.lastSwing = os.clock()
 					return false
 				end
 			else
@@ -2434,7 +2453,7 @@ run(function()
 							if ray and (localPos - ray.Instance.Position).Magnitude <= rayRange then 
 								local limit = (attackRange)
 								for _, ent in entitylib.List do 
-									doAttack = ray.Instance:IsDescendantOf(ent.Character) and (localPos - ent.RootPart.Position).Magnitude <= rayRange
+									doAttack = ent.Targetable and ray.Instance:IsDescendantOf(ent.Character) and (localPos - ent.RootPart.Position).Magnitude <= rayRange
 									if doAttack then 
 										break
 									end
@@ -2458,8 +2477,8 @@ run(function()
 		Name = 'CPS',
 		Min = 1,
 		Max = 9,
-		DefaultMin = 7,
-		DefaultMax = 7
+		DefaultMin = 4,
+		DefaultMax = 4
 	})
 end)
 	
@@ -3359,7 +3378,6 @@ run(function()
 	local AnimationTween
 	local Limit
 	local LegitAura
-	local Sync
 	local Particles, Boxes = {}, {}
 	local anims, AnimDelay, AnimTween, armC0 = vape.Libraries.auraanims, tick()
 	local AttackRemote = {FireServer = function() end}
@@ -3419,7 +3437,7 @@ run(function()
 		end
 
 		if LegitAura.Enabled then
-			if (tick() - bedwars.SwordController.lastSwing) > 0.1 then return false end
+			if (os.clock() - bedwars.SwordController.lastSwing) > 0.2 then return false end
 		end
 
 		return sword, meta
@@ -3547,7 +3565,7 @@ run(function()
 									store.KillauraTarget = v
 									if not isClaw then
 										if not Swing.Enabled and AnimDelay <= tick() and not LegitAura.Enabled then
-											AnimDelay = tick() + (meta.sword.respectAttackSpeedForEffects and meta.sword.attackSpeed or (Sync.Enabled and 0.24 or 0.14))
+											AnimDelay = tick() + (meta.sword.respectAttackSpeedForEffects and meta.sword.attackSpeed or 0.25)
 											bedwars.SwordController:playSwordEffect(meta, 0)
 											if meta.displayName:find(' Scythe') then
 												bedwars.ScytheController:playLocalAnimation()
@@ -3882,10 +3900,6 @@ run(function()
 		Name = 'Swing only',
 		Tooltip = 'Only attacks while swinging manually'
 	})
-	Sync = Killaura:CreateToggle({
-		Name = 'Synced Animation',
-		Tooltip = 'Plays animation with hit attempt'
-	})
 end)
 	
 run(function()
@@ -3959,7 +3973,7 @@ run(function()
 		end,
 		cat = function(_, _, dir)
 			LongJump:Clean(vapeEvents.CatPounce.Event:Connect(function()
-				JumpSpeed = 4.5 * Value.Value
+				JumpSpeed = 4 * Value.Value
 				JumpTick = tick() + 2.5
 				Direction = Vector3.new(dir.X, 0, dir.Z).Unit
 				entitylib.character.RootPart.Velocity = Vector3.zero
@@ -3975,10 +3989,6 @@ run(function()
 		end,
 		fireball = function(item, pos, dir)
 			launchProjectile(item, pos, 'fireball', 60, dir)
-			task.wait(0.05)
-			JumpSpeed = 2 * Value.Value
-			JumpTick = tick() + 1.5
-			Direction = Vector3.new(dir.X, 0, dir.Z).Unit
 		end,
 		grappling_hook = function(item, pos, dir)
 			launchProjectile(item, pos, 'grappling_hook_projectile', 140, dir)
@@ -3990,7 +4000,7 @@ run(function()
 	
 			if bedwars.AbilityController:canUseAbility(item.itemType..'_jump') and LongJump.Enabled then
 				bedwars.AbilityController:useAbility(item.itemType..'_jump')
-				JumpSpeed = 2.5 * Value.Value
+				JumpSpeed = 1.4 * Value.Value
 				JumpTick = tick() + 2.5
 				Direction = Vector3.new(dir.X, 0, dir.Z).Unit
 			end
