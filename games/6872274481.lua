@@ -2273,7 +2273,7 @@ run(function()
 							bedwars.SwordController:stopCharging(store.hand.tool.Name)
 							bedwars.SwordController.chargingMaid:DoCleaning()
 						end
- 						bedwars.SwordController:swingSwordAtMouse(0.25 + math.random() / 8)
+						bedwars.SwordController:swingSwordAtMouse(0.39)
 					end
 				end
 	
@@ -2462,7 +2462,7 @@ run(function()
 	
 							doAttack = doAttack or bedwars.SwordController:getTargetInRegion(attackRange or 3.8 * 3, 0)
 							if doAttack then 
-								bedwars.SwordController:swingSwordAtMouse(0.25 + math.random() / 8)
+								bedwars.SwordController:swingSwordAtMouse(0.39)
 							end
 						end
 					end
@@ -3566,7 +3566,7 @@ run(function()
 									if not isClaw then
 										if not Swing.Enabled and AnimDelay <= tick() and not LegitAura.Enabled then
 											AnimDelay = tick() + (meta.sword.respectAttackSpeedForEffects and meta.sword.attackSpeed or 0.25)
-											bedwars.SwordController:playSwordEffect(meta, 0)
+											bedwars.SwordController:playSwordEffect(meta, false)
 											if meta.displayName:find(' Scythe') then
 												bedwars.ScytheController:playLocalAnimation()
 											end
@@ -3678,7 +3678,7 @@ run(function()
 	ChargeRatio = Killaura:CreateSlider({
 		Name = "Charge Ratio",
 		Function = function() end,
-		Default = 9,
+		Default = 6.5,
 		Max = 10,
 		Min = 0
 	})

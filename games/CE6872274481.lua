@@ -5227,7 +5227,7 @@ run(function()
 		Function = function() end,
 		Min = 0,
 		Max = 10,
-		Default = 9
+		Default = 6.5
 	})
 	RangeCircle = Killaura:CreateToggle({
 		Name = "Range Visualiser",
