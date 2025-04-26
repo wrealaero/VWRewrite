@@ -1,5 +1,5 @@
 repeat task.wait() until game:IsLoaded()
-if shared.vape then shared.vape:Uninject() end
+if shared.vape then shared.vape:Uninject(); shared.VapeExecuted = false end
 
 if identifyexecutor and ({identifyexecutor()})[1] == 'Argon' then
 	getgenv().setthreadidentity = nil
@@ -165,6 +165,7 @@ shared.vape = vape
 getgenv().vape = vape
 getgenv().GuiLibrary = vape
 shared.GuiLibrary = vape
+shared.VapeExecuted = true
 
 getgenv().InfoNotification = function(title, msg, dur)
 	warn('info', tostring(title), tostring(msg), tostring(dur))

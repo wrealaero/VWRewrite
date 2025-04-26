@@ -1370,7 +1370,7 @@ function bedwars.MatchController:fetchMatchState()
 	if time > 0 then matchState = plrTeam == "Spectators" and 2 or 1 else matchState = 0 end
 	if (not timeMoving) and time > 0 then matchState = 2 end
 
-	if (not suc) then warn("[bedwars.MatchController:fetchMatchState]: Failure getting valid time!"); matchState = 1 end
+	if (not suc) then warn("[bedwars.MatchController:fetchMatchState]: Failure getting valid time!"); matchState > 0 and 2 or 1 end
 
 	--print(matchState, time, encode(timeTable), suc, plrTeam)
 
@@ -3160,7 +3160,7 @@ run(function()
 		Function = function(callback)
 			if callback then
 				AimAssist:Clean(runService.Heartbeat:Connect(function(dt)
-					if entitylib.isAlive and store.localHand.Type == 'sword' and ((not ClickAim.Enabled) or (tick() - bedwars.SwordController.lastSwing) < 0.4) then
+					if entitylib.isAlive and store.localHand.Type == 'sword' and ((not ClickAim.Enabled) or (workspace:GetServerTimeNow() - bedwars.SwordController.lastAttack) < 0.4) then
 						local ent = entitylib.EntityPosition({
 							Range = Distance.Value,
 							Part = 'RootPart',
@@ -4927,6 +4927,11 @@ run(function()
 		AttackRemote = bedwars.Client:Get(bedwars.AttackRemote)
 	end)
 
+	local lastSwingServerTime = 0
+	local lastSwingServerTimeDelta = 0
+
+	local OneTapCooldown = {Value = 5}
+
 	local function createRangeCircle()
 		local suc, err = pcall(function()
 			if (not shared.CheatEngineMode) then
@@ -4979,18 +4984,19 @@ run(function()
 		end
 
 		if LegitAura.Enabled then
-			if (tick() - bedwars.SwordController.lastSwing) > 0.1 then return false end
+			if (workspace:GetServerTimeNow() - bedwars.SwordController.lastAttack) > 0.1 then return false end
 		end
 
 		return sword, meta
 	end
 
-	local ChargeRatio = {Value = 9}
-
 	Killaura = vape.Categories.Blatant:CreateModule({
 		Name = 'Killaura',
 		Function = function(callback)
 			if callback then
+				lastSwingServerTime = Workspace:GetServerTimeNow()
+                lastSwingServerTimeDelta = 0
+
 				if RangeCircle.Enabled then
 					createRangeCircle()
 				end
@@ -5087,6 +5093,7 @@ run(function()
 
 							for _, v in plrs do
 								--if not ({whitelist:get(v)})[2] then continue end
+								if workspace:GetServerTimeNow() - bedwars.SwordController.lastAttack < OneTapCooldown.Value/10 then continue end
 								if Targets.Walls.Enabled then
 									if not Wallcheck(lplr.Character, v.Character) then continue end
 								end
@@ -5129,8 +5136,13 @@ run(function()
 								if actualRoot then
 									local dir = CFrame.lookAt(selfpos, actualRoot.Position).LookVector
 									local pos = selfpos + dir * math.max(delta.Magnitude - 14.399, 0)
+
 									bedwars.SwordController.lastAttack = workspace:GetServerTimeNow()
-									bedwars.SwordController.lastSwing = tick()
+                                    bedwars.SwordController.lastSwingServerTime = workspace:GetServerTimeNow()
+
+									lastSwingServerTimeDelta = workspace:GetServerTimeNow() - lastSwingServerTime
+                                    lastSwingServerTime = workspace:GetServerTimeNow()
+
 									store.attackReach = (delta.Magnitude * 100) // 1 / 100
 									store.attackReachUpdate = tick() + 1
 									if isClaw then
@@ -5138,7 +5150,7 @@ run(function()
 									else
 										AttackRemote:FireServer({
 											weapon = sword.tool,
-											chargeRatio = ChargeRatio.Value/10,
+											chargedAttack = {chargeRatio = 0},
 											entityInstance = v.Character,
 											validate = {
 												raycast = {
@@ -5147,7 +5159,8 @@ run(function()
 												},
 												targetPosition = {value = actualRoot.Position},
 												selfPosition = {value = pos}
-											}
+											},
+                                            lastSwingServerTimeDelta = lastSwingServerTimeDelta
 										})
 									end
 								end
@@ -5225,12 +5238,12 @@ run(function()
 			return val == 1 and 'stud' or 'studs'
 		end
 	})
-	ChargeRatio = Killaura:CreateSlider({
-		Name = "Charge Ratio",
+	OneTapCooldown = Killaura:CreateSlider({
+		Name = "OneTap Cooldown",
 		Function = function() end,
 		Min = 0,
-		Max = 10,
-		Default = 6.5
+		Max = 5,
+		Default = 5
 	})
 	RangeCircle = Killaura:CreateToggle({
 		Name = "Range Visualiser",
@@ -10739,7 +10752,7 @@ run(function()
 		end
 		local block, blockpos = nil, nil
 		if not bypass then block, blockpos = getLastCovered(pos, normal) end
-		if not block then block, blockpos = getPlacedBlock(bedwars.BlockController:getBlockPosition(pos)) end
+		--if not block then block, blockpos = getPlacedBlock(bedwars.BlockController:getBlockPosition(pos)) end
 		if not block then blockpos, block = bedwars.BlockController:getBlockPosition(pos) end
 		updateVisualizer(block, true)
 		if not isblockbreakable(block, lplr) then blockpos, block = nil, nil end
