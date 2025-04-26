@@ -1370,7 +1370,7 @@ function bedwars.MatchController:fetchMatchState()
 	if time > 0 then matchState = plrTeam == "Spectators" and 2 or 1 else matchState = 0 end
 	if (not timeMoving) and time > 0 then matchState = 2 end
 
-	if (not suc) then warn("[bedwars.MatchController:fetchMatchState]: Failure getting valid time!"); matchState > 0 and 2 or 1 end
+	if (not suc) then warn("[bedwars.MatchController:fetchMatchState]: Failure getting valid time!"); matchState = 1 end
 
 	--print(matchState, time, encode(timeTable), suc, plrTeam)
 
