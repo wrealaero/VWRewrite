@@ -1663,7 +1663,7 @@ run(function()
         table.insert(sides, Vector3.FromNormalId(v) * 3)
     end
 
-	local function extractTime(timeText)
+	--[[local function extractTime(timeText)
 		local minutes, seconds = string.match(timeText, "(%d+):(%d%d)")
 		local tbl = {
 			minutes = tonumber(minutes),
@@ -1868,9 +1868,9 @@ run(function()
 			RunService.Heartbeat:Wait()
 			pcall(function() bedwars.StoreController:updateStore() end)
 		until (not shared.vape)
-	end)
+	end)--]]
 
-    --[[local function updateStore(new, old)
+    local function updateStore(new, old)
         if new.Bedwars ~= old.Bedwars then
             store.equippedKit = new.Bedwars.kit ~= 'none' and new.Bedwars.kit or ''
         end
@@ -1911,7 +1911,7 @@ run(function()
     end
 
     local storeChanged = bedwars.Store.changed:connect(updateStore)
-    updateStore(bedwars.Store:getState(), {})--]]
+    updateStore(bedwars.Store:getState(), {})
 
     task.spawn(function()
         pcall(function()
@@ -3640,7 +3640,8 @@ run(function()
 					end
 					pcall(function() if RangeCirclePart ~= nil then RangeCirclePart.Parent = gameCamera end end)
 
-					task.wait(#attacked > 0 and #attacked * 0.02 or 1 / UpdateRate.Value)
+					--task.wait(#attacked > 0 and #attacked * 0.02 or 1 / UpdateRate.Value)
+					task.wait(1 / UpdateRate.Value)
 				until not Killaura.Enabled
 			else
 				store.KillauraTarget = nil
