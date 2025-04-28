@@ -1904,7 +1904,7 @@ run(function()
                     amount = currentHand and currentHand.amount or 0,
                     toolType = toolType
                 }
-                store.hand.itemType = store.tool and store.tool.Name
+                store.hand.itemType = store.hand.tool and store.hand.tool.Name
                 store.localHand = store.hand
             end
         end

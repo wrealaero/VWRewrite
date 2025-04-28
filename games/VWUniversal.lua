@@ -3151,7 +3151,7 @@ run(function()
 			end
 		end,
 		Purple3 = function()
-		if themesky then
+			if themesky then
 				themesky.SkyboxBk = "rbxassetid://433274085"
 				themesky.SkyboxDn = "rbxassetid://433274194"
 				themesky.SkyboxFt = "rbxassetid://433274131"
