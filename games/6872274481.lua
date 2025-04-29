@@ -3694,7 +3694,7 @@ run(function()
 		Function = function() end,
 		Min = 0,
 		Max = 5,
-		Default = 5
+		Default = 4.2
 	})
 	RangeCircle = Killaura:CreateToggle({
 		Name = "Range Visualiser",
@@ -3913,6 +3913,63 @@ run(function()
 	LegitAura = Killaura:CreateToggle({
 		Name = 'Swing only',
 		Tooltip = 'Only attacks while swinging manually'
+	})
+end)
+
+run(function()
+	local old
+	local oldSwing
+	local AutoChargeTime
+	
+	AutoCharge = vape.Categories.Combat:CreateModule({
+		Name = 'AutoCharge',
+		Function = function(callback)
+			debug.setconstant(bedwars.SwordController.attackEntity, 58, callback and 'damage' or 'multiHitCheckDurationSec')
+			if callback then
+				local chargeSwingTime = 0
+				local canSwing
+	
+				old = bedwars.SwordController.sendServerRequest
+				bedwars.SwordController.sendServerRequest = function(self, ...)
+					if (os.clock() - chargeSwingTime) < AutoChargeTime.Value then return end
+					self.lastSwingServerTimeDelta = 0.5
+					chargeSwingTime = os.clock()
+					canSwing = true
+	
+					local item = self:getHandItem()
+					if item and item.tool then
+						self:playSwordEffect(bedwars.ItemMeta[item.tool.Name], false)
+					end
+	
+					return old(self, ...)
+				end
+	
+				oldSwing = bedwars.SwordController.playSwordEffect
+				bedwars.SwordController.playSwordEffect = function(...)
+					if not canSwing then return end
+					canSwing = false
+					return oldSwing(...)
+				end
+			else
+				if old then
+					bedwars.SwordController.sendServerRequest = old
+					old = nil
+				end
+	
+				if oldSwing then
+					bedwars.SwordController.playSwordEffect = oldSwing
+					oldSwing = nil
+				end
+			end
+		end,
+		Tooltip = 'Allows you to get charged hits while spam clicking.'
+	})
+	AutoChargeTime = AutoCharge:CreateSlider({
+		Name = 'Charge Time',
+		Min = 0,
+		Max = 0.5,
+		Default = 0.4,
+		Decimal = 100
 	})
 end)
 	
@@ -10565,7 +10622,7 @@ run(function()
 		List = fontitems,
 		Function = function(val)
 			if DamageIndicator.Enabled then
-				debug.setconstant(bedwars.DamageIndicator, 82, val)
+				debug.setconstant(bedwars.DamageIndicator, 86, val)
 			end
 		end
 	})
@@ -10605,7 +10662,7 @@ run(function()
 		Name = 'Stroke',
 		Function = function(callback)
 			if DamageIndicator.Enabled then
-				debug.setconstant(bedwars.DamageIndicator, 102, callback and 'Thickness' or 'Enabled')
+				debug.setconstant(bedwars.DamageIndicator, 119, callback and 'Thickness' or 'Enabled')
 				tab.strokeThickness = callback and 1 or false
 			end
 		end
