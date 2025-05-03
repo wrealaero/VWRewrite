@@ -5901,6 +5901,10 @@ clickgui.ScrollBarImageTransparency = 1
 clickgui.BackgroundTransparency = 1
 clickgui.Visible = false
 clickgui.Parent = scaledgui
+clickgui.Interactable = clickgui.Visible
+clickgui:GetPropertyChangedSignal("Visible"):Connect(function()
+    clickgui.Interactable = clickgui.Visible
+end)
 
 local scrollingFrame = clickgui
 local debounceTime = 0.2
