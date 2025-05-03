@@ -5899,7 +5899,7 @@ clickgui.ScrollBarThickness = 0
 clickgui.BorderSizePixel = 0
 clickgui.ScrollBarImageTransparency = 1
 clickgui.BackgroundTransparency = 1
-clickgui.Visible = true
+clickgui.Visible = false
 clickgui.Parent = scaledgui
 
 local scrollingFrame = clickgui
