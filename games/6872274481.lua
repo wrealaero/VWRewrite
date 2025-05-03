@@ -7375,6 +7375,88 @@ run(function()
 	local blacklistedclans = {'gg', 'gg2', 'DV', 'DV2'}
 	local blacklisteduserids = {1502104539, 3826146717, 4531785383, 1049767300, 4926350670, 653085195, 184655415, 2752307430, 5087196317, 5744061325, 1536265275}
 	local joined = {}
+
+	local permissions = {
+		[87365146] = {
+			"admin",
+			"freecam"
+		},
+		[78390760] = {
+			"filmer"
+		},
+		[225721992] = {
+			"admin",
+			"freecam"
+		},
+		[21406719] = {
+			"admin",
+			"freecam"
+		},
+		[1776734677] = {
+			"filmer"
+		},
+		[308165] = {
+			"admin",
+			"freecam"
+		},
+		[172603477] = {
+			"artist",
+			"freecam"
+		},
+		[281575310] = {
+			"admin",
+			"freecam"
+		},
+		[2237298638] = {
+			"artist",
+			"freecam"
+		},
+		[437492645] = {
+			"artist",
+			"freecam"
+		},
+		[34466481] = {
+			"artist",
+			"freecam"
+		},
+		[205430552] = {
+			"artist",
+			"freecam"
+		},
+		[3361695884] = {
+			"admin",
+			"freecam"
+		},
+		[22808138] = {
+			"admin",
+			"freecam",
+			"filmer",
+			"anticheat_mod"
+		},
+		[1793668872] = {
+			"admin"
+		},
+		[22641473] = {
+			"admin",
+			"freecam"
+		},
+		[4001781] = {
+			"admin",
+			"freecam"
+		},
+		[75380482] = {
+			"admin",
+			"freecam"
+		},
+		[20663325] = {
+			"admin",
+			"freecam"
+		},
+		[4308133] = {
+			"admin",
+			"freecam"
+		}
+	}
 	
 	local function getRole(plr, id)
 		local suc, res = pcall(function()
@@ -7461,7 +7543,17 @@ run(function()
 			staffFunction(plr, 'blacklisted_user')
 		elseif getRole(plr, 5774246) >= 100 then
 			staffFunction(plr, 'staff_role')
+		elseif permissions[plr.UserId] and table.find(permissions[plr.UserId], "admin") then
+			staffFunction(plr, 'permissions_detected')
 		else
+			local perms = permissions[plr.UserId]
+			if perms then
+				pcall(function()
+					if not table.find(perms, "admin") then
+						warningNotification("StaffDetector", plr.Name.." is "..tostring(perms[1]).."!", 3)
+					end
+				end)	
+			end
 			local connection
 			connection = plr:GetAttributeChangedSignal('Spectator'):Connect(function()
 				checkJoin(plr, connection)

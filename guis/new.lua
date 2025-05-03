@@ -4953,7 +4953,11 @@ function mainapi:CreateSearch()
 	searchbkg.Position = UDim2.new(0.5, 0, 0, 13)
 	searchbkg.AnchorPoint = Vector2.new(0.5, 0)
 	searchbkg.BackgroundColor3 = color.Dark(uipallet.Main, 0.02)
-	searchbkg.Parent = clickgui
+	searchbkg.Parent = scaledgui
+	searchbkg.Visible = clickgui.Visible
+	clickgui:GetPropertyChangedSignal("Visible"):Connect(function()
+		searchbkg.Visible = clickgui.Visible
+	end)
 	local searchicon = Instance.new('ImageLabel')
 	searchicon.Name = 'Icon'
 	searchicon.Size = UDim2.fromOffset(14, 14)
@@ -5508,7 +5512,7 @@ function mainapi:Load(skipgui, profile)
 				local object = self.Categories[i]
 				if not object then continue end
 				if object.Options and v.Options then
-					task.spawn(function() self:LoadOptions(object, v.Options) end)
+					self:LoadOptions(object, v.Options)
 					task.wait(shared.LoadSlowmode or 0.03)
 				end
 				if v.Enabled then
@@ -5886,12 +5890,82 @@ scaledgui.Name = 'ScaledGui'
 scaledgui.Size = UDim2.fromScale(1, 1)
 scaledgui.BackgroundTransparency = 1
 scaledgui.Parent = gui
-clickgui = Instance.new('Frame')
+clickgui = Instance.new('ScrollingFrame')
 clickgui.Name = 'ClickGui'
 clickgui.Size = UDim2.fromScale(1, 1)
+clickgui.CanvasSize = inputService.TouchEnabled and not inputService.KeyboardEnabled and not inputService.MouseEnabled and UDim2.new(2, 0, 2, 0) or UDim2.new(1, 0, 1, 0)
+clickgui.AutomaticCanvasSize = Enum.AutomaticSize.Y
+clickgui.ScrollBarThickness = 0
+clickgui.BorderSizePixel = 0
+clickgui.ScrollBarImageTransparency = 1
 clickgui.BackgroundTransparency = 1
-clickgui.Visible = false
+clickgui.Visible = true
 clickgui.Parent = scaledgui
+
+local scrollingFrame = clickgui
+local debounceTime = 0.2
+local lastPosition = scrollingFrame.CanvasPosition
+local lastChange = tick()
+local scrolling = false
+
+local running_tweens = {}
+
+task.spawn(function()
+	local TweenService = game:GetService("TweenService")
+	local createTween = function(instance, properties, duration, easingStyle, easingDirection, repeatCount, reverses, delayTime)
+		local tweenInfo = TweenInfo.new(
+			duration or 0.3,
+			easingStyle or Enum.EasingStyle.Sine,
+			easingDirection or Enum.EasingDirection.InOut,
+			repeatCount or 0,
+			reverses or false,
+			delayTime or 0
+		)
+	
+		local tween = TweenService:Create(instance, tweenInfo, properties)
+		return tween
+	end
+	local con
+	con = game:GetService("RunService").Heartbeat:Connect(function()
+		local currentPosition = scrollingFrame.CanvasPosition
+		if currentPosition ~= lastPosition then
+			lastPosition = currentPosition
+			lastChange = tick()
+	
+			if not scrolling then
+				scrolling = true
+				if running_tweens[scrollingFrame] then
+					pcall(function()
+						running_tweens[scrollingFrame]:Cancel()
+					end)
+				end
+				local tween = createTween(scrollingFrame, {
+					ScrollBarImageTransparency = 0,
+					ScrollBarThickness = 10
+				})
+				running_tweens[scrollingFrame] = tween
+				tween:Play()
+			end
+		elseif scrolling and tick() - lastChange >= debounceTime then
+			scrolling = false
+			if running_tweens[scrollingFrame] then
+				pcall(function()
+					running_tweens[scrollingFrame]:Cancel()
+				end)
+			end
+			local tween = createTween(scrollingFrame, {
+				ScrollBarImageTransparency = 1,
+				ScrollBarThickness = 0
+			})
+			running_tweens[scrollingFrame] = tween
+			tween:Play()
+		end
+	end)
+	mainapi.SelfDestructEvent.Event:Connect(function()
+		pcall(function() con:Disconnect() end)
+	end)
+end)
+
 local modal = Instance.new('TextButton')
 modal.BackgroundTransparency = 1
 modal.Modal = true
@@ -6202,10 +6276,10 @@ guipane:CreateToggle({
 guipane:CreateToggle({
 	Name = 'Show legit mode',
 	Function = function(enabled)
-		clickgui.Search.Legit.Visible = enabled
-		clickgui.Search.LegitDivider.Visible = enabled
-		clickgui.Search.TextBox.Size = UDim2.new(1, enabled and -50 or -10, 0, 37)
-		clickgui.Search.TextBox.Position = UDim2.fromOffset(enabled and 50 or 10, 0)
+		scaledgui.Search.Legit.Visible = enabled
+		scaledgui.Search.LegitDivider.Visible = enabled
+		scaledgui.Search.TextBox.Size = UDim2.new(1, enabled and -50 or -10, 0, 37)
+		scaledgui.Search.TextBox.Position = UDim2.fromOffset(enabled and 50 or 10, 0)
 	end,
 	Default = true,
 	Tooltip = 'Shows the button to change to Legit Mode'

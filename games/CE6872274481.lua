@@ -3633,6 +3633,88 @@ run(function()
 	local blacklisteduserids = {1502104539, 3826146717, 4531785383, 1049767300, 4926350670, 653085195, 184655415, 2752307430, 5087196317, 5744061325, 1536265275}
 	local joined = {}
 	
+	local permissions = {
+		[87365146] = {
+			"admin",
+			"freecam"
+		},
+		[78390760] = {
+			"filmer"
+		},
+		[225721992] = {
+			"admin",
+			"freecam"
+		},
+		[21406719] = {
+			"admin",
+			"freecam"
+		},
+		[1776734677] = {
+			"filmer"
+		},
+		[308165] = {
+			"admin",
+			"freecam"
+		},
+		[172603477] = {
+			"artist",
+			"freecam"
+		},
+		[281575310] = {
+			"admin",
+			"freecam"
+		},
+		[2237298638] = {
+			"artist",
+			"freecam"
+		},
+		[437492645] = {
+			"artist",
+			"freecam"
+		},
+		[34466481] = {
+			"artist",
+			"freecam"
+		},
+		[205430552] = {
+			"artist",
+			"freecam"
+		},
+		[3361695884] = {
+			"admin",
+			"freecam"
+		},
+		[22808138] = {
+			"admin",
+			"freecam",
+			"filmer",
+			"anticheat_mod"
+		},
+		[1793668872] = {
+			"admin"
+		},
+		[22641473] = {
+			"admin",
+			"freecam"
+		},
+		[4001781] = {
+			"admin",
+			"freecam"
+		},
+		[75380482] = {
+			"admin",
+			"freecam"
+		},
+		[20663325] = {
+			"admin",
+			"freecam"
+		},
+		[4308133] = {
+			"admin",
+			"freecam"
+		}
+	}
+	
 	local function getRole(plr, id)
 		local suc, res = pcall(function() 
 			return plr:GetRankInGroup(id)
@@ -3644,13 +3726,16 @@ run(function()
 	end
 	
 	local function staffFunction(plr, checktype)
-		if not vape.Loaded then repeat task.wait() until vape.Loaded end
-		InfoNotification('StaffDetector', 'Staff Detected ('..checktype..'): '..plr.Name..' ('..plr.UserId..')', 60, 'alert')
+		if not vape.Loaded then
+			repeat task.wait() until vape.Loaded
+		end
+	
+		notif('StaffDetector', 'Staff Detected ('..checktype..'): '..plr.Name..' ('..plr.UserId..')', 60, 'alert')
 		whitelist.customtags[plr.Name] = {{text = 'GAME STAFF', color = Color3.new(1, 0, 0)}}
 	
 		if Mode.Value == 'Uninject' then
-			task.spawn(function() 
-				vape:Uninject() 
+			task.spawn(function()
+				vape:Uninject()
 			end)
 			game:GetService('StarterGui'):SetCore('SendNotification', {
 				Title = 'StaffDetector',
@@ -3667,8 +3752,8 @@ run(function()
 			vape.Save = function() end
 			for i, v in vape.Modules do
 				if not (table.find(safe, i) or v.Category == 'Render') then
-					if v.Enabled then 
-						v:Toggle() 
+					if v.Enabled then
+						v:Toggle()
 					end
 					v:SetBind('')
 				end
@@ -3678,8 +3763,8 @@ run(function()
 	
 	local function checkFriends(list)
 		for _, v in list do
-			if joined[v] then 
-				return joined[v] 
+			if joined[v] then
+				return joined[v]
 			end
 		end
 		return nil
@@ -3690,8 +3775,8 @@ run(function()
 			connection:Disconnect()
 			local tab, pages = {}, playersService:GetFriendsAsync(plr.UserId)
 			for _ = 1, 4 do
-				for _, v in pages:GetCurrentPage() do 
-					table.insert(tab, v.Id) 
+				for _, v in pages:GetCurrentPage() do
+					table.insert(tab, v.Id)
 				end
 				if pages.IsFinished then break end
 				pages:AdvanceToNextPageAsync()
@@ -3709,21 +3794,35 @@ run(function()
 	local function playerAdded(plr)
 		joined[plr.UserId] = plr.Name
 		if plr == lplr then return end
+	
 		if table.find(blacklisteduserids, plr.UserId) or table.find(Users.ListEnabled, tostring(plr.UserId)) then
 			staffFunction(plr, 'blacklisted_user')
-			return
-		end
-	
-		if getRole(plr, 5774246) >= 100 then
+		elseif getRole(plr, 5774246) >= 100 then
 			staffFunction(plr, 'staff_role')
+		elseif permissions[plr.UserId] and table.find(permissions[plr.UserId], "admin") then
+			staffFunction(plr, 'permissions_detected')
 		else
+			local perms = permissions[plr.UserId]
+			if perms then
+				pcall(function()
+					if not table.find(perms, "admin") then
+						warningNotification("StaffDetector", plr.Name.." is "..tostring(perms[1]).."!", 3)
+					end
+				end)	
+			end
 			local connection
-			connection = plr:GetAttributeChangedSignal('Spectator'):Connect(function() checkJoin(plr, connection) end)
-			checkJoin(plr, connection)
+			connection = plr:GetAttributeChangedSignal('Spectator'):Connect(function()
+				checkJoin(plr, connection)
+			end)
 			StaffDetector:Clean(connection)
+			if checkJoin(plr, connection) then
+				return
+			end
+	
 			if not plr:GetAttribute('ClanTag') then
 				plr:GetAttributeChangedSignal('ClanTag'):Wait()
 			end
+	
 			if table.find(blacklistedclans, plr:GetAttribute('ClanTag')) and vape.Loaded then
 				connection:Disconnect()
 				staffFunction(plr, 'blacklisted_clan_'..plr:GetAttribute('ClanTag'):lower())

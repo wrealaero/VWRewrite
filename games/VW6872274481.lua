@@ -6761,3 +6761,499 @@ end)
 		})
 	end)
 end--]]
+
+run(function()
+	local Maid = {}
+	Maid.__index = Maid
+	
+	function Maid.new()
+		return setmetatable({ Tasks = {} }, Maid)
+	end
+	
+	function Maid:Add(task)
+		if typeof(task) == "RBXScriptConnection" or
+		   (typeof(task) == "Instance" and task.Destroy) or
+		   typeof(task) == "function" or
+		   (typeof(task) == "table" and (task.Destroy or task.Disconnect)) then
+			table.insert(self.Tasks, task)
+		else
+			warn("[Maid] Invalid task type: " .. typeof(task))
+		end
+		return task
+	end
+	
+	function Maid:Clean()
+		for _, task in ipairs(self.Tasks) do
+			local success, errorMsg = pcall(function()
+				if typeof(task) == "RBXScriptConnection" then
+					task:Disconnect()
+				elseif typeof(task) == "Instance" then
+					task:Destroy()
+				elseif typeof(task) == "function" then
+					task()
+				elseif typeof(task) == "table" then
+					if task.Destroy then
+						task:Destroy()
+					elseif task.Disconnect then
+						task:Disconnect()
+					end
+				end
+			end)
+			if not success then
+				warn("[Maid] Error cleaning task: " .. tostring(errorMsg))
+			end
+		end
+		table.clear(self.Tasks)
+	end
+	
+	local Services = setmetatable({}, {
+		__index = function(self, key)
+			local suc, service = pcall(game.GetService, game, key)
+			if suc and service then
+				self[key] = service
+				return service
+			else
+				warn(`[Services] Warning: "{key}" is not a valid Roblox service.`)
+				return nil
+			end
+		end
+	})
+	
+    local Players = Services.Players
+    local Workspace = Services.Workspace
+    local maid = Maid.new()
+    local BetterSpectator = { Enabled = false }
+    local Choice = { Value = Players.LocalPlayer.Name }
+    local playerConnections = {} 
+    local connectedPlayerMaid = nil 
+    local localCharacter = nil
+    local refreshDebounce = false 
+    local lastRefreshTime = 0 
+
+    local function getPlayerList()
+        local playerList = {}
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player.Character and player.Character:IsDescendantOf(Workspace) and player.Character.ClassName == "Model" then
+                table.insert(playerList, player.Name)
+            end
+        end
+        return playerList
+    end
+
+    local function findLocalCharacter()
+        if localCharacter and localCharacter:IsDescendantOf(Workspace) and localCharacter.Name == Players.LocalPlayer.Name then
+            return localCharacter
+        end
+        local char = Workspace:FindFirstChild(Players.LocalPlayer.Name)
+        if char and char.ClassName == "Model" then
+            localCharacter = char
+            return char
+        end
+        return nil
+    end
+
+    local function saveLocalCharacter()
+        local char = Players.LocalPlayer.Character
+        if char and char:IsDescendantOf(Workspace) and char.ClassName == "Model" and char.Name == Players.LocalPlayer.Name then
+            localCharacter = char
+        else
+            localCharacter = findLocalCharacter()
+        end
+    end
+
+    local function connectPlayer(player)
+        if playerConnections[player] then
+            playerConnections[player]:Clean()
+        end
+        local playerMaid = Maid.new()
+        playerMaid:Add(player.CharacterAdded:Connect(function()
+            if not refreshDebounce then
+                refreshChoices()
+            end
+        end))
+        playerMaid:Add(player.CharacterRemoving:Connect(function()
+            if not refreshDebounce then
+                refreshChoices()
+            end
+        end))
+        playerConnections[player] = playerMaid
+    end
+
+    local function clearConnections()
+        for _, connectionMaid in pairs(playerConnections) do
+            connectionMaid:Clean()
+        end
+        table.clear(playerConnections)
+    end
+
+    local function initiatePlayers()
+        clearConnections()
+        for _, player in ipairs(Players:GetPlayers()) do
+            connectPlayer(player)
+        end
+    end
+
+    local function updateChoice(playerName)
+        local player = Players:FindFirstChild(playerName)
+        if not player or not player.Character or not player.Character:IsDescendantOf(Workspace) then
+            warningNotification("BetterSpectator", "Selected player is invalid or has no character.", 2)
+            Choice.Value = Players.LocalPlayer.Name
+            Players.LocalPlayer.Character = findLocalCharacter()
+            if connectedPlayerMaid then
+                connectedPlayerMaid:Clean()
+                connectedPlayerMaid = nil
+            end
+            return
+        end
+
+        saveLocalCharacter()
+        Players.LocalPlayer.Character = player.Character
+
+        if connectedPlayerMaid then
+            connectedPlayerMaid:Clean()
+        end
+        connectedPlayerMaid = Maid.new()
+        connectedPlayerMaid:Add(player.CharacterRemoving:Connect(function()
+            Players.LocalPlayer.Character = findLocalCharacter()
+            warningNotification("BetterSpectator", "Spectated player died. Waiting for respawn...", 2)
+        end))
+        connectedPlayerMaid:Add(player.CharacterAdded:Connect(function(newChar)
+            saveLocalCharacter()
+            Players.LocalPlayer.Character = newChar
+            InfoNotification("BetterSpectator", "Spectated player respawned.", 2)
+        end))
+
+        InfoNotification("BetterSpectator", "Now spectating " .. player.Name .. ".", 2)
+    end
+
+    function refreshChoices()
+        if refreshDebounce or tick() - lastRefreshTime < 0.5 then
+            return
+        end
+        refreshDebounce = true
+        lastRefreshTime = tick()
+
+        local playerList = getPlayerList()
+        Choice:Change(playerList)
+        initiatePlayers()
+
+        if BetterSpectator.Enabled and Choice.Value ~= Players.LocalPlayer.Name then
+            updateChoice(Choice.Value)
+        else
+            Players.LocalPlayer.Character = findLocalCharacter()
+            if connectedPlayerMaid then
+                connectedPlayerMaid:Clean()
+                connectedPlayerMaid = nil
+            end
+        end
+
+        refreshDebounce = false
+    end
+
+    BetterSpectator = vape.Categories.Utility:CreateModule({
+        Name = "BetterSpectator",
+        Function = function(enabled)
+            if enabled then
+                BetterSpectator.Enabled = true
+                initiatePlayers()
+                maid:Add(Players.PlayerAdded:Connect(function(player)
+                    connectPlayer(player)
+                    refreshChoices()
+                end))
+                maid:Add(Players.PlayerRemoving:Connect(function(player)
+                    if playerConnections[player] then
+                        playerConnections[player]:Clean()
+                        playerConnections[player] = nil
+                    end
+                    if Choice.Value == player.Name then
+                        Choice.Value = Players.LocalPlayer.Name
+                        updateChoice(Choice.Value)
+                    end
+                    refreshChoices()
+                end))
+                maid:Add(clearConnections)
+                maid:Add(function()
+                    if connectedPlayerMaid then
+                        connectedPlayerMaid:Clean()
+                        connectedPlayerMaid = nil
+                    end
+                    Players.LocalPlayer.Character = findLocalCharacter()
+                    Choice.Value = Players.LocalPlayer.Name
+                end)
+                refreshChoices()
+            else
+                BetterSpectator.Enabled = false
+                maid:Clean()
+            end
+        end,
+        Tooltip = "Allows spectating other players by switching your character's perspective."
+    })
+
+    Choice = BetterSpectator:CreateDropdown({
+        Name = "Player",
+        List = getPlayerList(),
+        Default = Players.LocalPlayer.Name,
+        Function = function(value)
+            Choice.Value = value
+            if BetterSpectator.Enabled then
+                updateChoice(value)
+            end
+        end
+    })
+end)
+
+shared.slowmode = 0
+run(function()
+    local HttpService = game:GetService("HttpService")
+    local StaffDetectionSystem = {
+        Enabled = false
+    }
+    local StaffDetectionSystemConfig = {
+        GameMode = "Bedwars",
+        CustomGroupEnabled = false,
+        IgnoreOnline = false,
+        AutoCheck = false,
+        MemberLimit = 50,
+        CustomGroupId = "",
+        CustomRoles = {}
+    }
+    local StaffDetectionSystemStaffData = {
+        Games = {
+            Bedwars = {groupId = 5774246, roles = {79029254, 86172137, 43926962, 37929139, 87049509, 37929138}},
+            PS99 = {groupId = 5060810, roles = {33738740, 33738765}}
+        },
+        Detected = {}
+    }
+
+    local DetectionUtils = {
+        resetSlowmode = function() end,
+        fetchUsersInRole = function() end,
+        fetchUserPresence = function() end,
+        fetchGroupRoles = function() end,
+        getDetectionConfig = function() end,
+        scanStaff = function() end
+    }
+
+    DetectionUtils = {
+        resetSlowmode = function()
+            task.spawn(function()
+                while shared.slowmode > 0 do
+                    shared.slowmode = shared.slowmode - 1
+                    task.wait(1)
+                end
+                shared.slowmode = 0
+            end)
+        end,
+
+        fetchUsersInRole = function(groupId, roleId, cursor)
+            local url = string.format("https://groups.roblox.com/v1/groups/%d/roles/%d/users?limit=%d%s", groupId, roleId, StaffDetectionSystemConfig.MemberLimit, cursor and "&cursor=" .. cursor or "")
+            local success, response = pcall(function()
+                return request({Url = url, Method = "GET"})
+            end)
+            return success and HttpService:JSONDecode(response.Body) or {}
+        end,
+
+        fetchUserPresence = function(userIds)
+            local success, response = pcall(function()
+                return request({
+                    Url = "https://presence.roblox.com/v1/presence/users",
+                    Method = "POST",
+                    Headers = {["Content-Type"] = "application/json"},
+                    Body = HttpService:JSONEncode({userIds = userIds})
+                })
+            end)
+            return success and HttpService:JSONDecode(response.Body) or {userPresences = {}}
+        end,
+
+        fetchGroupRoles = function(groupId)
+            local success, response = pcall(function()
+                return request({
+                    Url = "https://groups.roblox.com/v1/groups/" .. groupId .. "/roles",
+                    Method = "GET"
+                })
+            end)
+            if success and response.StatusCode == 200 then
+                local roles = {}
+                for _, role in pairs(HttpService:JSONDecode(response.Body).roles) do
+                    table.insert(roles, role.id)
+                end
+                return true, roles
+            end
+            return false, nil, "Failed to fetch roles: " .. (success and response.StatusCode or "Network error")
+        end,
+
+        getDetectionConfig = function()
+            if StaffDetectionSystemConfig.CustomGroupEnabled then
+                if not StaffDetectionSystemConfig.CustomGroupId or StaffDetectionSystemConfig.CustomGroupId == "" then
+                    return false, nil, "Custom Group ID not specified", false, nil, "Custom"
+                end
+                if #StaffDetectionSystemConfig.CustomRoles == 0 then
+                    return true, tonumber(StaffDetectionSystemConfig.CustomGroupId), nil, false, nil, "Custom roles not specified"
+                end
+                local success, roles, error = DetectionUtils.fetchGroupRoles(StaffDetectionSystemConfig.CustomGroupId)
+                return true, tonumber(StaffDetectionSystemConfig.CustomGroupId), nil, success, roles, error, "Custom"
+            else
+                local gameData = StaffDetectionSystemStaffData.Games[StaffDetectionSystemConfig.GameMode]
+                return true, gameData.groupId, nil, true, gameData.roles, nil, "Normal"
+            end
+        end,
+
+        scanStaff = function(groupId, roleId)
+            local users, userIds = {}, {}
+            local cursor = nil
+            repeat
+                local data = DetectionUtils.fetchUsersInRole(groupId, roleId, cursor)
+                for _, user in pairs(data.data or {}) do
+                    table.insert(users, user)
+                    table.insert(userIds, user.userId)
+                end
+                cursor = data.nextPageCursor
+            until not cursor
+
+            local presenceData = DetectionUtils.fetchUserPresence(userIds)
+            for _, user in pairs(users) do
+                for _, presence in pairs(presenceData.userPresences) do
+                    if user.userId == presence.userId then
+                        user.presenceType = presence.userPresenceType
+                        user.lastLocation = presence.lastLocation
+                        break
+                    end
+                end
+            end
+            return users
+        end
+    }
+
+    local function processStaffCheck()
+        if shared.slowmode > 0 and not StaffDetectionSystemConfig.AutoCheck then
+            errorNotification("StaffDetector", "Slowmode active! Wait " .. shared.slowmode .. " seconds", shared.slowmode)
+            return
+        end
+
+        shared.slowmode = 5
+        DetectionUtils.resetSlowmode()
+        InfoNotification("StaffDetector", "Checking staff presence...", 5)
+
+        local groupSuccess, groupId, groupError, rolesSuccess, roles, rolesError, mode = DetectionUtils.getDetectionConfig()
+        if not groupSuccess or not rolesSuccess then
+            shared.slowmode = 0
+            if groupError then errorNotification("StaffDetector", groupError, 5) end
+            if rolesError then errorNotification("StaffDetector", rolesError, 5) end
+            return
+        end
+
+        local detectedStaff, uniqueIds = {}, {}
+        for _, roleId in pairs(roles) do
+            for _, user in pairs(DetectionUtils.scanStaff(groupId, roleId)) do
+				local resolve = {
+					["Offline"] = '<font color="rgb(128,128,128)">Offline</font>',
+					["Online"] = '<font color="rgb(0,255,0)">Online</font>',
+					["In Game"] = '<font color="rgb(16, 150, 234)">In Game</font>',
+					["In Studio"] = '<font color="rgb(255,165,0)">In Studio</font>'
+				}
+                local status = ({
+                    [0] = "Offline",
+                    [1] = "Online",
+                    [2] = "In Game",
+                    [3] = "In Studio"
+                })[user.presenceType or 0]
+
+                if (status == "In Game" or (not StaffDetectionSystemConfig.IgnoreOnline and status == "Online")) and
+                   not table.find(uniqueIds, user.userId) then
+                    table.insert(uniqueIds, user.userId)
+                    local userData = {UserID = tostring(user.userId), Username = user.username, Status = status}
+                    if not table.find(detectedStaff, userData) then
+                        table.insert(detectedStaff, userData)
+                        errorNotification("StaffDetector", "@" .. userData.Username .. "(" .. userData.UserID .. ") is " .. resolve[status], 7)
+                    end
+                end
+            end
+        end
+        InfoNotification("StaffDetector", #detectedStaff .. " staff members detected online/in-game!", 7)
+    end
+
+    StaffDetectionSystem = vape.Categories.Utility:CreateModule({
+        Name = 'StaffFetcher - Roblox',
+        Function = function(enabled)
+            StaffDetectionSystem.Enabled = enabled
+            if enabled then
+                if StaffDetectionSystemConfig.AutoCheck then
+                    task.spawn(function()
+                        repeat
+                            processStaffCheck()
+                            task.wait(30)
+                        until not StaffDetectionSystem.Enabled or not StaffDetectionSystemConfig.AutoCheck
+                        StaffDetectionSystem:Toggle(false)
+                    end)
+                else
+                    processStaffCheck()
+                    StaffDetectionSystem:Toggle(false)
+                end
+            end
+        end
+    })
+
+    local StaffDetectionSystemUI = {}
+
+    local gameList = {}
+    for game in pairs(StaffDetectionSystemStaffData.Games) do table.insert(gameList, game) end
+    StaffDetectionSystemUI.GameSelector = StaffDetectionSystem:CreateDropdown({
+        Name = "Game Mode",
+        Function = function(value) StaffDetectionSystemConfig.GameMode = value end,
+        List = gameList
+    })
+
+    StaffDetectionSystemUI.RolesList = StaffDetectionSystem:CreateTextList({
+        Name = "Custom Roles",
+        TempText = "Role ID (number)",
+        Function = function(values) StaffDetectionSystemConfig.CustomRoles = values end
+    })
+
+    StaffDetectionSystemUI.GroupIdInput = StaffDetectionSystem:CreateTextBox({
+        Name = "Custom Group ID",
+        TempText = "Group ID (number)",
+        Function = function(value) StaffDetectionSystemConfig.CustomGroupId = value end
+    })
+
+    StaffDetectionSystem:CreateToggle({
+        Name = "Custom Group",
+        Function = function(enabled)
+            StaffDetectionSystemConfig.CustomGroupEnabled = enabled
+            StaffDetectionSystemUI.GroupIdInput.Object.Visible = enabled
+            StaffDetectionSystemUI.RolesList.Object.Visible = enabled
+            StaffDetectionSystemUI.GameSelector.Object.Visible = not enabled
+        end,
+        Tooltip = "Use a custom staff group",
+        Default = false
+    })
+
+    StaffDetectionSystem:CreateToggle({
+        Name = "Ignore Online Staff",
+        Function = function(enabled) StaffDetectionSystemConfig.IgnoreOnline = enabled end,
+        Tooltip = "Only show in-game staff, ignoring online staff",
+        Default = false
+    })
+
+    StaffDetectionSystem:CreateSlider({
+        Name = "Member Limit",
+        Min = 1,
+        Max = 100,
+        Function = function(value) StaffDetectionSystemConfig.MemberLimit = value end,
+        Default = 50
+    })
+
+    StaffDetectionSystem:CreateToggle({
+        Name = "Auto Check",
+        Function = function(enabled)
+            StaffDetectionSystemConfig.AutoCheck = enabled
+            if enabled and shared.slowmode > 0 then
+                errorNotification("StaffDetector", "Disable Auto Check to use manually during slowmode!", 5)
+            end
+        end,
+        Tooltip = "Automatically check every 30 seconds",
+        Default = false
+    })
+
+    StaffDetectionSystemUI.GroupIdInput.Object.Visible = false
+    StaffDetectionSystemUI.RolesList.Object.Visible = false
+end)
