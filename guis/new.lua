@@ -3760,7 +3760,7 @@ function mainapi:CreateCategory(categorysettings)
 
 	local windowScale = Instance.new("UIScale")
 	windowScale.Parent = window
-	window.Scale = isMobile and 0.8 or 1
+	windowScale.Scale = isMobile and 0.8 or 1
 
 	addBlur(window)
 	addCorner(window)
