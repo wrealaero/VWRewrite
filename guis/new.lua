@@ -5903,10 +5903,11 @@ scaledgui.Size = UDim2.fromScale(1, 1)
 scaledgui.BackgroundTransparency = 1
 scaledgui.Parent = gui
 
-clickgui = isMobile and Instance.new('ScrollingFrame') or Instance.new("Frame")
+--clickgui = isMobile and Instance.new('ScrollingFrame') or Instance.new("Frame")
+clickgui = Instance.new("Frame")
 clickgui.Name = 'ClickGui'
 clickgui.Size = UDim2.fromScale(1, 1)
-if isMobile then
+--[[if isMobile then
 	clickgui.CanvasSize = isMobile and UDim2.new(2, 0, 2, 0) or UDim2.new(1, 0, 1, 0)
 	clickgui.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	clickgui.ScrollBarThickness = 0
@@ -5916,12 +5917,12 @@ if isMobile then
 		clickgui.Interactable = clickgui.Visible
 	end)
 	clickgui.BorderSizePixel = 0
-end
+end--]]
 clickgui.BackgroundTransparency = 1
 clickgui.Visible = false
 clickgui.Parent = scaledgui
 
-if isMobile then
+--[[if isMobile then
 	local scrollingFrame = clickgui
 	local debounceTime = 0.2
 	local lastPosition = scrollingFrame.CanvasPosition
@@ -5985,7 +5986,7 @@ if isMobile then
 			pcall(function() con:Disconnect() end)
 		end)
 	end)
-end	
+end--]]
 
 local modal = Instance.new('TextButton')
 modal.BackgroundTransparency = 1

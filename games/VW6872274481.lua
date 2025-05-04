@@ -7257,3 +7257,25 @@ run(function()
     StaffDetectionSystemUI.GroupIdInput.Object.Visible = false
     StaffDetectionSystemUI.RolesList.Object.Visible = false
 end)
+
+if not shared.CheatEngineMode then
+	local inputService = game:GetService('UserInputService')
+	local isMobile = inputService.TouchEnabled and not inputService.KeyboardEnabled and not inputService.MouseEnabled
+	run(function()
+		local controller
+		local LegacyLayout = {Enabled = false}
+		LegacyLayout = vape.Categories.World:Createmodule({
+			Name = "LegacyLayout",
+			Function = function(call)
+				if not controller then
+					controller = require(game:GetService("ReplicatedStorage").rbxts_include.node_modules["@flamework"].core.out).Flamework.resolveDependency("@easy-games/game-core:client/controllers/ability/ability-controller@AbilityController").mobileAbilityUIController.mobileLayoutController
+				end
+				if call and not isMobile then
+					warningNotification("LegacyLayout", "Mobile devices only!", 3)
+					--LegacyLayout:Toggle(false)
+				end
+				controller:setIsLegacyMode(call)
+			end
+		})
+	end)
+end
