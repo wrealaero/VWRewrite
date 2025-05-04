@@ -3742,6 +3742,8 @@ function mainapi:CreateGUI()
 	return categoryapi
 end
 
+local isMobile = inputService.TouchEnabled and not inputService.KeyboardEnabled and not inputService.MouseEnabled
+
 function mainapi:CreateCategory(categorysettings)
 	local categoryapi = {
 		Type = 'Category',
@@ -5895,8 +5897,6 @@ scaledgui.Name = 'ScaledGui'
 scaledgui.Size = UDim2.fromScale(1, 1)
 scaledgui.BackgroundTransparency = 1
 scaledgui.Parent = gui
-
-local isMobile = inputService.TouchEnabled and not inputService.KeyboardEnabled and not inputService.MouseEnabled
 
 clickgui = isMobile and Instance.new('ScrollingFrame') or Instance.new("Frame")
 clickgui.Name = 'ClickGui'
