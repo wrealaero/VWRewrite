@@ -3757,6 +3757,11 @@ function mainapi:CreateCategory(categorysettings)
 	window.Visible = false
 	window.Text = ''
 	window.Parent = clickgui
+
+	local windowScale = Instance.new("UIScale")
+	windowScale.Parent = window
+	window.Scale = isMobile and 0.8 or 1
+
 	addBlur(window)
 	addCorner(window)
 	makeDraggable(window)
@@ -5890,85 +5895,92 @@ scaledgui.Name = 'ScaledGui'
 scaledgui.Size = UDim2.fromScale(1, 1)
 scaledgui.BackgroundTransparency = 1
 scaledgui.Parent = gui
-clickgui = Instance.new('ScrollingFrame')
+
+local isMobile = inputService.TouchEnabled and not inputService.KeyboardEnabled and not inputService.MouseEnabled
+
+clickgui = isMobile and Instance.new('ScrollingFrame') or Instance.new("Frame")
 clickgui.Name = 'ClickGui'
 clickgui.Size = UDim2.fromScale(1, 1)
-clickgui.CanvasSize = inputService.TouchEnabled and not inputService.KeyboardEnabled and not inputService.MouseEnabled and UDim2.new(2, 0, 2, 0) or UDim2.new(1, 0, 1, 0)
-clickgui.AutomaticCanvasSize = Enum.AutomaticSize.Y
-clickgui.ScrollBarThickness = 0
-clickgui.BorderSizePixel = 0
-clickgui.ScrollBarImageTransparency = 1
+if isMobile then
+	clickgui.CanvasSize = isMobile and UDim2.new(2, 0, 2, 0) or UDim2.new(1, 0, 1, 0)
+	clickgui.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	clickgui.ScrollBarThickness = 0
+	clickgui.ScrollBarImageTransparency = 1
+	clickgui.Interactable = clickgui.Visible
+	clickgui:GetPropertyChangedSignal("Visible"):Connect(function()
+		clickgui.Interactable = clickgui.Visible
+	end)
+	clickgui.BorderSizePixel = 0
+end
 clickgui.BackgroundTransparency = 1
 clickgui.Visible = false
 clickgui.Parent = scaledgui
-clickgui.Interactable = clickgui.Visible
-clickgui:GetPropertyChangedSignal("Visible"):Connect(function()
-    clickgui.Interactable = clickgui.Visible
-end)
 
-local scrollingFrame = clickgui
-local debounceTime = 0.2
-local lastPosition = scrollingFrame.CanvasPosition
-local lastChange = tick()
-local scrolling = false
-
-local running_tweens = {}
-
-task.spawn(function()
-	local TweenService = game:GetService("TweenService")
-	local createTween = function(instance, properties, duration, easingStyle, easingDirection, repeatCount, reverses, delayTime)
-		local tweenInfo = TweenInfo.new(
-			duration or 0.3,
-			easingStyle or Enum.EasingStyle.Sine,
-			easingDirection or Enum.EasingDirection.InOut,
-			repeatCount or 0,
-			reverses or false,
-			delayTime or 0
-		)
+if isMobile then
+	local scrollingFrame = clickgui
+	local debounceTime = 0.2
+	local lastPosition = scrollingFrame.CanvasPosition
+	local lastChange = tick()
+	local scrolling = false
 	
-		local tween = TweenService:Create(instance, tweenInfo, properties)
-		return tween
-	end
-	local con
-	con = game:GetService("RunService").Heartbeat:Connect(function()
-		local currentPosition = scrollingFrame.CanvasPosition
-		if currentPosition ~= lastPosition then
-			lastPosition = currentPosition
-			lastChange = tick()
+	local running_tweens = {}
 	
-			if not scrolling then
-				scrolling = true
+	task.spawn(function()
+		local TweenService = game:GetService("TweenService")
+		local createTween = function(instance, properties, duration, easingStyle, easingDirection, repeatCount, reverses, delayTime)
+			local tweenInfo = TweenInfo.new(
+				duration or 0.3,
+				easingStyle or Enum.EasingStyle.Sine,
+				easingDirection or Enum.EasingDirection.InOut,
+				repeatCount or 0,
+				reverses or false,
+				delayTime or 0
+			)
+		
+			local tween = TweenService:Create(instance, tweenInfo, properties)
+			return tween
+		end
+		local con
+		con = game:GetService("RunService").Heartbeat:Connect(function()
+			local currentPosition = scrollingFrame.CanvasPosition
+			if currentPosition ~= lastPosition then
+				lastPosition = currentPosition
+				lastChange = tick()
+		
+				if not scrolling then
+					scrolling = true
+					if running_tweens[scrollingFrame] then
+						pcall(function()
+							running_tweens[scrollingFrame]:Cancel()
+						end)
+					end
+					local tween = createTween(scrollingFrame, {
+						ScrollBarImageTransparency = 0,
+						ScrollBarThickness = 10
+					})
+					running_tweens[scrollingFrame] = tween
+					tween:Play()
+				end
+			elseif scrolling and tick() - lastChange >= debounceTime then
+				scrolling = false
 				if running_tweens[scrollingFrame] then
 					pcall(function()
 						running_tweens[scrollingFrame]:Cancel()
 					end)
 				end
 				local tween = createTween(scrollingFrame, {
-					ScrollBarImageTransparency = 0,
-					ScrollBarThickness = 10
+					ScrollBarImageTransparency = 1,
+					ScrollBarThickness = 0
 				})
 				running_tweens[scrollingFrame] = tween
 				tween:Play()
 			end
-		elseif scrolling and tick() - lastChange >= debounceTime then
-			scrolling = false
-			if running_tweens[scrollingFrame] then
-				pcall(function()
-					running_tweens[scrollingFrame]:Cancel()
-				end)
-			end
-			local tween = createTween(scrollingFrame, {
-				ScrollBarImageTransparency = 1,
-				ScrollBarThickness = 0
-			})
-			running_tweens[scrollingFrame] = tween
-			tween:Play()
-		end
+		end)
+		mainapi.SelfDestructEvent.Event:Connect(function()
+			pcall(function() con:Disconnect() end)
+		end)
 	end)
-	mainapi.SelfDestructEvent.Event:Connect(function()
-		pcall(function() con:Disconnect() end)
-	end)
-end)
+end	
 
 local modal = Instance.new('TextButton')
 modal.BackgroundTransparency = 1
