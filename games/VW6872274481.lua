@@ -7264,7 +7264,7 @@ if not shared.CheatEngineMode then
 	run(function()
 		local controller
 		local LegacyLayout = {Enabled = false}
-		LegacyLayout = vape.Categories.World:Createmodule({
+		LegacyLayout = vape.Categories.World:CreateModule({
 			Name = "LegacyLayout",
 			Function = function(call)
 				if not controller then
