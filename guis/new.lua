@@ -2631,6 +2631,11 @@ function mainapi:CreateGUI()
 	addBlur(window)
 	addCorner(window)
 	makeDraggable(window)
+
+	local windowScale = Instance.new("UIScale")
+	windowScale.Parent = window
+	windowScale.Scale = isMobile and 0.8 or 1
+
 	local logo = Instance.new('ImageLabel')
 	logo.Name = 'VapeLogo'
 	logo.Size = UDim2.fromOffset(62, 18)
@@ -6019,15 +6024,19 @@ local toolstroke = Instance.new('UIStroke')
 toolstroke.Color = color.Light(uipallet.Main, 0.02)
 toolstroke.Parent = toolstrokebkg
 addCorner(toolstrokebkg, UDim.new(0, 4))
+
+local GuiService = game:GetService("GuiService")
+local screenResolution = GuiService:GetScreenResolution()
+
 scale = Instance.new('UIScale')
-scale.Scale = math.max(gui.AbsoluteSize.X / 1920, isMobile and 0.5 or 0.68)
+scale.Scale = math.max(gui.AbsoluteSize.X / screenResolution.X, isMobile and 0.5 or 0.68)
 scale.Parent = scaledgui
 mainapi.guiscale = scale
 scaledgui.Size = UDim2.fromScale(1 / scale.Scale, 1 / scale.Scale)
 
 mainapi:Clean(gui:GetPropertyChangedSignal('AbsoluteSize'):Connect(function()
 	if mainapi.Scale.Enabled then
-		scale.Scale = math.max(gui.AbsoluteSize.X / 1920, 0.68)
+		scale.Scale = math.max(gui.AbsoluteSize.X / screenResolution.X, 0.68)
 	end
 end))
 
