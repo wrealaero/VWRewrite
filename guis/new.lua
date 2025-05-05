@@ -2632,9 +2632,9 @@ function mainapi:CreateGUI()
 	addCorner(window)
 	makeDraggable(window)
 
-	local windowScale = Instance.new("UIScale")
+	--[[local windowScale = Instance.new("UIScale")
 	windowScale.Parent = window
-	windowScale.Scale = isMobile and 0.8 or 1
+	windowScale.Scale = isMobile and 0.8 or 1--]]
 
 	local logo = Instance.new('ImageLabel')
 	logo.Name = 'VapeLogo'
@@ -3765,9 +3765,9 @@ function mainapi:CreateCategory(categorysettings)
 	window.Text = ''
 	window.Parent = clickgui
 
-	local windowScale = Instance.new("UIScale")
+	--[[local windowScale = Instance.new("UIScale")
 	windowScale.Parent = window
-	windowScale.Scale = isMobile and 0.8 or 1
+	windowScale.Scale = isMobile and 0.8 or 1--]]
 
 	addBlur(window)
 	addCorner(window)
