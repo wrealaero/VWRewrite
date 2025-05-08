@@ -5491,24 +5491,6 @@ function mainapi:CreateNotification(title, text, duration, type)
 	end)
 end
 
-local function wrap(callback, identifier)
-	task.spawn(function()
-		local suc, err = pcall(function()
-			callback()
-		end)
-		if not suc then
-			if identifier then
-				warn("--------["..string.upper(tostring(identifier)).."]--------")
-			end
-			warn("[wrap]: "..tostring(err))
-			warn("[wrap | Debug]: "..debug.traceback(tostring(err)))
-			if identifier then
-				warn("--------["..string.upper(tostring(identifier)).."]--------")
-			end
-		end
-	end)
-end
-
 function mainapi:Load(skipgui, profile)
 	--[[local bedwarsID = {
 		game = {6872274481, 8444591321, 8560631822},
@@ -5587,82 +5569,74 @@ function mainapi:Load(skipgui, profile)
 		end
 
 		for i, v in savedata.Categories do
-			wrap(function()
-				local object = self.Categories[i]
-				if not object then return end
-				if object.Options and v.Options then
-					task.spawn(function()
-						self:LoadOptions(object, v.Options)
-					end)
-				end
-				if v.Pinned ~= object.Pinned then
-					object:Pin()
-				end
-				if v.Expanded ~= nil and v.Expanded ~= object.Expanded then
-					object:Expand()
-				end
-				if object.Button and (v.Enabled or false) ~= object.Button.Enabled then
-					task.spawn(function()
-						object.Button:Toggle()
-					end)
-				end
-				if v.List and (#object.List > 0 or #v.List > 0) then
-					object.List = v.List or {}
-					object.ListEnabled = v.ListEnabled or {}
-					object:ChangeValue()
-				end
-				object.Object.Position = UDim2.fromOffset(v.Position.X, v.Position.Y)
-			end, "Categories")
+			local object = self.Categories[i]
+			if not object then continue end
+			if object.Options and v.Options then
+				task.spawn(function()
+					self:LoadOptions(object, v.Options)
+				end)
+			end
+			if v.Pinned ~= object.Pinned then
+				object:Pin()
+			end
+			if v.Expanded ~= nil and v.Expanded ~= object.Expanded then
+				object:Expand()
+			end
+			if object.Button and (v.Enabled or false) ~= object.Button.Enabled then
+				task.spawn(function()
+					object.Button:Toggle()
+				end)
+			end
+			if v.List and (#object.List > 0 or #v.List > 0) then
+				object.List = v.List or {}
+				object.ListEnabled = v.ListEnabled or {}
+				object:ChangeValue()
+			end
+			object.Object.Position = UDim2.fromOffset(v.Position.X, v.Position.Y)
 		end
 
 		for i, v in savedata.Modules do
-			wrap(function()
-				local object = self.Modules[i]
-				if not object then return end
-				if object.Options and v.Options then
-					task.spawn(function()
-						local suc, err = pcall(function()
-							self:LoadOptions(object, v.Options)
-						end)
-						if (not suc) then
-							task.spawn(function()
-								repeat task.wait() until errorNotification ~= nil and type(errorNotification) == "function" 
-								pcall(function()
-									errorNotification("Voidware", "Failure loading "..tostring(v).." Error: "..tostring(err), 5)
-								end)
+			local object = self.Modules[i]
+			if not object then continue end
+			if object.Options and v.Options then
+				task.spawn(function()
+					local suc, err = pcall(function()
+						self:LoadOptions(object, v.Options)
+					end)
+					if (not suc) then
+						task.spawn(function()
+							repeat task.wait() until errorNotification ~= nil and type(errorNotification) == "function" 
+							pcall(function()
+								errorNotification("Voidware", "Failure loading "..tostring(v).." Error: "..tostring(err), 5)
 							end)
-						end
-					end)
-				end
-				if v.Enabled ~= object.Enabled then
-					if skipgui then
-						if self.ToggleNotifications.Enabled then self:CreateNotification('Module Toggled', i.."<font color='#FFFFFF'> has been </font>"..(v.Enabled and "<font color='#5AFF5A'>Enabled</font>" or "<font color='#FF5A5A'>Disabled</font>").."<font color='#FFFFFF'>!</font>", 0.75) end
+						end)
 					end
-					pcall(function()
-						object:Toggle(true)
-					end)
+				end)
+			end
+			if v.Enabled ~= object.Enabled then
+				if skipgui then
+					if self.ToggleNotifications.Enabled then self:CreateNotification('Module Toggled', i.."<font color='#FFFFFF'> has been </font>"..(v.Enabled and "<font color='#5AFF5A'>Enabled</font>" or "<font color='#FF5A5A'>Disabled</font>").."<font color='#FFFFFF'>!</font>", 0.75) end
 				end
-				object:SetBind(v.Bind)
-				object.Object.Bind.Visible = #v.Bind > 0
-			end, "Modules")
+				object:Toggle(true)
+			end
+			object:SetBind(v.Bind)
+			object.Object.Bind.Visible = #v.Bind > 0
 		end
 
 		for i, v in savedata.Legit do
-			wrap(function()
-				local object = self.Legit.Modules[i]
-				if not object then return end
-				if object.Options and v.Options then
-					task.spawn(function()
-						self:LoadOptions(object, v.Options)
-					end)
-				end
-				if object.Enabled ~= v.Enabled then
-					object:Toggle()
-				end
-				if v.Position and object.Children then
-					object.Children.Position = UDim2.fromOffset(v.Position.X, v.Position.Y)
-				end
-			end, "Legit")
+			local object = self.Legit.Modules[i]
+			if not object then continue end
+			if object.Options and v.Options then
+				task.spawn(function()
+					self:LoadOptions(object, v.Options)
+				end)
+			end
+			if object.Enabled ~= v.Enabled then
+				object:Toggle()
+			end
+			if v.Position and object.Children then
+				object.Children.Position = UDim2.fromOffset(v.Position.X, v.Position.Y)
+			end
 		end
 
 		self:UpdateTextGUI(true)
