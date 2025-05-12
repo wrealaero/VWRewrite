@@ -9022,8 +9022,10 @@ run(function()
 	})
 	AutoBuyAxolotl.Object.Visible = false
 	task.spawn(function()
-		repeat task.wait() until store.equippedKit ~= ""
-		AutoBuyAxolotl.Object.Visible = store.equippedKit == "axolotl"
+		pcall(function()
+			repeat task.wait() until store.equippedKit ~= ""
+			AutoBuyAxolotl.Object.Visible = store.equippedKit == "axolotl"
+		end)
 	end)
 	AutoBuyGui = AutoBuy:CreateToggle({
 		Name = "Shop GUI Check",

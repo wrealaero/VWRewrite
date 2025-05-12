@@ -5176,9 +5176,10 @@ pcall(function()
 					end
 				}
 			},
-			JoinNotifier = {Enabled = false}
+			JoinNotifier = {Enabled = false},
+			LeaveParty = {Enabled = false}
 		}
-	
+
 		local DetectionUtils = {
 			notify = function() end,
 			saveStaffRecord = function() end,
@@ -5224,6 +5225,10 @@ pcall(function()
 				
 				DetectionUtils.notify(message)
 				DetectionUtils.saveStaffRecord(player, detectionType)
+				if StaffDetectionConfig.LeaveParty and StaffDetectionConfig.LeaveParty.Enabled then
+					game:GetService("ReplicatedStorage"):WaitForChild("events-@easy-games/lobby:shared/event/lobby-events@getEvents.Events"):WaitForChild("leaveParty"):FireServer()
+					DetectionUtils.notify("Left party")
+				end
 				StaffDetectionConfig.Actions.Options[StaffDetectionConfig.Actions.Current]()
 			end
 		}
@@ -5328,6 +5333,15 @@ pcall(function()
 			end
 		})
 	
+		StaffDetectionConfig.LeaveParty = StaffDetector:CreateToggle({
+			Name = "Leave Party",
+			Function = function(enabled)
+				StaffDetectionConfig.LeaveParty.Enabled = enabled
+				StaffDetector.Restart()
+			end,
+			Default = true
+		})
+
 		StaffDetectionConfig.JoinNotifier = StaffDetector:CreateToggle({
 			Name = "Join Notifier",
 			Function = function(enabled)
@@ -5343,7 +5357,14 @@ pcall(function()
 			Default = false
 		})
 	end)
-end)		
+	
+	--[[task.spawn(function()
+		pcall(function()
+			repeat task.wait() until shared.VapeFullyLoaded
+			if (not StaffDetector.Enabled) then StaffDetector.ToggleButton(false) end
+		end)
+	end)--]]
+end)	
 
 --[[local isEnabled = function() return false end
 local function isEnabled(module)
@@ -7279,3 +7300,16 @@ if not shared.CheatEngineMode then
 		})
 	end)
 end
+
+run(function()
+	local a = {Enabled = false}
+	a = vape.Categories.World:CreateModule({
+		Name = "Leave Party",
+		Function = function(call)
+			if call then
+				a:Toggle(false)
+				game:GetService("ReplicatedStorage"):WaitForChild("events-@easy-games/lobby:shared/event/lobby-events@getEvents.Events"):WaitForChild("leaveParty"):FireServer()
+			end
+		end
+	})
+end)
