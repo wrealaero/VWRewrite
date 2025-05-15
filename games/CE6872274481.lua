@@ -9946,7 +9946,7 @@ run(function()
 	})--]]
 end)
 
---[[run(function()
+run(function()
 	local PickupRangeRange = {Value = 1}
 	local PickupRange = {Enabled = false}
 	PickupRange = vape.Categories.Utility:CreateModule({
@@ -9980,7 +9980,7 @@ end)
 		Function = function() end,
 		Default = 10
 	})
-end)--]]
+end)
 
 --[[run(function()
 	local BowExploit = {Enabled = false}
