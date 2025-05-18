@@ -232,7 +232,22 @@ local function vapeGithubRequest(scripturl, isImportant)
     suc, res = pcall(function() return game:HttpGet(url..commit.."/"..scripturl, true) end)
     if not suc or res == "404: Not Found" then
         if isImportant then
-            game:GetService("Players").LocalPlayer:Kick(string.format("CH: %s Failed to connect to github: %s%s : %s", tostring(commit), tostring(baseDirectory), tostring(scripturl), tostring(res)))
+            game:GetService('StarterGui'):SetCore('SendNotification', {
+				Title = 'Failure loading Voidware | Please try again',
+				Text = string.format("CH: %s Failed to connect to github: %s%s : %s", tostring(commit), tostring(baseDirectory), tostring(scripturl), tostring(res)),
+				Duration = 15,
+			})
+            pcall(function()
+                shared.GuiLibrary:SelfDestruct()
+                shared.vape:Uninject()
+                shared.rise:SelfDestruct()
+                shared.vape = nil
+                shared.vape = nil
+                shared.rise = nil
+                shared.VapeExecuted = nil
+                shared.RiseExecuted = nil
+            end)
+            --game:GetService("Players").LocalPlayer:Kick(string.format("CH: %s Failed to connect to github: %s%s : %s", tostring(commit), tostring(baseDirectory), tostring(scripturl), tostring(res)))
         end
         warn(baseDirectory..scripturl, res)
     end
