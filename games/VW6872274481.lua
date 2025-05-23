@@ -4499,6 +4499,7 @@ local function EntityNearPosition(distance, ignore, overridepos)
 end
 VoidwareFunctions.GlobaliseObject("EntityNearPosition", EntityNearPosition)
 
+local function oldautowin()
 run(function()
 	local Autowin = {Enabled = false}
 	local AutowinNotification = {Enabled = true}
@@ -4613,6 +4614,7 @@ run(function()
 		Tooltip = "best paid autowin 2023!1!!! rel11!11!1"
 	})
 end)
+end
 
 run(function()
 	local GetHost = {Enabled = false}
