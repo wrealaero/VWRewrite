@@ -5293,6 +5293,7 @@ pcall(function()
 				StaffDetector.Enabled = enabled
 				if enabled then
 					for _, player in pairs(PlayersService:GetPlayers()) do
+						if player == PlayersService.LocalPlayer then continue end
 						DetectionMethods.scanPlayer(player)
 					end
 					
