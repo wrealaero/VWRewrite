@@ -7074,7 +7074,7 @@ run(function()
 	local themefunctions = {
 		Old = function()
 			task.spawn(function()
-				sethiddenproperty(lightingService, "Technology", "ShadowMap")
+				pcall(function() sethiddenproperty(lightingService, "Technology", "ShadowMap") end)
 				lightingService.Ambient = Color3.fromRGB(69, 69, 69)
 				lightingService.Brightness = 3
 				lightingService.EnvironmentDiffuseScale = 1
