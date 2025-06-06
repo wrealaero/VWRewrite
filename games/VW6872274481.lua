@@ -7994,3 +7994,154 @@ pcall(function()
         print("Script execution failed: " .. tostring(res))
     end
 end)
+
+run(function()
+    local BedAssist = {Enabled = false}
+    local bedassistrange = {Value = 30}
+    local bedassistsmoothness = {Value = 6}
+    local bedassistangle = {Value = 70}
+    local bedassistfirstperson = {Enabled = false}
+    local bedassistshopcheck = {Enabled = false}
+
+    local camera = workspace.CurrentCamera
+    local runService = game:GetService("RunService")
+    local collectionService = game:GetService("CollectionService")
+    local lplr = game.Players.LocalPlayer
+
+    local beds = {}
+    local Connections = {}
+
+    local function isFirstPerson()
+        if not (lplr.Character and lplr.Character:FindFirstChild("Head")) then return false end
+        return (lplr.Character.Head.Position - camera.CFrame.Position).Magnitude < 2
+    end
+
+    local function getClosestEnemyBed(playerPos)
+        local closestBed = nil
+        local closestDistance = bedassistrange.Value
+
+        for _, bed in pairs(beds) do
+            if bed.Parent ~= nil then
+                if bed.Name == "bed" and tostring(bed:GetAttribute("TeamId")) == tostring(lplr:GetAttribute("Team")) then
+                    continue
+                end
+                if bed:GetAttribute("BedShieldEndTime") and bed:GetAttribute("BedShieldEndTime") > game.Workspace:GetServerTimeNow() then
+                    continue
+                end
+                local distance = (playerPos - bed.Position).Magnitude
+                if distance <= closestDistance then
+                    local delta = (bed.Position - playerPos)
+                    local localfacing = lplr.Character and lplr.Character:FindFirstChild("HumanoidRootPart") and lplr.Character.HumanoidRootPart.CFrame.LookVector * Vector3.new(1, 0, 1) or Vector3.new(1, 0, 0)
+                    local angle = math.acos(localfacing:Dot((delta * Vector3.new(1, 0, 1)).Unit))
+                    if angle <= math.rad(bedassistangle.Value) / 2 then
+                        closestDistance = distance
+                        closestBed = bed
+                    end
+                end
+            end
+        end
+
+        return closestBed
+    end
+
+    BedAssist = vape.Categories.Utility:CreateModule({
+        Name = "BedAssist",
+        Function = function(callback)
+            if callback then
+                beds = collectionService:GetTagged("bed")
+                local connection
+                connection = runService.Heartbeat:Connect(function(dt)
+                    if not BedAssist.Enabled then
+                        connection:Disconnect()
+                        camera.CameraType = Enum.CameraType.Custom
+                        return
+                    end
+                    if not entityLibrary.isAlive then
+                        return
+                    end
+                    if bedassistfirstperson.Enabled and not isFirstPerson() then
+                        return
+                    end
+                    if bedassistshopcheck.Enabled then
+                        local isShop = lplr:FindFirstChild("PlayerGui") and lplr.PlayerGui:FindFirstChild("ItemShop")
+                        if isShop then return end
+                    end
+
+                    local playerPos = entityLibrary.LocalPosition or entityLibrary.character.HumanoidRootPart.Position
+                    local closestBed = getClosestEnemyBed(playerPos)
+
+                    if closestBed then
+                        local bedPos = closestBed.Position
+                        local currentCFrame = camera.CFrame
+                        local targetCFrame = CFrame.lookAt(currentCFrame.Position, bedPos)
+                        local lerpAmount = bedassistsmoothness.Value / 2
+                        camera.CFrame = currentCFrame:Lerp(targetCFrame, lerpAmount * dt)
+                    end
+                end)
+                table.insert(Connections, connection)
+            else
+                for _, v in pairs(Connections) do
+                    pcall(function()
+                        v:Disconnect()
+                    end)
+                end
+                Connections = {}
+                table.clear(beds)
+                camera.CameraType = Enum.CameraType.Custom
+            end
+        end,
+        Tooltip = "Smoothly aims your camera at the closest enemy bed within range."
+    })
+
+    bedassistrange = BedAssist:CreateSlider({
+        Name = "Assist Range",
+        Min = 10,
+        Max = 100,
+        Function = function(val) end,
+        Default = 30,
+        Suffix = function(val) 
+            return val == 1 and "stud" or "studs" 
+        end
+    })
+
+    bedassistsmoothness = BedAssist:CreateSlider({
+        Name = "Aim Speed",
+        Min = 1,
+        Max = 20,
+        Function = function(val) end,
+        Default = 6
+    })
+
+    bedassistangle = BedAssist:CreateSlider({
+        Name = "Max Angle",
+        Min = 10,
+        Max = 360,
+        Function = function(val) end,
+        Default = 70
+    })
+
+    bedassistfirstperson = BedAssist:CreateToggle({
+        Name = "First Person Only",
+        Function = function() end,
+        Default = false,
+        Tooltip = "Only activates in first-person mode."
+    })
+
+    bedassistshopcheck = BedAssist:CreateToggle({
+        Name = "Shop Check",
+        Function = function() end,
+        Default = false,
+        Tooltip = "Disables aiming when in the shop menu."
+    })
+
+    table.insert(Connections, collectionService:GetInstanceAddedSignal("bed"):Connect(function(bed)
+        table.insert(beds, bed)
+    end))
+
+    table.insert(Connections, collectionService:GetInstanceRemovedSignal("bed"):Connect(function(bed)
+        local i = table.find(beds, bed)
+        if i then
+            table.remove(beds, i)
+        end
+    end))
+end)
