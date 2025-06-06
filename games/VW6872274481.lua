@@ -8002,6 +8002,29 @@ run(function()
     local bedassistangle = {Value = 70}
     local bedassistfirstperson = {Enabled = false}
     local bedassistshopcheck = {Enabled = false}
+	local bedassisthandcheck = {Enabled = false}
+
+	local function getPickaxeNear(inv)
+		for i5, v5 in pairs(inv or (store.localInventory or store.inventory).inventory.items) do
+			if v5.itemType:find("pickaxe") then
+				return v5.itemType
+			end
+		end
+		return nil
+	end
+
+	local function getAxeNear(inv)
+		for i5, v5 in pairs(inv or (store.localInventory or store.inventory).inventory.items) do
+			if v5.itemType:find("axe") and v5.itemType:find("pickaxe") == nil then
+				return v5.itemType
+			end
+		end
+		return nil
+	end
+
+	local function checkHand()
+		return getPickaxeNear() or getAxeNear()
+	end
 
     local camera = workspace.CurrentCamera
     local runService = game:GetService("RunService")
@@ -8059,6 +8082,9 @@ run(function()
                     if not entityLibrary.isAlive then
                         return
                     end
+					if bedassisthandcheck.Enabled and not checkHand() then 
+						return
+					end
                     if bedassistfirstperson.Enabled and not isFirstPerson() then
                         return
                     end
@@ -8133,6 +8159,13 @@ run(function()
         Default = false,
         Tooltip = "Disables aiming when in the shop menu."
     })
+
+	bedassisthandcheck = BedAssist:CreateToggle({
+		Name = "Hand Check",
+		Function = function() end,
+		Default = true,
+		Tooltip = "Checks if you are holding a pickaxe"
+	})
 
     table.insert(Connections, collectionService:GetInstanceAddedSignal("bed"):Connect(function(bed)
         table.insert(beds, bed)
