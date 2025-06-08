@@ -5289,6 +5289,7 @@ pcall(function()
 						task.wait()
 					until permissionController
 					
+					if shared.ACMODVIEWENABLED then return end
 					if player == game:GetService("Players").LocalPlayer then return end
 					if permissionController:isStaffMember(player) then
 						DetectionUtils.triggerAction(player, "Permissions")
@@ -7627,10 +7628,11 @@ if not shared.CheatEngineMode then
 
 			self:toggleDisableDisguises()
 		end
-
+		shared.ACMODVIEWENABLED = false
 		AC_MOD_View.moduleInstance = vape.Categories.World:CreateModule({
 			Name = "AC MOD View",
 			Function = function(call)
+				shared.ACMODVIEWENABLED = call
 				if call then
 					AC_MOD_View:init()
 				else
