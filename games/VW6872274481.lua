@@ -4771,6 +4771,22 @@ run(function()
 		return alive
 	end
 
+	local playerRaycasted = function(player, direction)
+        if not isAlive(player, true) then
+            return false
+        end
+
+        local root = player.Character.HumanoidRootPart
+        local rayOrigin = root.Position
+        local rayDirection = direction or Vector3.new(0, -15, 0)
+        local raycastParams = RaycastParams.new()
+        raycastParams.FilterDescendantsInstances = {player.Character}
+        raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+
+        local raycastResult = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+        return raycastResult ~= nil
+    end
+
     local ExploitDetectionSystem = {
         Connections = {},
         PlayerData = {}
