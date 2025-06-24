@@ -5252,6 +5252,8 @@ run(function()
 	local AlwaysJump
 	local rayCheck = RaycastParams.new()
 	rayCheck.RespectCanCollide = true
+
+	local kit_fix = false
 	
 	Speed = vape.Categories.Blatant:CreateModule({
 		Name = 'Speed',
@@ -5283,7 +5285,9 @@ run(function()
 						end
 	
 						root.CFrame += destination
-						root.AssemblyLinearVelocity = (moveDirection * velo) + Vector3.new(0, root.AssemblyLinearVelocity.Y, 0)
+						if not kit_fix then
+							root.AssemblyLinearVelocity = (moveDirection * velo) + Vector3.new(0, root.AssemblyLinearVelocity.Y, 0)
+						end
 						if AutoJump.Enabled and (state == Enum.HumanoidStateType.Running or state == Enum.HumanoidStateType.Landed) and moveDirection ~= Vector3.zero and (Attacking or AlwaysJump.Enabled) then
 							entitylib.character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
 						end
@@ -5319,6 +5323,14 @@ run(function()
 		Name = 'Always Jump',
 		Visible = false,
 		Darker = true
+	})
+	Speed:CreateToggle({
+		Name = "Kit Fix",
+		Function = function(call)
+			kit_fix = call
+		end,
+		Default = true,
+		Tooltip = "Fixed movement kits not working when Speed is enabled."
 	})
 end)
 	
