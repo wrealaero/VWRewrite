@@ -1180,7 +1180,7 @@ run(function()
 end)
 bedwars.placeBlock = function(pos, blockName)
 	--if (not isBlockCovered(Vector3.new(pos.X/3, pos.Y/3, pos.Z/3))) then
-		bedwars.Client:GetNamespace("PlaceBlock", {"PlaceBlockEvent"}):Get("PlaceBlock"):InvokeServer({
+		bedwars.Client:GetNamespace("PlaceBlock", {"PlaceBlockEvent", "DefenderRequestPlaceBlock"}):Get("PlaceBlock"):InvokeServer({
 			["blockType"] = blockName,
 			["position"] = Vector3.new(pos.X/3, pos.Y/3, pos.Z/3),
 			["blockData"] = 0

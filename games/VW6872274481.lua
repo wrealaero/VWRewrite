@@ -4772,26 +4772,23 @@ run(function()
 	end
 
 	local playerRaycasted = function(player, direction)
-        if not isAlive(player, true) then
-            return false
-        end
+		if not isAlive(player, true) then
+			return false
+		end
 
-        local root = player.Character.HumanoidRootPart
-        local rayOrigin = root.Position
-        local rayDirection = direction or Vector3.new(0, -15, 0)
-        local raycastParams = RaycastParams.new()
-        raycastParams.FilterDescendantsInstances = {player.Character}
-        raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+		local root = player.Character.HumanoidRootPart
+		local rayOrigin = root.Position
+		local rayDirection = direction or Vector3.new(0, -15, 0)
+		local raycastParams = RaycastParams.new()
+		raycastParams.FilterDescendantsInstances = {player.Character}
+		raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
 
-        local raycastResult = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
-        return raycastResult ~= nil
-    end
+		local raycastResult = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+		return raycastResult ~= nil
+	end
 
-    local ExploitDetectionSystem = {
-        Connections = {},
-        PlayerData = {}
-    }
 	local ExploitDetectionSystemConfig = {
+		Enabled = false,
 		DetectionThresholds = {
 			TeleportDistance = 400,
 			SpeedDistance = 25,
@@ -4812,178 +4809,179 @@ run(function()
 		InvisibilityDetection = false,
 		NukerDetection = false,
 		SpeedDetection = false,
-		NameDetection = false
+		NameDetection = false,
+		Connections = {}
 	}
 
-    local DetectionCore = {
-        updateCache = function(player, detectionType)
-            if not ExploitDetectionSystemConfig.CacheEnabled then return end
-            
-            local success, cache = pcall(function()
-                local file = readfile('vape/Libraries/exploiters.json')
-                return file and httpService:JSONDecode(file) or {}
-            end)
-            
-            cache = cache or {}
-            cache[player.Name] = cache[player.Name] or {
-                DisplayName = player.DisplayName,
-                UserId = tostring(player.UserId),
-                Detections = {}
-            }
-            
-            if not table.find(cache[player.Name].Detections, detectionType) then
-                table.insert(cache[player.Name].Detections, detectionType)
-                pcall(function()
-                    writefile('vape/Libraries/exploiters.json', httpService:JSONEncode(cache))
-                end)
-            end
-        end,
+	local DetectionCore = {
+		updateCache = function(player, detectionType)
+			if not ExploitDetectionSystemConfig.CacheEnabled then return end
+			
+			local success, cache = pcall(function()
+				local file = readfile('vape/Libraries/exploiters.json')
+				return file and httpService:JSONDecode(file) or {}
+			end)
+			
+			cache = cache or {}
+			cache[player.Name] = cache[player.Name] or {
+				DisplayName = player.DisplayName,
+				UserId = tostring(player.UserId),
+				Detections = {}
+			}
+			
+			if not table.find(cache[player.Name].Detections, detectionType) then
+				table.insert(cache[player.Name].Detections, detectionType)
+				pcall(function()
+					writefile('vape/Libraries/exploiters.json', httpService:JSONEncode(cache))
+				end)
+			end
+		end,
 
-        isValidTarget = function(player)
-            return player ~= lplr and not player:GetAttribute('Spectator') and store.queueType:find('bedwars') ~= nil
-        end,
+		isValidTarget = function(player)
+			return player ~= lplr and not player:GetAttribute('Spectator') and store.queueType:find('bedwars') ~= nil
+		end,
 
-        notify = function(title, message, duration)
-            InfoNotification('HackerDetector', message, duration)
-            whitelist.customtags[title] = {{text = 'VAPE USER', color = Color3.fromRGB(255, 255, 0)}}
-        end
-    }
+		notify = function(title, message, duration)
+			InfoNotification('HackerDetector', message, duration)
+			whitelist.customtags[title] = {{text = 'VAPE USER', color = Color3.fromRGB(255, 255, 0)}}
+		end
+	}
 
-    local DetectionMethods = {
-        Teleport = function(player)
-            local lastTeleport = player:GetAttribute('LastTeleported') or 0
-            local lastPosition = Vector3.zero
-            
-            table.insert(ExploitDetectionSystem.Connections, player:GetAttributeChangedSignal('LastTeleported'):Connect(function()
-                lastTeleport = player:GetAttribute('LastTeleported')
-            end))
-            
-            table.insert(ExploitDetectionSystem.Connections, player.CharacterAdded:Connect(function()
-                task.spawn(function()
-                    repeat task.wait() until isAlive(player, true)
-                    lastPosition = player.Character.HumanoidRootPart.Position
-                    
-                    task.delay(ExploitDetectionSystemConfig.DetectionThresholds.CheckInterval, function()
-                        if isAlive(player, true) and not table.find(ExploitDetectionSystemConfig.DetectedPlayers.Teleport, player) then
-                            local distance = (player.Character.HumanoidRootPart.Position - lastPosition).Magnitude
-                            if distance >= ExploitDetectionSystemConfig.DetectionThresholds.TeleportDistance and 
-                               (player:GetAttribute('LastTeleported') - lastTeleport) == 0 then
-                                DetectionCore.notify(player.Name, player.DisplayName .. ' detected using Teleport!', 100)
-                                table.insert(ExploitDetectionSystemConfig.DetectedPlayers.Teleport, player)
-                                DetectionCore.updateCache(player, 'Teleport')
-                            end
-                        end
-                    end)
-                end)
-            end))
-        end,
+	local DetectionMethods = {
+		Teleport = function(player)
+			local lastTeleport = player:GetAttribute('LastTeleported') or 0
+			local lastPosition = Vector3.zero
+			
+			table.insert(ExploitDetectionSystemConfig.Connections, player:GetAttributeChangedSignal('LastTeleported'):Connect(function()
+				lastTeleport = player:GetAttribute('LastTeleported')
+			end))
+			
+			table.insert(ExploitDetectionSystemConfig.Connections, player.CharacterAdded:Connect(function()
+				task.spawn(function()
+					repeat task.wait() until isAlive(player, true)
+					lastPosition = player.Character.HumanoidRootPart.Position
+					
+					task.delay(ExploitDetectionSystemConfig.DetectionThresholds.CheckInterval, function()
+						if isAlive(player, true) and not table.find(ExploitDetectionSystemConfig.DetectedPlayers.Teleport, player) then
+							local distance = (player.Character.HumanoidRootPart.Position - lastPosition).Magnitude
+							if distance >= ExploitDetectionSystemConfig.DetectionThresholds.TeleportDistance and 
+							   (player:GetAttribute('LastTeleported') - lastTeleport) == 0 then
+								DetectionCore.notify(player.Name, player.DisplayName .. ' detected using Teleport!', 100)
+								table.insert(ExploitDetectionSystemConfig.DetectedPlayers.Teleport, player)
+								DetectionCore.updateCache(player, 'Teleport')
+							end
+						end
+					end)
+				end)
+			end))
+		end,
 
-        Speed = function(player)
-            local lastTeleport = player:GetAttribute('LastTeleported') or 0
-            local lastPosition = Vector3.zero
-            
-            table.insert(ExploitDetectionSystem.Connections, player:GetAttributeChangedSignal('LastTeleported'):Connect(function()
-                lastTeleport = player:GetAttribute('LastTeleported')
-            end))
-            
-            task.spawn(function()
-                repeat
-                    if isAlive(player, true) and not table.find(ExploitDetectionSystemConfig.DetectedPlayers.Speed, player) then
-                        local magnitude = (player.Character.HumanoidRootPart.Position - lastPosition).Magnitude
-                        local kitDistance = ExploitDetectionSystemConfig.DetectionThresholds.SpeedDistance
-                        local threshold = kitDistance + (playerRaycasted(player, Vector3.new(0, -15, 0)) and 0 or 40)
-                        
-                        if magnitude >= threshold and (player:GetAttribute('LastTeleported') - lastTeleport) ~= 0 then
-                            DetectionCore.notify(player.Name, player.DisplayName .. ' detected using Speed!', 60)
-                            table.insert(ExploitDetectionSystemConfig.DetectedPlayers.Speed, player)
-                            DetectionCore.updateCache(player, 'Speed')
-                        end
-                        lastPosition = player.Character.HumanoidRootPart.Position
-                        task.wait(ExploitDetectionSystemConfig.DetectionThresholds.CheckInterval)
-                    end
-                until not ExploitDetectionSystem.Enabled or not ExploitDetectionSystem.SpeedToggle.Enabled
-            end)
-        end,
+		Speed = function(player)
+			local lastTeleport = player:GetAttribute('LastTeleported') or 0
+			local lastPosition = Vector3.zero
+			
+			table.insert(ExploitDetectionSystemConfig.Connections, player:GetAttributeChangedSignal('LastTeleported'):Connect(function()
+				lastTeleport = player:GetAttribute('LastTeleported')
+			end))
+			
+			task.spawn(function()
+				repeat
+					if isAlive(player, true) and not table.find(ExploitDetectionSystemConfig.DetectedPlayers.Speed, player) then
+						local magnitude = (player.Character.HumanoidRootPart.Position - lastPosition).Magnitude
+						local kitDistance = ExploitDetectionSystemConfig.DetectionThresholds.SpeedDistance
+						local threshold = kitDistance + (playerRaycasted(player, Vector3.new(0, -15, 0)) and 0 or 40)
+						
+						if magnitude >= threshold and (player:GetAttribute('LastTeleported') - lastTeleport) ~= 0 then
+							DetectionCore.notify(player.Name, player.DisplayName .. ' detected using Speed!', 60)
+							table.insert(ExploitDetectionSystemConfig.DetectedPlayers.Speed, player)
+							DetectionCore.updateCache(player, 'Speed')
+						end
+						lastPosition = player.Character.HumanoidRootPart.Position
+						task.wait(ExploitDetectionSystemConfig.DetectionThresholds.CheckInterval)
+					end
+				until not ExploitDetectionSystemConfig.Enabled or not ExploitDetectionSystemConfig.SpeedDetection
+			end)
+		end,
 
-        InfiniteFly = function(player)
-            task.spawn(function()
-                repeat
-                    if isAlive(player, true) and not table.find(ExploitDetectionSystemConfig.DetectedPlayers.InfiniteFly, player) then
-                        local distance = (lplr.Character:WaitForChild("HumanoidRootPart").Position - player.Character.HumanoidRootPart.Position).Magnitude
-                        if distance >= ExploitDetectionSystemConfig.DetectionThresholds.FlyDistance and 
-                           not playerRaycast(player) then
-                            DetectionCore.notify(player.Name, player.DisplayName .. ' detected using Infinite Fly!', 60)
-                            table.insert(ExploitDetectionSystemConfig.DetectedPlayers.InfiniteFly, player)
-                            DetectionCore.updateCache(player, 'InfiniteFly')
-                        end
-                        task.wait(ExploitDetectionSystemConfig.DetectionThresholds.CheckInterval)
-                    end
-                until not ExploitDetectionSystem.Enabled or not ExploitDetectionSystem.InfiniteFlyToggle.Enabled
-            end)
-        end,
+		InfiniteFly = function(player)
+			task.spawn(function()
+				repeat
+					if isAlive(player, true) and not table.find(ExploitDetectionSystemConfig.DetectedPlayers.InfiniteFly, player) then
+						local distance = (lplr.Character:WaitForChild("HumanoidRootPart").Position - player.Character.HumanoidRootPart.Position).Magnitude
+						if distance >= ExploitDetectionSystemConfig.DetectionThresholds.FlyDistance and 
+						   not playerRaycasted(player) then
+							DetectionCore.notify(player.Name, player.DisplayName .. ' detected using Infinite Fly!', 60)
+							table.insert(ExploitDetectionSystemConfig.DetectedPlayers.InfiniteFly, player)
+							DetectionCore.updateCache(player, 'InfiniteFly')
+						end
+						task.wait(ExploitDetectionSystemConfig.DetectionThresholds.CheckInterval)
+					end
+				until not ExploitDetectionSystemConfig.Enabled or not ExploitDetectionSystemConfig.InfiniteFlyDetection
+			end)
+		end,
 
-        Invisibility = function(player)
-            task.spawn(function()
-                repeat
-                    if isAlive(player, true) and not table.find(ExploitDetectionSystemConfig.DetectedPlayers.Invisibility, player) then
-                        for _, track in pairs(player.Character.Humanoid:GetPlayingAnimationTracks()) do
-                            local animId = track.Animation.AnimationId
-                            if animId == 'http://www.roblox.com/asset/?id=11335949902' or animId == 'rbxassetid://11335949902' then
-                                DetectionCore.notify(player.Name, player.DisplayName .. ' detected using Invisibility!', 60)
-                                table.insert(ExploitDetectionSystemConfig.DetectedPlayers.Invisibility, player)
-                                DetectionCore.updateCache(player, 'Invisibility')
-                            end
-                        end
-                        task.wait(0.5)
-                    end
-                until not ExploitDetectionSystem.Enabled or not ExploitDetectionSystem.InvisibilityToggle.Enabled
-            end)
-        end,
+		Invisibility = function(player)
+			task.spawn(function()
+				repeat
+					if isAlive(player, true) and not table.find(ExploitDetectionSystemConfig.DetectedPlayers.Invisibility, player) then
+						for _, track in pairs(player.Character.Humanoid:GetPlayingAnimationTracks()) do
+							local animId = track.Animation.AnimationId
+							if animId == 'http://www.roblox.com/asset/?id=11335949902' or animId == 'rbxassetid://11335949902' then
+								DetectionCore.notify(player.Name, player.DisplayName .. ' detected using Invisibility!', 60)
+								table.insert(ExploitDetectionSystemConfig.DetectedPlayers.Invisibility, player)
+								DetectionCore.updateCache(player, 'Invisibility')
+							end
+						end
+						task.wait(0.5)
+					end
+				until not ExploitDetectionSystemConfig.Enabled or not ExploitDetectionSystemConfig.InvisibilityDetection
+			end)
+		end,
 
-        NameCheck = function(player)
-            task.spawn(function()
-                local suspiciousNames = {'godsploit', 'alsploit', 'renderintents'}
-                local nameLower = player.Name:lower()
-                local displayLower = player.DisplayName:lower()
-                
-                for _, term in ipairs(suspiciousNames) do
-                    if nameLower:find(term) or displayLower:find(term) then
-                        DetectionCore.notify(player.Name, player.DisplayName .. ' has suspicious ' .. (nameLower:find(term) and 'username' or 'display name') .. ' "' .. term .. '"!', 20)
-                        DetectionCore.updateCache(player, 'SuspiciousName')
-                        return
-                    end
-                end
-            end)
-        end,
+		NameCheck = function(player)
+			task.spawn(function()
+				local suspiciousNames = {'godsploit', 'alsploit', 'renderintents'}
+				local nameLower = player.Name:lower()
+				local displayLower = player.DisplayName:lower()
+				
+				for _, term in ipairs(suspiciousNames) do
+					if nameLower:find(term) or displayLower:find(term) then
+						DetectionCore.notify(player.Name, player.DisplayName .. ' has suspicious ' .. (nameLower:find(term) and 'username' or 'display name') .. ' "' .. term .. '"!', 20)
+						DetectionCore.updateCache(player, 'SuspiciousName')
+						return
+					end
+				end
+			end)
+		end,
 
-        CacheCheck = function(player)
-            local success, cache = pcall(function()
-                return httpService:JSONDecode(readfile('vape/Libraries/exploiters.json'))
-            end)
-            
-            if success and cache[player.Name] then
-                DetectionCore.notify(player.Name, player.DisplayName .. ' found in exploiter cache!', 30)
-                table.insert(ExploitDetectionSystemConfig.DetectedPlayers.Cached, player)
-            end
-        end
-    }
+		CacheCheck = function(player)
+			local success, cache = pcall(function()
+				return httpService:JSONDecode(readfile('vape/Libraries/exploiters.json'))
+			end)
+			
+			if success and cache[player.Name] then
+				DetectionCore.notify(player.Name, player.DisplayName .. ' found in exploiter cache!', 30)
+				table.insert(ExploitDetectionSystemConfig.DetectedPlayers.Cached, player)
+			end
+		end
+	}
 
-    local function initializeDetections(player)
-        local toggles = {
-            Teleport = ExploitDetectionSystemConfig.TeleportDetection,
-            Speed = ExploitDetectionSystemConfig.SpeedDetection,
-            InfiniteFly = ExploitDetectionSystemConfig.InfiniteFlyDetection,
-            Invisibility = ExploitDetectionSystemConfig.InvisibilityDetection,
-            NameCheck = ExploitDetectionSystemConfig.NameDetection,
-            CacheCheck = ExploitDetectionSystemConfig.CacheEnabled
-        }
-        
-        for detection, method in pairs(DetectionMethods) do
-            if toggles[detection] then
-                task.spawn(method, player)
-            end
-        end
-    end
+	local function initializeDetections(player)
+		local toggles = {
+			Teleport = ExploitDetectionSystemConfig.TeleportDetection,
+			Speed = ExploitDetectionSystemConfig.SpeedDetection,
+			InfiniteFly = ExploitDetectionSystemConfig.InfiniteFlyDetection,
+			Invisibility = ExploitDetectionSystemConfig.InvisibilityDetection,
+			NameCheck = ExploitDetectionSystemConfig.NameDetection,
+			CacheCheck = ExploitDetectionSystemConfig.CacheEnabled
+		}
+		
+		for detection, method in pairs(DetectionMethods) do
+			if toggles[detection] then
+				task.spawn(method, player)
+			end
+		end
+	end
 
 	local CORE_CONNECTIONS = {}
 
@@ -4991,88 +4989,96 @@ run(function()
 		table.insert(CORE_CONNECTIONS, con)
 	end
 
-    ExploitDetectionSystem = vape.Categories.Utility:CreateModule({
-        Name = 'HackerDetector',
-        Tooltip = 'Advanced exploit detection system for monitoring suspicious player behavior',
-        ExtraText = function() return 'Enhanced' end,
-        Function = function(enabled)
-            ExploitDetectionSystem.Enabled = enabled
-            if enabled then
-                for _, player in pairs(playersService:GetPlayers()) do
-                    if player ~= lplr then
-                        initializeDetections(player)
-                    end
-                end
-                clean(playersService.PlayerAdded:Connect(initializeDetections))
-            else
-                for _, conn in pairs(ExploitDetectionSystem.Connections) do
-                    conn:Disconnect()
-                end
-                table.clear(ExploitDetectionSystem.Connections)
+	local ExploitDetectionSystem = {
+		Enabled = false,
+		ToggleButton = function() end,
+		Toggle = function(self, enabled)
+			ExploitDetectionSystemConfig.Enabled = enabled
+			if enabled then
+				for _, player in pairs(playersService:GetPlayers()) do
+					if player ~= lplr then
+						initializeDetections(player)
+					end
+				end
+				clean(playersService.PlayerAdded:Connect(initializeDetections))
+			else
+				for _, conn in pairs(ExploitDetectionSystemConfig.Connections) do
+					conn:Disconnect()
+				end
+				table.clear(ExploitDetectionSystemConfig.Connections)
 				for _, conn in pairs(CORE_CONNECTIONS) do
-                    conn:Disconnect()
-                end
+					conn:Disconnect()
+				end
 				table.clear(CORE_CONNECTIONS)
-            end
-        end
-    })
+			end
+		end
+	}
 
-    ExploitDetectionSystem:CreateToggle({
-        Name = 'Teleport',
-        Default = true,
-        Function = function(call) 
+	local module = vape.Categories.Utility:CreateModule({
+		Name = 'HackerDetector',
+		Tooltip = 'Advanced exploit detection system for monitoring suspicious player behavior',
+		ExtraText = function() return 'Enhanced' end,
+		Function = function(enabled)
+			ExploitDetectionSystem:Toggle(enabled)
+		end
+	})
+
+	module:CreateToggle({
+		Name = 'Teleport',
+		Default = true,
+		Function = function(call) 
 			ExploitDetectionSystemConfig.TeleportDetection = call
 		end	
-    })
-    
-    ExploitDetectionSystem:CreateToggle({
-        Name = 'InfiniteFly',
-        Default = true,
-        Function = function(call) 
+	})
+	
+	module:CreateToggle({
+		Name = 'InfiniteFly',
+		Default = true,
+		Function = function(call) 
 			ExploitDetectionSystemConfig.InfiniteFlyDetection = call
 		end
-    })
-    
-    ExploitDetectionSystem:CreateToggle({
-        Name = 'Invisibility',
-        Default = true,
-        Function = function(call) 
+	})
+	
+	module:CreateToggle({
+		Name = 'Invisibility',
+		Default = true,
+		Function = function(call) 
 			ExploitDetectionSystemConfig.InvisibilityDetection = call
 		end
-    })
-    
-    ExploitDetectionSystem:CreateToggle({
-        Name = 'Nuker',
-        Default = true,
-        Function = function(call) 
+	})
+	
+	module:CreateToggle({
+		Name = 'Nuker',
+		Default = true,
+		Function = function(call) 
 			ExploitDetectionSystemConfig.NukerDetection = call
 		end
-    })
-    
-    ExploitDetectionSystem:CreateToggle({
-        Name = 'Speed',
-        Default = true,
-        Function = function(call) 
+	})
+	
+	module:CreateToggle({
+		Name = 'Speed',
+		Default = true,
+		Function = function(call) 
 			ExploitDetectionSystemConfig.SpeedDetection = call
 		end
-    })
-    
-    ExploitDetectionSystem:CreateToggle({
-        Name = 'Name',
-        Default = true,
-        Function = function(call)
+	})
+	
+	module:CreateToggle({
+		Name = 'Name',
+		Default = true,
+		Function = function(call)
 			ExploitDetectionSystemConfig.NameDetection = call
 		end
-    })
-    
-    ExploitDetectionSystem:CreateToggle({
-        Name = 'Cached detections',
-        Tooltip = 'Manages detection cache in vape/Libraries/exploiters.json',
-        Default = true,
-        Function = function(state) 
-            ExploitDetectionSystemConfig.CacheEnabled = state 
-        end
-    })
+	})
+	
+	module:CreateToggle({
+		Name = 'Cached detections',
+		Tooltip = 'Manages detection cache in vape/Libraries/exploiters.json',
+		Default = true,
+		Function = function(state) 
+			ExploitDetectionSystemConfig.CacheEnabled = state 
+		end
+	})
 end)
 
 --[[run(function()

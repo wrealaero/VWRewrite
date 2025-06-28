@@ -214,6 +214,7 @@ if not shared.VapeIndependent then
 		fileName1 = CE.."6872265039.lua"
 		fileName2 = "VW6872265039.lua"
 	end
+	if not (isGame or isLobby) then fileName2 = "VW"..fileName2 end
 	warn("[CheatEngineMode]: ", tostring(shared.CheatEngineMode))
 	warn("[TestingMode]: ", tostring(shared.TestingMode))
 	warn("[FileName1]: ", tostring(fileName1), " [FileName2]: ", tostring(fileName2), " [FileName3]: ", tostring(fileName3))
