@@ -4758,7 +4758,7 @@ run(function()
 	lplr_gui.ChildAdded:Connect(handle_new_ui)
 end)
 
-run(function()
+--[[run(function()
 	local isAlive = function(plr, healthblacklist)
 		plr = plr or lplr
 		local alive = false 
@@ -5079,7 +5079,7 @@ run(function()
 			ExploitDetectionSystemConfig.CacheEnabled = state 
 		end
 	})
-end)
+end)--]]
 
 --[[run(function()
 	local DoubleHighJump = {Enabled = false}
