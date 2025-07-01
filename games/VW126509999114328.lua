@@ -1465,6 +1465,128 @@ run(function()
     })
 end)
 
+run(function()
+	local AntiVoid
+	local Method
+	local Mode
+	local Material
+	local Color
+	local rayCheck = RaycastParams.new()
+	rayCheck.RespectCanCollide = true
+	local part
+	
+	AntiVoid = SNF.utilityWindow:CreateModule({
+		Name = 'AntiVoid',
+		Function = function(callback)
+			if callback then
+				if Method.Value == 'Part' then 
+					local debounce = tick()
+					part = Instance.new('Part')
+					part.Size = Vector3.new(10000, 1, 10000)
+					part.Transparency = 1 - Color.Opacity
+					part.Material = Enum.Material[Material.Value]
+					part.Color = Color3.fromHSV(Color.Hue, Color.Sat, Color.Value)
+					part.CanCollide = Mode.Value == 'Collide'
+					part.Anchored = true
+					part.CanQuery = false
+					part.Parent = game.Workspace
+					AntiVoid:Clean(part)
+					AntiVoid:Clean(part.Touched:Connect(function(touchedpart)
+						if touchedpart.Parent == lplr.Character and entitylib.isAlive and debounce < tick() then
+							local root = entitylib.character.RootPart
+							debounce = tick() + 0.1
+							if Mode.Value == 'Velocity' then
+								root.Velocity = Vector3.new(root.Velocity.X, 100, root.Velocity.Z)
+							end
+						end
+					end))
+	
+					repeat
+						if entitylib.isAlive then 
+							local root = entitylib.character.RootPart
+							rayCheck.FilterDescendantsInstances = {gameCamera, lplr.Character, part}
+							rayCheck.CollisionGroup = root.CollisionGroup
+							local ray = game.Workspace:Raycast(root.Position, Vector3.new(0, -1000, 0), rayCheck)
+							if ray then
+								part.Position = ray.Position - Vector3.new(0, 15, 0)
+							end
+						end
+						task.wait(0.1)
+					until not AntiVoid.Enabled
+				else
+					local lastpos
+					AntiVoid:Clean(RunService.PreSimulation:Connect(function()
+						if entitylib.isAlive then
+							local root = entitylib.character.RootPart
+							lastpos = entitylib.character.Humanoid.FloorMaterial ~= Enum.Material.Air and root.Position or lastpos
+							if (root.Position.Y + (root.Velocity.Y * 0.016)) <= (game.Workspace.FallenPartsDestroyHeight + 10) then
+								lastpos = lastpos or Vector3.new(root.Position.X, (game.Workspace.FallenPartsDestroyHeight + 20), root.Position.Z)
+								root.CFrame += (lastpos - root.Position)
+								root.Velocity *= Vector3.new(1, 0, 1)
+							end
+						end
+					end))
+				end
+			end
+		end,
+		Tooltip = 'Help\'s you with your Parkinson\'s\nPrevents you from falling into the void.'
+	})
+	Method = AntiVoid:CreateDropdown({
+		Name = 'Method',
+		List = {'Part', 'Classic'},
+		Function = function(val)
+			if Mode.Object then 
+				Mode.Object.Visible = val == 'Part'
+				Material.Object.Visible = val == 'Part'
+				Color.Object.Visible = val == 'Part'
+			end
+			if AntiVoid.Enabled then 
+				AntiVoid:Toggle()
+				AntiVoid:Toggle()
+			end
+		end,
+		Tooltip = 'Part - Moves a part under you that does various methods to stop you from falling\nClassic - Teleports you out of the void after reaching the part destroy plane'
+	})
+	Mode = AntiVoid:CreateDropdown({
+		Name = 'Move Mode',
+		List = {'Velocity', 'Collide'},
+		Darker = true,
+		Function = function(val)
+			if part then
+				part.CanCollide = val == 'Collide'
+			end
+		end,
+		Tooltip = 'Velocity - Launches you upward after touching\nCollide - Allows you to walk on the part'
+	})
+	local materials = {'ForceField'}
+	for _, v in Enum.Material:GetEnumItems() do
+		if v.Name ~= 'ForceField' then
+			table.insert(materials, v.Name)
+		end
+	end
+	Material = AntiVoid:CreateDropdown({
+		Name = 'Material',
+		List = materials,
+		Darker = true,
+		Function = function(val)
+			if part then 
+				part.Material = Enum.Material[val] 
+			end
+		end
+	})
+	Color = AntiVoid:CreateColorSlider({
+		Name = 'Color',
+		DefaultOpacity = 0.5,
+		Darker = true,
+		Function = function(h, s, v, o)
+			if part then
+				part.Color = Color3.fromHSV(h, s, v)
+				part.Transparency = 1 - o
+			end
+		end
+	})
+end)
+
 local PromptButtonHoldBegan = nil
 run(function()
     local IPP 
