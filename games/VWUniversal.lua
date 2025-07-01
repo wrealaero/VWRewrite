@@ -1561,9 +1561,9 @@ task.spawn(function()
     pcall(function()
         if not isfile("Local_VW_Update_Log.json") then
             shared.UpdateLogBypass = true
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWExtra/main/VWUpdateLog.lua", true))()
-            shared.UpdateLogBypass = nil
         end
+		loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWExtra/main/VWUpdateLog.lua", true))()
+        shared.UpdateLogBypass = nil
     end)
 end)
 
