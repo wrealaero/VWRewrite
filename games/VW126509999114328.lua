@@ -1587,6 +1587,51 @@ run(function()
 	})
 end)
 
+local vec3 = function(a, b, c) return Vector3.new(a, b, c) end
+run(function() 
+	local CustomJump = {Enabled = false}
+	local CustomJumpMode = {Value = "Normal"}
+	local CustomJumpVelocity = {Value = 50}
+	local UIS_Connection = {Disconnect = function() end}
+	CustomJump = SNF.utilityWindow:CreateModule({
+		Name = "InfJUmp",
+        Tooltip = "Gives you infinite jumps.",
+		Function = function(callback)
+			if callback then
+				UIS_Connection = Services.InputService.JumpRequest:Connect(function()
+					if CustomJumpMode.Value == "Normal" then
+						entityLibrary.character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+					elseif CustomJumpMode.Value == "Velocity" then
+						entityLibrary.character.HumanoidRootPart.Velocity += vec3(0,CustomJumpVelocity.Value,0)
+					end 
+				end)
+			else
+				pcall(function()
+					UIS_Connection:Disconnect()
+				end)
+			end
+		end,
+		ExtraText = function()
+			return CustomJumpMode.Value
+		end
+	})
+	CustomJumpMode = CustomJump:CreateDropdown({
+		Name = "Mode",
+		List = {
+			"Normal",
+			"Velocity"
+		},
+		Function = function() end,
+	})
+	CustomJumpVelocity = CustomJump:CreateSlider({
+		Name = "Velocity",
+		Min = 1,
+		Max = 100,
+		Function = function() end,
+		Default = 50
+	})
+end)
+
 local PromptButtonHoldBegan = nil
 run(function()
     local IPP 
