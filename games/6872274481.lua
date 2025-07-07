@@ -3448,6 +3448,8 @@ run(function()
 
 	local OneTapCooldown = {Value = 5}
 
+	local preserveSwordIcon = false
+
 	Killaura = vape.Categories.Blatant:CreateModule({
 		Name = 'Killaura',
 		Function = function(callback)
@@ -3458,7 +3460,7 @@ run(function()
 				if RangeCircle.Enabled then
 					createRangeCircle()
 				end
-				if inputService.TouchEnabled then
+				if inputService.TouchEnabled and not preserveSwordIcon then
 					pcall(function()
 						lplr.PlayerGui.MobileUI['2'].Visible = Limit.Enabled
 					end)
@@ -3671,6 +3673,18 @@ run(function()
 		end,
 		Tooltip = 'Attack players around you\nwithout aiming at them.'
 	})
+
+	pcall(function()
+		local PSI = Killaura:CreateToggle({
+			Name = 'Preserve Sword Icon',
+			Function = function(callback)
+				preserveSwordIcon = callback
+			end,
+			Default = true
+		})
+		PSI.Object.Visible = inputService.TouchEnabled
+	end)
+
 	Targets = Killaura:CreateTargets({
 		Players = true,
 		NPCs = true
