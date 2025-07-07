@@ -10238,6 +10238,7 @@ run(function()
 					AntiVoidPart.CanCollide = AntiVoidMode.Value == "Collide"
 					AntiVoidPart.Size = Vector3.new(10000, 1, 10000)
 					AntiVoidPart.Anchored = true
+					shared.AntiVoidPart = AntiVoidPart
 					AntiVoidPart.Material = Enum.Material.Neon
 					AntiVoidPart.Color = Color3.fromHSV(AntiVoidColor.Hue, AntiVoidColor.Sat, AntiVoidColor.Value)
 					AntiVoidPart.Transparency = 1 - (AntiVoidTransparent.Value / 100)

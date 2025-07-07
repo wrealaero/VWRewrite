@@ -2572,6 +2572,7 @@ run(function()
 				if pos ~= math.huge then
 					AntiVoidPart = Instance.new('Part')
 					AntiVoidPart.Size = Vector3.new(10000, 1, 10000)
+					shared.AntiVoidPart = AntiVoidPart
 					AntiVoidPart.Transparency = 1 - Color.Opacity
 					AntiVoidPart.Material = Enum.Material[Material.Value]
 					AntiVoidPart.Color = Color3.fromHSV(Color.Hue, Color.Sat, Color.Value)
@@ -5243,6 +5244,19 @@ run(function()
 		end
 	})
 end)
+
+local kit_fix = false
+
+run(function()
+	vape.Categories.World:CreateModule({
+		Name = 'Kit Speed Fix',
+		Function = function(callback)
+			kit_fix = callback
+		end,
+		Default = false,
+		Tooltip = 'Fixes movement kits not working when Speed is enabled.'
+	})
+end)
 	
 run(function()
 	local Speed
@@ -5252,8 +5266,6 @@ run(function()
 	local AlwaysJump
 	local rayCheck = RaycastParams.new()
 	rayCheck.RespectCanCollide = true
-
-	local kit_fix = false
 	
 	Speed = vape.Categories.Blatant:CreateModule({
 		Name = 'Speed',
@@ -5323,14 +5335,6 @@ run(function()
 		Name = 'Always Jump',
 		Visible = false,
 		Darker = true
-	})
-	Speed:CreateToggle({
-		Name = "Kit Fix",
-		Function = function(call)
-			kit_fix = call
-		end,
-		Default = true,
-		Tooltip = "Fixed movement kits not working when Speed is enabled."
 	})
 end)
 	

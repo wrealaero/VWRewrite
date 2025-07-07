@@ -472,6 +472,7 @@ run(function()
         Transparency = 1,
         MaxMessages = 50 
     }
+	local GradientEnabled = false
     local scale
     local Players
     local guiService
@@ -481,6 +482,9 @@ run(function()
     local inputService
     local TextChatService
     local UserInputService
+
+    local chatColor1, chatColor2, chatColor3, chatThirdColorToggle
+    local chatGradient, chatGradientRotationTask
 
     local function brickColorToRGB(brickColor)
         local color3 = brickColor.Color
@@ -749,10 +753,47 @@ run(function()
                 chatFrame.Size = UDim2.new(0.29, 0, 0.4, 0)
                 chatFrame.AnchorPoint = Vector2.new(0, 0.2)
                 chatFrame.Position = UDim2.new(0, 5, 0.4, 0)
-                chatFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+                chatFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
                 chatFrame.BackgroundTransparency = Config.Transparency/10
                 chatFrame.BorderSizePixel = 0
                 chatFrame.Parent = screenGui
+
+                chatGradient = Instance.new("UIGradient", chatFrame)
+                chatGradient.Rotation = 0
+                local function getChatColorFromSlider(slider)
+                    return Color3.fromHSV(slider.Hue, slider.Sat, slider.Value)
+                end
+                function updateChatGradient()
+					if not GradientEnabled then
+						chatFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+						chatGradient.Enabled = false
+					else
+						chatFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+						chatGradient.Enabled = true
+					end
+                    local c1 = getChatColorFromSlider(chatColor1)
+                    local c2 = getChatColorFromSlider(chatColor2)
+                    if chatThirdColorToggle and chatThirdColorToggle.Enabled then
+                        local c3 = getChatColorFromSlider(chatColor3)
+                        chatGradient.Color = ColorSequence.new({
+                            ColorSequenceKeypoint.new(0, c1),
+                            ColorSequenceKeypoint.new(0.5, c2),
+                            ColorSequenceKeypoint.new(1, c3)
+                        })
+                    else
+                        chatGradient.Color = ColorSequence.new({
+                            ColorSequenceKeypoint.new(0, c1),
+                            ColorSequenceKeypoint.new(1, c2)
+                        })
+                    end
+                end
+                if chatGradientRotationTask then pcall(function() task.cancel(chatGradientRotationTask) end) end
+                chatGradientRotationTask = task.spawn(function()
+                    while chatFrame and chatFrame.Parent do
+                        chatGradient.Rotation = (chatGradient.Rotation + 1) % 360
+                        task.wait(0.01)
+                    end
+                end)
 
                 local chatFrameCorner = Instance.new("UICorner")
                 chatFrameCorner.CornerRadius = UDim.new(0, 8)
@@ -805,6 +846,8 @@ run(function()
                         TweenService:Create(inputBox, TweenInfo.new(1), {BackgroundTransparency = 1, TextTransparency = 1}):Play()
                     end
                 end
+
+				pcall(updateChatGradient)
 
                 local function resetFadeTimer()
                     fadeTimer = 0
@@ -1179,6 +1222,48 @@ run(function()
             Default = true
         })
     end
+
+	CustomChat:CreateToggle({
+		Name = "Gradient",
+		Function = function(call)
+			GradientEnabled = call
+		end,
+		Default = false
+	})
+
+    chatColor1 = CustomChat:CreateColorSlider({
+        Name = 'Chat Color 1',
+        DefaultValue = 0,
+        DefaultOpacity = 1,
+        Function = function(h, s, v, o)
+            if chatGradient then updateChatGradient() end
+        end
+    })
+    chatColor2 = CustomChat:CreateColorSlider({
+        Name = 'Chat Color 2',
+        DefaultValue = 0.5,
+        DefaultOpacity = 1,
+        Function = function(h, s, v, o)
+            if chatGradient then updateChatGradient() end
+        end
+    })
+    chatColor3 = CustomChat:CreateColorSlider({
+        Name = 'Chat Color 3',
+        DefaultValue = 0.75,
+        DefaultOpacity = 1,
+        Function = function(h, s, v, o)
+            if chatGradient then updateChatGradient() end
+        end
+    })
+    chatColor3.Object.Visible = false
+    chatThirdColorToggle = CustomChat:CreateToggle({
+        Name = 'Third Chat Color',
+        Default = false,
+        Function = function(val)
+            chatColor3.Object.Visible = val
+            if chatGradient then updateChatGradient() end
+        end
+    })
 end)
 
 run(function()
@@ -1577,6 +1662,22 @@ run(function()
                 InfoNotification("ChangeLog", "Loading changelog...", 3)
                 shared.UpdateLogBypass = true
                 loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWExtra/main/VWUpdateLog.lua", true))()
+			end
+		end
+	})
+	pcall(function()
+		ChangeLog.Object.TextSize = 20
+	end)
+end)
+
+run(function()
+	local ChangeLog = {Enabled = false}
+	ChangeLog = vape.Categories.World:CreateModule({
+		Name = ".Config Installer ⭐",
+		Function = function(call)
+			if call then
+				ChangeLog:Toggle()
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWExtra/main/installer.lua", true))()
 			end
 		end
 	})
@@ -3740,3 +3841,309 @@ end)
 		end
 	end)
 end)--]]
+
+run(function()
+    local RunLoops = {}
+    RunLoops._loops = {}
+
+    function RunLoops:BindToHeartbeat(loopName, func)
+        if self._loops[loopName] then
+            warn(loopName .. " is already bound!")
+            return
+        end
+        self._loops[loopName] = game:GetService("RunService").Heartbeat:Connect(func)
+    end
+
+    function RunLoops:UnbindFromHeartbeat(loopName)
+        if self._loops[loopName] then
+            self._loops[loopName]:Disconnect()
+            self._loops[loopName] = nil
+        else
+            warn(loopName .. " was not bound!")
+        end
+    end
+
+    local EventSys = {}
+    EventSys._events = {}
+
+    function EventSys:Connect(evtName, func)
+        if not self._events[evtName] then
+            self._events[evtName] = {}
+        end
+        table.insert(self._events[evtName], func)
+    end
+
+    function EventSys:Fire(evtName, ...)
+        if self._events[evtName] then
+            for _, func in ipairs(self._events[evtName]) do
+                func(...)
+            end
+        end
+    end
+
+    function EventSys:Disconnect(evtName)
+        if self._events[evtName] then
+            self._events[evtName] = nil
+        else
+            warn(evtName .. " had no bound events to disconnect!")
+        end
+    end
+
+    local AmongUsMode = {Enabled = false}
+    local AmongUsOthers = {Enabled = false}
+    local TransformedPlrs = {}
+    local Mode = {Value = "Among Us", Ver = "v3.0"}
+
+    local function getTorso(plr)
+        local hum = plr.Character:WaitForChild("Humanoid", 10)
+        if hum then
+            local torsoPart = hum.RigType == Enum.HumanoidRigType.R6 and "Torso" or "UpperTorso"
+            return plr.Character:FindFirstChild(torsoPart)
+        end
+        return nil
+    end
+
+    local function applyAmongUsSkin(plr)
+        local meshId = "http://www.roblox.com/asset/?id=6235963214"
+        local texId = "http://www.roblox.com/asset/?id=6235963270"
+        local torso = getTorso(plr)
+
+        if torso then
+            local amogusPart = Instance.new("Part")
+            local mesh = Instance.new("SpecialMesh")
+            local weld = Instance.new("Weld")
+
+            amogusPart.Name = "AmogusSkin"
+            amogusPart.CanCollide = false
+            amogusPart.Anchored = false
+            amogusPart.Parent = plr.Character
+
+            mesh.MeshId = meshId
+            mesh.TextureId = texId
+            mesh.Offset = Vector3.new(0, -0.3, 0)
+            mesh.Scale = Vector3.new(0.11, 0.11, 0.11)
+            mesh.Parent = amogusPart
+
+            weld.Part0 = amogusPart
+            weld.Part1 = torso
+            weld.Parent = amogusPart
+
+            TransformedPlrs[plr.UserId] = true
+        end
+    end
+
+    local function resetPlr(plr)
+        if plr.Character and TransformedPlrs[plr.UserId] then
+            local amogusSkin = plr.Character:FindFirstChild("AmogusSkin")
+            if amogusSkin then
+                amogusSkin:Destroy()
+            end
+
+            for _, part in ipairs(plr.Character:GetChildren()) do
+                if part:IsA("MeshPart") or part:IsA("Part") then
+                    part.Transparency = 0
+                elseif part:IsA("Accessory") then
+                    part.Handle.Transparency = 0
+                end
+            end
+
+            TransformedPlrs[plr.UserId] = nil
+        end
+    end
+
+    local function hideCharParts(plr)
+        for _, part in ipairs(plr.Character:GetChildren()) do
+            if part:IsA("MeshPart") or (part:IsA("Part") and part.Name ~= "AmogusSkin") then
+                part.Transparency = 1
+            elseif part:IsA("Accessory") and not string.match(part.Name, "sword|block|pickaxe|bow|axe|fireball|cannon|shears") then
+                part.Handle.Transparency = 1
+            end
+        end
+    end
+
+    local function isPlrAlive(plr)
+        return plr.Character and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0
+    end
+
+    local function resetAllPlrs()
+        for _, plr in ipairs(game.Players:GetPlayers()) do
+            EventSys:Fire("ResetPlr", plr)
+        end
+    end
+
+    EventSys:Connect("TransformPlr", function(plr)
+        if isPlrAlive(plr) and (not TransformedPlrs[plr.UserId]) then
+            applyAmongUsSkin(plr)
+            hideCharParts(plr)
+        end
+    end)
+
+    EventSys:Connect("ResetPlr", function(plr)
+        resetPlr(plr)
+    end)
+
+    AmongUsMode = vape.Categories.Misc:CreateModule({
+        Name = "AmongusChanger",
+        Function = function(call)
+            if call then
+				EventSys:Connect("TransformPlr", function(plr)
+					if isPlrAlive(plr) and (not TransformedPlrs[plr.UserId]) then
+						applyAmongUsSkin(plr)
+						hideCharParts(plr)
+					end
+				end)
+				EventSys:Connect("ResetPlr", function(plr)
+					resetPlr(plr)
+				end)
+                RunLoops:BindToHeartbeat("AmongUsLoop", function()
+                    for _, plr in pairs(game.Players:GetPlayers()) do
+						if plr ~= game.Players.LocalPlayer then
+							if AmongUsOthers.Enabled then EventSys:Fire("TransformPlr", plr) end
+						else EventSys:Fire("TransformPlr", plr) end
+                    end
+                end)
+            else
+                RunLoops:UnbindFromHeartbeat("AmongUsLoop")
+                resetAllPlrs()
+                EventSys:Disconnect("TransformPlr")
+                EventSys:Disconnect("ResetPlr")
+            end
+        end,
+        Tooltip = "Transform yourself into an Among Us character.",
+        ExtraText = function() return "sussy" end
+    })
+
+    AmongUsOthers = AmongUsMode:CreateToggle({
+        Name = "AmongUsOthers",
+        Function = function(call)
+            if AmongUsMode.Enabled then
+                AmongUsMode:Toggle(false)
+                AmongUsMode:Toggle(false)
+            end
+        end
+    })
+end)
+
+run(function()
+	local PlayerAttach = {Enabled = false}
+	local PlayerAttachrange = {Value = 50}
+	local PlayerAttachMovementType = {Value = "Tween"}
+	local PlayerAttachTweenDuration = {Value = 0.3}
+	local PlayerAttachBehindTarget = {Enabled = false}
+	local PlayerAttachBehindDistance = {Value = 3}
+	
+	local function smoothMoveToPosition(targetCFrame, targetCharacter)
+		local rootPart = entityLibrary.character and entityLibrary.character.HumanoidRootPart
+		if not rootPart then return end
+		
+		local finalCFrame = targetCFrame
+		
+		if PlayerAttachBehindTarget.Enabled and targetCharacter then
+			local targetRoot = targetCharacter:FindFirstChild("HumanoidRootPart")
+			if targetRoot then
+				local targetLookVector = targetRoot.CFrame.LookVector
+				local behindPosition = targetRoot.Position - (targetLookVector * PlayerAttachBehindDistance.Value)
+				finalCFrame = CFrame.new(behindPosition, targetRoot.Position)
+			end
+		end
+		
+		if PlayerAttachMovementType.Value == "Teleport" then
+			rootPart.CFrame = finalCFrame
+		elseif PlayerAttachMovementType.Value == "Tween" then
+			local tweenInfo = TweenInfo.new(PlayerAttachTweenDuration.Value/10, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+			local tween = tween:Create(rootPart, tweenInfo, {CFrame = finalCFrame})
+			tween:Play()
+		elseif PlayerAttachMovementType.Value == "Velocity" then
+			local direction = (finalCFrame.Position - rootPart.Position).Unit
+			local distance = (finalCFrame.Position - rootPart.Position).Magnitude
+			local speed = math.min(distance * 2, 50)
+			rootPart.Velocity = direction * speed
+		end
+	end
+	
+	PlayerAttach = vape.Categories.Utility:CreateModule({
+		Name = 'Player Attach',
+		Tooltip = 'Attach to players',
+		Function = function(callback)
+			if callback then 
+				task.spawn(function()
+					local lastUpdate = 0
+					local updateInterval = 0.05
+					
+					repeat
+						local currentTime = tick()
+						if currentTime - lastUpdate >= updateInterval then
+							if not entityLibrary.isAlive or not lplr.Character then 
+								task.wait(0.1)
+								continue
+							end
+							
+							local players = game:GetService("Players"):GetPlayers()
+							local closestPlayer = nil
+							local closestDistance = PlayerAttachrange.Value
+							
+							for _, player in pairs(players) do
+								if player ~= lplr and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 and player.Team ~= lplr.Team then
+									local distance = (player.Character.HumanoidRootPart.Position - lplr.Character.HumanoidRootPart.Position).Magnitude
+									if distance < closestDistance then
+										closestPlayer = player
+										closestDistance = distance
+									end
+								end
+							end
+							
+							if closestPlayer and closestPlayer.Character and closestPlayer.Character.HumanoidRootPart then
+								smoothMoveToPosition(closestPlayer.Character.HumanoidRootPart.CFrame, closestPlayer.Character)
+								lastUpdate = currentTime
+							end
+						end
+						task.wait(0.01)
+					until not PlayerAttach.Enabled
+				end)
+			end
+		end
+	})
+	
+	PlayerAttachrange = PlayerAttach:CreateSlider({
+		Name = "Range",
+		Min = 1,
+		Max = 100,
+		Default = 50,
+		Function = function(val)
+			PlayerAttachrange.Value = val
+		end
+	})
+	
+	PlayerAttachMovementType = PlayerAttach:CreateDropdown({
+		Name = "Movement Type",
+		List = {"Teleport", "Tween", "Velocity"},
+		Function = function() end,
+		Default = "Tween"
+	})
+	
+	PlayerAttachTweenDuration = PlayerAttach:CreateSlider({
+		Name = "Tween Duration",
+		Min = 1,
+		Max = 10,
+		Default = 3,
+		Function = function(val)
+			PlayerAttachTweenDuration.Value = val
+		end
+	})
+	
+	PlayerAttachBehindTarget = PlayerAttach:CreateToggle({
+		Name = "Stay Behind Target",
+		Tooltip = "Position yourself behind the target to avoid being hit",
+		Function = function() end
+	})
+	
+	PlayerAttachBehindDistance = PlayerAttach:CreateSlider({
+		Name = "Behind Distance",
+		Min = 1,
+		Max = 10,
+		Default = 3,
+		Function = function(val)
+			PlayerAttachBehindDistance.Value = val
+		end
+	})
+end)

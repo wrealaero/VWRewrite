@@ -282,9 +282,9 @@ local GetEnumItems = function() return {} end
 										attachModel(playerTool, toolData, CFrame.new(0.4, 0, -0.9))
 									end
 								end
-							end
-						end
-						
+		end
+	end
+	
 						
 						local loadedTools = game:GetObjects(ASSET_ID)
 						local mainAsset = loadedTools[1]
@@ -338,11 +338,11 @@ local GetEnumItems = function() return {} end
 										})
 									else
 										--warn("Model for " .. identifier .. " not found in initializeToolIndex!")
-									end
-								end
-							end
-						end
-						
+		end
+	end
+		end
+	end
+	
 						local function adjustAppearance(part)
 							if part:IsA("BasePart") then
 								part.Transparency = 1
@@ -3698,8 +3698,8 @@ run(function()
             else 
 				toolFunction = function() end
 				refresh()
-			end
 		end
+	end
 	})
 	local list = {}
 	for i,v in pairs(packfunctions) do table.insert(list, tostring(i)) end
@@ -3732,7 +3732,7 @@ end)
 			task.wait(0.1) 
 		end
 	end
-
+	
 	local function invokePurchaseUpgrade(upgrades)
 		for _, upgrade in ipairs(upgrades) do
 			local args = {
@@ -6281,9 +6281,9 @@ run(function()
     InvisibilitySystem = vape.Categories.Blatant:CreateModule({
         Name = "Invisibility",
         Tooltip = "Renders you less visible via animation and transparency",
-        Function = function(enabled)
+		Function = function(enabled)
             InvisibilitySystem.Enabled = enabled
-            if enabled then
+			if enabled then
                 local spiderWasDisabled = InvisUtils.toggleSpider(true)
                 
                 local taskHandle = task.spawn(applyInvisibility)
@@ -6782,7 +6782,7 @@ end)
 			if entitylib.isAlive then
 				gameCamera.CameraSubject = lplr.Character:WaitForChild("Humanoid")
 			end
-			pcall(function()
+						pcall(function()
 				clone:Destroy()
 			end)
 		end
@@ -6845,8 +6845,8 @@ run(function()
 					elseif task.Disconnect then
 						task:Disconnect()
 					end
-				end
-			end)
+							end
+						end)
 			if not success then
 				warn("[Maid] Error cleaning task: " .. tostring(errorMsg))
 			end
@@ -6918,7 +6918,7 @@ run(function()
             if not refreshDebounce then
                 refreshChoices()
             end
-        end))
+					end))
         playerMaid:Add(player.CharacterRemoving:Connect(function()
             if not refreshDebounce then
                 refreshChoices()
@@ -7045,9 +7045,9 @@ run(function()
             Choice.Value = value
             if BetterSpectator.Enabled then
                 updateChoice(value)
-            end
-        end
-    })
+			end
+		end
+	})
 end)
 
 shared.slowmode = 0
@@ -7890,4 +7890,626 @@ run(function()
             table.remove(beds, i)
         end
     end))
+end)
+
+run(function()
+	local DamageIndicator = {}
+
+	local Config = {
+		ColorMode = {Value = 'Rainbow'},
+		RainbowStyle = {Value = 'Gradient'},
+		TextMode = {Value = 'Custom'},
+		CustomColor = {Enabled = false},
+		CustomText = {Enabled = false},
+		CustomFont = {Enabled = false},
+		Color = {Hue = 0, Sat = 0, Value = 0},
+		Font = {Value = 'GothamBlack'},
+		CustomMessages = {ListEnabled = {}}
+	}
+	
+	local PresetMessages = {
+		'Pow!', 'Pop!', 'Hit!', 'Smack!', 'Bang!', 'Boom!', 'Whoop!',
+		'Damage!', '-9e9!', 'Whack!', 'Crash!', 'Slam!', 'Zap!', 'Snap!', 'Thump!'
+	}
+	
+	local RainbowColors = {
+		Color3.fromRGB(255, 0, 0),    -- Red
+		Color3.fromRGB(255, 127, 0),  -- Orange
+		Color3.fromRGB(255, 255, 0),  -- Yellow
+		Color3.fromRGB(0, 255, 0),    -- Green
+		Color3.fromRGB(0, 0, 255),    -- Blue
+		Color3.fromRGB(75, 0, 130),   -- Indigo
+		Color3.fromRGB(148, 0, 211)   -- Violet
+	}
+	
+	local function getRandomMessage()
+		return PresetMessages[math.random(1, #PresetMessages)]
+	end
+	
+	local function getRandomCustomMessage()
+		local messages = Config.CustomMessages.ListEnabled
+		if #messages == 0 then return 'Voidware on top!' end
+		local msg = messages[math.random(1, #messages)]
+		return msg ~= '' and msg or 'Voidware on top!'
+	end
+	
+	local function applyColorToIndicator(indicator)
+		if not Config.CustomColor.Enabled then return end
+		
+		if Config.ColorMode.Value == 'Rainbow' then
+			if Config.RainbowStyle.Value == 'Gradient' then
+				indicator.TextColor3 = Color3.fromHSV(tick() % 5 / 5, 1, 1)
+			else
+				local colorIndex = math.floor(tick() * 2) % #RainbowColors + 1
+				indicator.TextColor3 = RainbowColors[colorIndex]
+			end
+		elseif Config.ColorMode.Value == 'Custom' then
+			indicator.TextColor3 = Color3.fromHSV(
+				Config.Color.Hue, 
+				Config.Color.Sat, 
+				Config.Color.Value
+			)
+		else
+			indicator.TextColor3 = Color3.fromRGB(127, 0, 255)
+		end
+	end
+	
+	local function applyTextToIndicator(indicator)
+		if not Config.CustomText.Enabled then return end
+		
+		if Config.TextMode.Value == 'Custom' then
+			indicator.Text = getRandomCustomMessage()
+		elseif Config.TextMode.Value == 'Multiple' then
+			indicator.Text = getRandomMessage()
+		else
+			indicator.Text = 'Voidware on top!'
+		end
+	end
+	
+	local function applyFontToIndicator(indicator)
+		if Config.CustomFont.Enabled then
+			indicator.Font = Enum.Font[Config.Font.Value]
+		end
+	end
+	
+	local function processDamageIndicator(indicator)
+		applyColorToIndicator(indicator)
+		applyTextToIndicator(indicator)
+		applyFontToIndicator(indicator)
+	end
+	
+	DamageIndicator = vape.Categories.Render:CreateModule({
+		PerformanceModeBlacklisted = true,
+		Name = 'Damage Indicator',
+		Function = function(enabled)
+			if enabled then
+				task.spawn(function()
+					table.insert(DamageIndicator.Connections, workspace.DescendantAdded:Connect(function(descendant)
+						pcall(function()
+							if descendant.Name ~= 'DamageIndicatorPart' then return end
+							
+							local billboardGui = descendant:FindFirstChildWhichIsA('BillboardGui')
+							if not billboardGui then return end
+							
+							local frame = billboardGui:FindFirstChildWhichIsA('Frame')
+							if not frame then return end
+							
+							local textLabel = frame:FindFirstChildWhichIsA('TextLabel')
+							if textLabel then
+								processDamageIndicator(textLabel)
+							end
+						end)
+					end))
+				end)
+			end
+		end
+	})
+	
+	Config.ColorMode = DamageIndicator:CreateDropdown({
+		Name = 'Color Mode',
+		List = {'Rainbow', 'Custom', 'Lunar'},
+		HoverText = 'Select how to color the damage indicator',
+		Value = 'Rainbow',
+		Function = function() end
+	})
+	
+	Config.RainbowStyle = DamageIndicator:CreateDropdown({
+		Name = 'Rainbow Style',
+		List = {'Gradient', 'Paint'},
+		HoverText = 'Choose rainbow animation style',
+		Value = 'Gradient',
+		Function = function() end
+	})
+	
+	Config.TextMode = DamageIndicator:CreateDropdown({
+		Name = 'Text Mode',
+		List = {'Custom', 'Multiple', 'Lunar'},
+		HoverText = 'Select damage indicator text style',
+		Value = 'Custom',
+		Function = function() end
+	})
+	
+	Config.CustomColor = DamageIndicator:CreateToggle({
+		Name = 'Custom Color',
+		Function = function(enabled) 
+			pcall(function() Config.Color.Object.Visible = enabled end) 
+		end
+	})
+	
+	Config.Color = DamageIndicator:CreateColorSlider({
+		Name = 'Text Color',
+		Function = function() end
+	})
+	
+	Config.CustomText = DamageIndicator:CreateToggle({
+		Name = 'Custom Text',
+		HoverText = 'Use custom messages for damage indicators',
+		Function = function(enabled) 
+			pcall(function() Config.CustomMessages.Object.Visible = enabled end) 
+		end
+	})
+	
+	Config.CustomMessages = DamageIndicator:CreateTextList({
+		Name = 'Custom Messages',
+		TempText = 'Enter message',
+		AddFunction = function() end
+	})
+	
+	Config.CustomFont = DamageIndicator:CreateToggle({
+		Name = 'Custom Font',
+		Function = function(enabled) 
+			pcall(function() Config.Font.Object.Visible = enabled end) 
+		end
+	})
+	
+	Config.Font = DamageIndicator:CreateDropdown({
+		Name = 'Font',
+		List = GetEnumItems('Font'),
+		Function = function() end
+	})
+	
+	Config.Color.Object.Visible = Config.CustomColor.Enabled
+	Config.CustomMessages.Object.Visible = Config.CustomText.Enabled
+	Config.Font.Object.Visible = Config.CustomFont.Enabled
+end)
+
+run(function()
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local LocalPlayer = Players.LocalPlayer
+    local invisibilityEnabled = false
+
+    local function modifyHRP(onEnable)
+        local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        local hrp = character:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+        if onEnable then
+            hrp.Transparency = 0.3
+            hrp.Color = Color3.new(1, 1, 1)
+            hrp.Material = Enum.Material.Plastic
+        else
+            hrp.Transparency = 1
+        end
+        hrp.CanCollide = true
+        hrp.Anchored = false
+    end
+
+    local function setCharacterVisibility(isVisible)
+        local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        for _, part in ipairs(character:GetDescendants()) do
+            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                part.LocalTransparencyModifier = isVisible and 0 or 1
+            elseif part:IsA("Decal") then
+                part.Transparency = isVisible and 0 or 1
+            elseif part:IsA("LayerCollector") then
+                part.Enabled = isVisible
+            end
+        end
+    end
+
+    local maid = {
+		Clean = function(self)
+			for _, v in pairs(self) do
+				pcall(function()
+					v:Disconnect()
+				end)
+			end
+		end,
+		Add = function(self, connection)
+			table.insert(self, connection)
+		end
+	}
+
+    Invisibility = vape.Categories.Render:CreateModule({
+        Name = 'Invisibility',
+        Function = function(callback)
+            invisibilityEnabled = callback
+            maid:Clean()
+            local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+
+            if callback then
+                vape:CreateNotification('Invisibility Enabled', 'You are now invisible.', 4)
+                modifyHRP(true)
+                setCharacterVisibility(false)
+                maid:Add(RunService.Heartbeat:Connect(function()
+                    if not invisibilityEnabled then return end
+                    local char = LocalPlayer.Character
+                    if not char then return end
+                    local humanoid = char:FindFirstChild("Humanoid")
+                    local rootPart = char:FindFirstChild("HumanoidRootPart")
+                    if not humanoid or not rootPart or humanoid.RigType == Enum.HumanoidRigType.R6 then return end
+                    for _, part in ipairs(char:GetDescendants()) do
+                        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                            part.LocalTransparencyModifier = 1
+                        elseif part:IsA("Decal") then
+                            part.Transparency = 1
+                        elseif part:IsA("LayerCollector") then
+                            part.Enabled = false
+                        end
+                    end
+                    local oldcf = rootPart.CFrame
+                    local oldcamoffset = humanoid.CameraOffset
+                    local newcf = rootPart.CFrame - Vector3.new(0, humanoid.HipHeight + (rootPart.Size.Y / 2) - 1, 0)
+                    rootPart.CFrame = newcf * CFrame.Angles(0, 0, math.rad(180))
+                    humanoid.CameraOffset = Vector3.new(0, -5, 0)
+                    local anim = Instance.new("Animation")
+                    anim.AnimationId = "http://www.roblox.com/asset/?id=11360825341"
+                    local loaded = humanoid.Animator:LoadAnimation(anim)
+                    loaded.Priority = Enum.AnimationPriority.Action4
+                    loaded:Play()
+                    loaded.TimePosition = 0.2
+                    loaded:AdjustSpeed(0)
+                    RunService.RenderStepped:Wait()
+                    loaded:Stop()
+                    humanoid.CameraOffset = oldcamoffset
+                    rootPart.CFrame = oldcf
+                end))
+                maid:Add(LocalPlayer.CharacterAdded:Connect(function()
+                    if invisibilityEnabled then
+                        task.wait(0.5)
+                        if Invisibility and Invisibility.Function then
+                            Invisibility.Function(true, Invisibility)
+                        end
+                    end
+                end))
+            else
+                modifyHRP(false)
+                setCharacterVisibility(true)
+                maid:Clean()
+            end
+        end,
+        Default = false,
+        Tooltip = ""
+    })
+
+    LocalPlayer.CharacterAdded:Connect(function()
+        if invisibilityEnabled then
+            task.wait(0.5)
+            Invisibility.Function(true)
+        end
+    end)
+end)
+
+run(function()
+	local HotbarMods = {}
+	local HotbarRounding = {}
+	local HotbarHighlight = {}
+	local HotbarColorToggle = {}
+	local HotbarHideSlotIcons = {}
+	local HotbarSlotNumberColorToggle = {}
+	local HotbarRoundRadius = {Value = 8}
+	local HotbarColor = {Hue = 0, Sat = 0, Value = 0}
+	local HotbarHighlightColor = {Hue = 0, Sat = 0, Value = 0}
+	local HotbarSlotNumberColor = {Hue = 0, Sat = 0, Value = 0}
+	local HotbarModsGradient = {}
+	local HotbarModsGradientAnimate = {Enabled = false}
+	local HotbarModsGradientColor = {Hue = 0, Sat = 0, Value = 0}
+	local HotbarModsGradientColor2 = {Hue = 0, Sat = 0, Value = 0}
+	local hotbarsloticons = {}
+	local hotbarobjects = {}
+	local hotbarcoloricons = {}
+	local hotbarslotgradients = {}
+	local GuiSync = {Enabled = false}
+	local hotbarGradientAnimTask
+
+	local function hotbarFunction()
+		local inventoryicons = ({pcall(function() return lplr.PlayerGui.hotbar['1'].ItemsHotbar end)})[2]
+		if inventoryicons and type(inventoryicons) == 'userdata' then
+			for i,v in next, inventoryicons:GetChildren() do 
+				local sloticon = ({pcall(function() return v:FindFirstChildWhichIsA('ImageButton'):FindFirstChildWhichIsA('TextLabel') end)})[2]
+				if type(sloticon) ~= 'userdata' then 
+					continue
+				end
+				if HotbarColorToggle.Enabled and not HotbarModsGradient.Enabled and not HotbarModsGradientAnimate.Enabled then 
+					sloticon.Parent.BackgroundColor3 = Color3.fromHSV(HotbarColor.Hue, HotbarColor.Sat, HotbarColor.Value)
+					table.insert(hotbarcoloricons, sloticon.Parent) 
+				end
+				if GuiSync.Enabled then 
+					if shared.RiseMode and GuiLibrary.GUICoreColor and GuiLibrary.GUICoreColorChanged then
+						sloticon.Parent.BackgroundColor3 = GuiLibrary.GUICoreColor
+						GuiLibrary.GUICoreColorChanged.Event:Connect(function()
+							pcall(function()
+								sloticon.Parent.BackgroundColor3 = GuiLibrary.GUICoreColor
+							end)
+						end)
+					else
+						local color = GuiLibrary.ObjectsThatCanBeSaved["Gui ColorSliderColor"].Api
+						sloticon.Parent.BackgroundColor3 = Color3.fromHSV(color.Hue, color.Sat, color.Value)
+						VoidwareFunctions.Connections:register(VoidwareFunctions.Controllers:get("UpdateUI").UIUpdate.Event:Connect(function(h,s,v)
+							color = {Hue = h, Sat = s, Value = v}
+							sloticon.Parent.BackgroundColor3 = Color3.fromHSV(color.Hue, color.Sat, color.Value)
+						end))
+					end
+				end
+				if HotbarModsGradient.Enabled and not HotbarModsGradientAnimate.Enabled and not GuiSync.Enabled then 
+					sloticon.Parent.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+					if sloticon.Parent:FindFirstChildWhichIsA('UIGradient') == nil then 
+						local gradient = Instance.new('UIGradient') 
+						local color = Color3.fromHSV(HotbarModsGradientColor.Hue, HotbarModsGradientColor.Sat, HotbarModsGradientColor.Value)
+						local color2 = Color3.fromHSV(HotbarModsGradientColor2.Hue, HotbarModsGradientColor2.Sat, HotbarModsGradientColor2.Value)
+						gradient.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, color), ColorSequenceKeypoint.new(1, color2)})
+						gradient.Parent = sloticon.Parent
+						table.insert(hotbarslotgradients, gradient)
+						table.insert(hotbarcoloricons, sloticon.Parent) 
+					end
+				end
+				if HotbarModsGradientAnimate.Enabled and HotbarModsGradient.Enabled and not GuiSync.Enabled then 
+					sloticon.Parent.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+					if sloticon.Parent:FindFirstChildWhichIsA('UIGradient') == nil then 
+						local gradient = Instance.new('UIGradient') 
+						local color = Color3.fromHSV(HotbarModsGradientColor.Hue, HotbarModsGradientColor.Sat, HotbarModsGradientColor.Value)
+						local color2 = Color3.fromHSV(HotbarModsGradientColor2.Hue, HotbarModsGradientColor2.Sat, HotbarModsGradientColor2.Value)
+						gradient.Color = ColorSequence.new({
+							ColorSequenceKeypoint.new(0, color),
+							ColorSequenceKeypoint.new(0.5, Color3.fromHSV(HotbarColor.Hue, HotbarColor.Sat, HotbarColor.Value)),
+							ColorSequenceKeypoint.new(1, color2)
+						})
+						gradient.Parent = sloticon.Parent
+						table.insert(hotbarslotgradients, gradient)
+						table.insert(hotbarcoloricons, sloticon.Parent) 
+					end
+				end
+				if HotbarRounding.Enabled then 
+					local uicorner = Instance.new('UICorner')
+					uicorner.Parent = sloticon.Parent
+					uicorner.CornerRadius = UDim.new(0, HotbarRoundRadius.Value)
+					table.insert(hotbarobjects, uicorner)
+				end
+				if HotbarHighlight.Enabled then
+					local highlight = Instance.new('UIStroke')
+					if GuiSync.Enabled then
+						if shared.RiseMode and GuiLibrary.GUICoreColor and GuiLibrary.GUICoreColorChanged then
+							highlight.Color = GuiLibrary.GUICoreColor
+							GuiLibrary.GUICoreColorChanged.Event:Connect(function()
+								highlight.Color = GuiLibrary.GUICoreColor
+							end)
+						else
+							local color = GuiLibrary.ObjectsThatCanBeSaved["Gui ColorSliderColor"].Api
+							highlight.Color = Color3.fromHSV(color.Hue, color.Sat, color.Value)
+							VoidwareFunctions.Connections:register(VoidwareFunctions.Controllers:get("UpdateUI").UIUpdate.Event:Connect(function(h,s,v)
+								color = {Hue = h, Sat = s, Value = v}
+								highlight.Color = Color3.fromHSV(color.Hue, color.Sat, color.Value)
+							end))
+						end
+					else
+						highlight.Color = Color3.fromHSV(HotbarHighlightColor.Hue, HotbarHighlightColor.Sat, HotbarHighlightColor.Value)
+					end
+					highlight.Thickness = 1.3 
+					highlight.Parent = sloticon.Parent
+					table.insert(hotbarobjects, highlight)
+				end
+				if HotbarHideSlotIcons.Enabled then 
+					sloticon.Visible = false 
+				end
+				table.insert(hotbarsloticons, sloticon)
+			end 
+		end
+	end
+
+	HotbarMods = vape.Categories.Misc:CreateModule({
+		Name = 'Hotbar Visuals',
+		HoverText = 'Add customization to your hotbar.',
+		Function = function(calling)
+			if calling then 
+				task.spawn(function()
+					table.insert(HotbarMods.Connections, lplr.PlayerGui.DescendantAdded:Connect(function(v)
+						if v.Name == 'hotbar' then
+							hotbarFunction()
+						end
+					end))
+					hotbarFunction()
+					if HotbarModsGradientAnimate.Enabled and HotbarModsGradient.Enabled and not GuiSync.Enabled then
+						if hotbarGradientAnimTask then pcall(function() task.cancel(hotbarGradientAnimTask) end) end
+						hotbarGradientAnimTask = task.spawn(function()
+							while HotbarMods.Enabled and HotbarModsGradientAnimate.Enabled and HotbarModsGradient.Enabled and not GuiSync.Enabled do
+								for idx, gradient in ipairs(hotbarslotgradients) do
+									local parent = gradient.Parent
+									if parent and parent.AbsolutePosition then
+										local x = parent.AbsolutePosition.X
+										local w = parent.AbsoluteSize.X
+										local t = tick()
+										local function getHue(hue)
+											return (hue + (math.abs((x + w * 0.5) / 500 + t/6) % 1)) % 1
+										end
+										local c1 = Color3.fromHSV(getHue(HotbarModsGradientColor.Hue), HotbarModsGradientColor.Sat, HotbarModsGradientColor.Value)
+										local c2 = Color3.fromHSV(getHue(HotbarColor.Hue), HotbarColor.Sat, HotbarColor.Value)
+										local c3 = Color3.fromHSV(getHue(HotbarModsGradientColor2.Hue), HotbarModsGradientColor2.Sat, HotbarModsGradientColor2.Value)
+										gradient.Color = ColorSequence.new({
+											ColorSequenceKeypoint.new(0, c1),
+											ColorSequenceKeypoint.new(0.5, c2),
+											ColorSequenceKeypoint.new(1, c3)
+										})
+									end
+								end
+								task.wait(0.03)
+							end
+						end)
+					end
+				end)
+			else
+				for i,v in hotbarsloticons do 
+					pcall(function() v.Visible = true end)
+				end
+				for i,v in hotbarcoloricons do 
+					pcall(function() v.BackgroundColor3 = Color3.fromRGB(29, 36, 46) end)
+				end
+				for i,v in hotbarobjects do
+					pcall(function() v:Destroy() end)
+				end
+				for i,v in next, hotbarslotgradients do 
+					pcall(function() v:Destroy() end)
+				end
+				if hotbarGradientAnimTask then pcall(function() task.cancel(hotbarGradientAnimTask) end) end
+				table.clear(hotbarobjects)
+				table.clear(hotbarsloticons)
+				table.clear(hotbarcoloricons)
+				table.clear(hotbarslotgradients)
+			end
+		end
+	})
+	HotbarMods.Restart = function() if HotbarMods.Enabled then HotbarMods:Toggle(); HotbarMods:Toggle() end end
+
+	local function refreshGUI()
+		repeat task.wait() until HotbarColorToggle.Object and HotbarModsGradient.Object and HotbarModsGradientColor.Object and HotbarModsGradientColor2.Object and HotbarColor.Object and HotbarModsGradientAnimate.Object
+		HotbarColorToggle.Object.Visible = (not GuiSync.Enabled)
+		HotbarModsGradient.Object.Visible = (not GuiSync.Enabled)
+		HotbarModsGradientColor.Object.Visible = HotbarModsGradient.Enabled and (not GuiSync.Enabled)
+		HotbarModsGradientColor2.Object.Visible = HotbarModsGradient.Enabled and (not GuiSync.Enabled)
+		HotbarColor.Object.Visible = (not GuiSync.Enabled)
+		HotbarModsGradientAnimate.Object.Visible = HotbarModsGradient.Enabled and (not GuiSync.Enabled)
+	end
+
+	GuiSync = HotbarMods:CreateToggle({
+		Name = "GUI Color Sync",
+		Function = function()
+			if HotbarMods.Enabled then HotbarMods:Toggle(); HotbarMods:Toggle() end
+			task.spawn(refreshGUI)
+		end
+	})
+	GuiSync.Object.Visible = false
+	HotbarColorToggle = HotbarMods:CreateToggle({
+		Name = 'Slot Color',
+		Function = function(calling)
+			pcall(function() HotbarColor.Object.Visible = calling end)
+			if HotbarMods.Enabled then HotbarMods:Toggle(); HotbarMods:Toggle() end
+			task.spawn(refreshGUI)
+		end
+	})
+	HotbarModsGradient = HotbarMods:CreateToggle({
+		Name = 'Gradient Slot Color',
+		Function = function(calling)
+			pcall(function() HotbarModsGradientColor.Object.Visible = calling end)
+			pcall(function() HotbarModsGradientColor2.Object.Visible = calling end)
+			pcall(function() HotbarModsGradientAnimate.Object.Visible = calling end)
+			if HotbarMods.Enabled then HotbarMods:Toggle(); HotbarMods:Toggle() end
+			task.spawn(refreshGUI)
+		end
+	})
+	HotbarModsGradientAnimate = HotbarMods:CreateToggle({
+		Name = 'Animated Gradient',
+		Function = function(calling)
+			if HotbarMods.Enabled then HotbarMods:Toggle(); HotbarMods:Toggle() end
+			task.spawn(refreshGUI)
+		end
+	})
+	HotbarModsGradientColor = HotbarMods:CreateColorSlider({
+		Name = 'Gradient Color',
+		Function = function(h, s, v)
+			HotbarModsGradientColor.Hue = h
+			HotbarModsGradientColor.Sat = s
+			HotbarModsGradientColor.Value = v
+			if not HotbarModsGradientAnimate.Enabled then
+				for i,v in next, hotbarslotgradients do 
+					pcall(function() 
+						v.Color = ColorSequence.new({
+							ColorSequenceKeypoint.new(0, Color3.fromHSV(HotbarModsGradientColor.Hue, HotbarModsGradientColor.Sat, HotbarModsGradientColor.Value)),
+							ColorSequenceKeypoint.new(1, Color3.fromHSV(HotbarModsGradientColor2.Hue, HotbarModsGradientColor2.Sat, HotbarModsGradientColor2.Value))
+						})
+					end)
+				end
+			end
+		end
+	})
+	HotbarModsGradientColor2 = HotbarMods:CreateColorSlider({
+		Name = 'Gradient Color 2',
+		Function = function(h, s, v)
+			HotbarModsGradientColor2.Hue = h
+			HotbarModsGradientColor2.Sat = s
+			HotbarModsGradientColor2.Value = v
+			if not HotbarModsGradientAnimate.Enabled then
+				for i,v in next, hotbarslotgradients do 
+					pcall(function() 
+						v.Color = ColorSequence.new({
+							ColorSequenceKeypoint.new(0, Color3.fromHSV(HotbarModsGradientColor.Hue, HotbarModsGradientColor.Sat, HotbarModsGradientColor.Value)),
+							ColorSequenceKeypoint.new(1, Color3.fromHSV(HotbarModsGradientColor2.Hue, HotbarModsGradientColor2.Sat, HotbarModsGradientColor2.Value))
+						})
+					end)
+				end
+			end
+		end
+	})
+	HotbarColor = HotbarMods:CreateColorSlider({
+		Name = 'Slot Color',
+		Function = function(h, s, v)
+			HotbarColor.Hue = h
+			HotbarColor.Sat = s
+			HotbarColor.Value = v
+			for i,v in next, hotbarcoloricons do
+				if HotbarColorToggle.Enabled then
+					pcall(function() v.BackgroundColor3 = Color3.fromHSV(HotbarColor.Hue, HotbarColor.Sat, HotbarColor.Value) end)
+				end
+			end
+		end
+	})
+	HotbarRounding = HotbarMods:CreateToggle({
+		Name = 'Rounding',
+		Function = function(calling)
+			pcall(function() HotbarRoundRadius.Object.Visible = calling end)
+			if HotbarMods.Enabled then HotbarMods:Toggle(); HotbarMods:Toggle() end
+			task.spawn(refreshGUI)
+		end
+	})
+	HotbarRoundRadius = HotbarMods:CreateSlider({
+		Name = 'Corner Radius',
+		Min = 1,
+		Max = 20,
+		Function = function(calling)
+			for i,v in next, hotbarobjects do 
+				pcall(function() v.CornerRadius = UDim.new(0, calling) end)
+			end
+		end
+	})
+	HotbarHighlight = HotbarMods:CreateToggle({
+		Name = 'Outline Highlight',
+		Function = function(calling)
+			pcall(function() HotbarHighlightColor.Object.Visible = calling end)
+			if HotbarMods.Enabled then HotbarMods:Toggle(); HotbarMods:Toggle() end
+			task.spawn(refreshGUI)
+		end
+	})
+	HotbarHighlightColor = HotbarMods:CreateColorSlider({
+		Name = 'Highlight Color',
+		Function = function(h, s, v)
+			HotbarHighlightColor.Hue = h
+			HotbarHighlightColor.Sat = s
+			HotbarHighlightColor.Value = v
+			for i,v in next, hotbarobjects do 
+				if v:IsA('UIStroke') and HotbarHighlight.Enabled then 
+					pcall(function() v.Color = Color3.fromHSV(HotbarHighlightColor.Hue, HotbarHighlightColor.Sat, HotbarHighlightColor.Value) end)
+				end
+			end
+		end
+	})
+	HotbarHideSlotIcons = HotbarMods:CreateToggle({
+		Name = 'No Slot Numbers',
+		Function = function()
+			if HotbarMods.Enabled then HotbarMods:Toggle(); HotbarMods:Toggle() end
+		end
+	})
+	HotbarColor.Object.Visible = false
+	HotbarRoundRadius.Object.Visible = false
+	HotbarHighlightColor.Object.Visible = false
+	HotbarModsGradientColor.Object.Visible = false
+	HotbarModsGradientColor2.Object.Visible = false
+	HotbarModsGradientAnimate.Object.Visible = false
 end)
