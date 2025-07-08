@@ -12181,6 +12181,53 @@ run(function()
 	})
 end)
 
+local function collection(tags, module, customadd, customremove)
+	tags = typeof(tags) ~= 'table' and {tags} or tags
+	local objs, connections = {}, {}
+
+	for _, tag in tags do
+		table.insert(connections, collectionService:GetInstanceAddedSignal(tag):Connect(function(v)
+			if customadd then
+				customadd(objs, v, tag)
+				return
+			end
+			table.insert(objs, v)
+		end))
+		table.insert(connections, collectionService:GetInstanceRemovedSignal(tag):Connect(function(v)
+			if customremove then
+				customremove(objs, v, tag)
+				return
+			end
+			v = table.find(objs, v)
+			if v then
+				table.remove(objs, v)
+			end
+		end))
+
+		for _, v in collectionService:GetTagged(tag) do
+			if customadd then
+				customadd(objs, v, tag)
+				continue
+			end
+			table.insert(objs, v)
+		end
+	end
+
+	local cleanFunc = function(self)
+		for _, v in connections do
+			v:Disconnect()
+		end
+		table.clear(connections)
+		table.clear(objs)
+		table.clear(self)
+	end
+
+	return objs, cleanFunc
+end
+store.shop = collection({'BedwarsItemShop', 'TeamUpgradeShopkeeper'}, vape, function(tab, obj)
+	table.insert(tab, {Id = obj.Name, RootPart = obj, Shop = obj:HasTag('BedwarsItemShop'), Upgrades = obj:HasTag('TeamUpgradeShopkeeper')})
+end)
+
 run(function()
 	local replicatedStorage = game:GetService("ReplicatedStorage")
 	local guiService = game:GetService("GuiService")
@@ -12337,52 +12384,6 @@ run(function()
 	})
 end)
 
-local function collection(tags, module, customadd, customremove)
-		tags = typeof(tags) ~= 'table' and {tags} or tags
-		local objs, connections = {}, {}
-	
-		for _, tag in tags do
-			table.insert(connections, collectionService:GetInstanceAddedSignal(tag):Connect(function(v)
-				if customadd then
-					customadd(objs, v, tag)
-					return
-				end
-				table.insert(objs, v)
-			end))
-			table.insert(connections, collectionService:GetInstanceRemovedSignal(tag):Connect(function(v)
-				if customremove then
-					customremove(objs, v, tag)
-					return
-				end
-				v = table.find(objs, v)
-				if v then
-					table.remove(objs, v)
-				end
-			end))
-	
-			for _, v in collectionService:GetTagged(tag) do
-				if customadd then
-					customadd(objs, v, tag)
-					continue
-				end
-				table.insert(objs, v)
-			end
-		end
-	
-		local cleanFunc = function(self)
-			for _, v in connections do
-				v:Disconnect()
-			end
-			table.clear(connections)
-			table.clear(objs)
-			table.clear(self)
-		end
-	
-		return objs, cleanFunc
-	end
-	store.shop = collection({'BedwarsItemShop', 'TeamUpgradeShopkeeper'}, vape, function(tab, obj)
-        table.insert(tab, {Id = obj.Name, RootPart = obj, Shop = obj:HasTag('BedwarsItemShop'), Upgrades = obj:HasTag('TeamUpgradeShopkeeper')})
-    end)
 
 --VoidwareFunctions.GlobaliseObject("store", store)
 VoidwareFunctions.GlobaliseObject("GlobalStore", store)
