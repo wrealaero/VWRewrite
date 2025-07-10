@@ -11709,7 +11709,9 @@ run(function()
 	local LimitItem
 	
 	local function fixPosition(pos)
-		return bedwars.BlockController:getBlockPosition(pos) * 3
+		local blockPos = bedwars.BlockController:getBlockPosition(pos)
+		if not blockPos then return nil end
+		return blockPos * 3
 	end
 	
 	AutoSuffocate = vape.Categories.World:CreateModule({
@@ -11733,18 +11735,20 @@ run(function()
 								side = Vector3.fromNormalId(side)
 								if side.Y ~= 0 then continue end
 	
-								side = fixPosition(ent.RootPart.Position + side * 2)
-								if not getPlacedBlock(side) then
-									table.insert(needPlaced, side)
+								local fixedSide = fixPosition(ent.RootPart.Position + side * 2)
+								if fixedSide and not getPlacedBlock(fixedSide) then
+									table.insert(needPlaced, fixedSide)
 								end
 							end
 	
 							if #needPlaced < 3 then
-								table.insert(needPlaced, fixPosition(ent.Head.Position))
-								table.insert(needPlaced, fixPosition(ent.RootPart.Position - Vector3.new(0, 1, 0)))
+								local headPos = fixPosition(ent.Head.Position)
+								local rootBelowPos = fixPosition(ent.RootPart.Position - Vector3.new(0, 1, 0))
+								if headPos then table.insert(needPlaced, headPos) end
+								if rootBelowPos then table.insert(needPlaced, rootBelowPos) end
 	
 								for _, pos in needPlaced do
-									if not getPlacedBlock(pos) then
+									if pos and not getPlacedBlock(pos) then
 										task.spawn(bedwars.placeBlock, pos, item)
 										break
 									end
