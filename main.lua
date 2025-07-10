@@ -204,13 +204,6 @@ if not shared.VapeIndependent then
 	--local fileName3
 	local isGame = table.find(bedwarsID.game, game.PlaceId)
 	local isLobby = table.find(bedwarsID.lobby, game.PlaceId)
-	if not shared.CheatEngineMode then
-		shared.CheatEngineMode = true
-		InfoNotification("Voidware - Emergency Update", "Till we fix the normal version, Voidware will load \n Cheat Engine Mode in the meantime.", 10)
-		errorNotification("Voidware - Emergency Update", "Sorry for the inconvinience", 10)
-		warningNotification("Voidware - Emergency Update", "To prevent profiles loss we will disable profile saving!", 10)
-		vape.Save = function() end
-	end
 	local CE = shared.CheatEngineMode and "CE" or ""
 	if isGame then
 		if game.PlaceId ~= 6872274481 then vape.Place = 6872274481 end
