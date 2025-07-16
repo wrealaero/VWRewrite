@@ -1096,51 +1096,79 @@ bedwars2.Client = {}
 local cache = {} 
 local namespaceCache = {}
 
+local remoteThrottleTable = {}
+local REMOTE_THROTTLE_TIME = {
+    SwordHit = 0.1,
+    ChestGetItem = 1.0,
+    SetObservedChest = 0.2,
+    _default = 0.1
+}
+
+local function shouldThrottle(remoteName)
+    local now = tick()
+    local throttleTime = REMOTE_THROTTLE_TIME[remoteName] or REMOTE_THROTTLE_TIME._default
+    if not remoteThrottleTable[remoteName] or now - remoteThrottleTable[remoteName] > throttleTime then
+        remoteThrottleTable[remoteName] = now
+        return false
+    end
+	if shared.VoidDev and shared.ThrottleDebug then
+   	 	warn("[Remote Throttle] Throttled remote call to '" .. tostring(remoteName) .. "' at " .. tostring(now))
+	end
+    return true
+end
+
 local function decorateRemote(remote, src)
-	local isFunction = string.find(string.lower(remote.ClassName), "function")
-	local isEvent = string.find(string.lower(remote.ClassName), "remoteevent")
-	local isBindable = string.find(string.lower(remote.ClassName), "bindable")
+    local isFunction = string.find(string.lower(remote.ClassName), "function")
+    local isEvent = string.find(string.lower(remote.ClassName), "remoteevent")
+    local isBindable = string.find(string.lower(remote.ClassName), "bindable")
 
-	if isFunction then
-		function src:CallServer(...)
-			local args = {...}
-			return remote:InvokeServer(unpack(args))
-		end
-	elseif isEvent then
-		function src:CallServer(...)
-			local args = {...}
-			return remote:FireServer(unpack(args))
-		end
-	elseif isBindable then
-		function src:CallServer(...)
-			local args = {...}
-			return remote:Fire(unpack(args))
-		end
-	end
-
-	function src:InvokeServer(...)
+    local function middlewareCall(method, ...)
+        local remoteName = remote.Name
 		local args = {...}
-		src:CallServer(unpack(args))
-	end
+        if shouldThrottle(remoteName) then
+            return
+        end
+        return method(...)
+    end
 
-	function src:FireServer(...)
-		local args = {...}
-		src:CallServer(unpack(args))
-	end
+    if isFunction then
+        function src:CallServer(...)
+            return middlewareCall(function(...) return remote:InvokeServer(...) end, ...)
+        end
+    elseif isEvent then
+        function src:CallServer(...)
+            return middlewareCall(function(...) return remote:FireServer(...) end, ...)
+        end
+    elseif isBindable then
+        function src:CallServer(...)
+            return middlewareCall(function(...) return remote:Fire(...) end, ...)
+        end
+    end
 
-	function src:SendToServer(...)
-		local args = {...}
-		src:CallServer(unpack(...))
-	end
+    function src:InvokeServer(...)
+        local args = {...}
+        src:CallServer(unpack(args))
+    end
 
-	function src:CallServerAsync(...)
-		local args = {...}
-		src:CallServer(unpack(args))
-	end
+    function src:FireServer(...)
+        local args = {...}
+        src:CallServer(unpack(args))
+    end
 
-	src.instance = remote
+    function src:SendToServer(...)
+        local args = {...}
+        src:CallServer(unpack(args))
+    end
 
-	return src
+    function src:CallServerAsync(...)
+        local args = {...}
+        src:CallServer(unpack(args))
+    end
+
+    src.instance = remote
+	src._custom = true
+
+    return src
 end
 
 local remotes_cache
@@ -1473,13 +1501,13 @@ run(function()
     }
 
     local remoteDefinitions = {
-        AttackEntity = function()
+        --[[AttackEntity = function()
             local remote = dumpRemote(debug.getconstants(Knit.Controllers.SwordController.sendServerRequest))
             if remote == '' and shared.VoidDev then
                 notif('Vape', 'Failed to grab remote (AttackEntity)', 10, 'alert')
             end
             return remote
-        end,
+        end,--]]
         DepositPinata = function()
             local remote = dumpRemote(debug.getconstants(debug.getproto(debug.getproto(Knit.Controllers.PiggyBankController.KnitStart, 2), 5)))
             if remote == '' and shared.VoidDev then
@@ -1515,6 +1543,7 @@ run(function()
             end
             return remote
         end,
+		AttackEntity = function() return bedwars2.Client:Get(remz.AttackRemote, 0) end,
         AckKnockback = function() return bedwars2.Client:Get(remz.AckKnockback, 0) end,
         ConsumeBattery = function() return bedwars2.Client:Get(remz.BatteryRemote, 0) end,
         DragonBreath = function() return bedwars2.Client:Get(remz.DragonBreath, 0) end,
@@ -1556,40 +1585,17 @@ run(function()
 
     OldBreak = bedwars.BlockController.isBlockBreakable
 
-    Client.Get = function(self, remoteName)
+    Client.Get = function(self, res)
+		local remoteName = res
         if type(remoteName) == "table" then
             remoteName = remoteName.instance.Name
         end
-        local call = OldGet(self, remoteName)
-        if remoteName == remotes.AttackEntity then
-            return {
-                instance = call.instance,
-                SendToServer = function(_, attackTable, ...)
-                    local suc, plr = pcall(function()
-                        return playersService:GetPlayerFromCharacter(attackTable.entityInstance)
-                    end)
-
-                    local selfpos = attackTable.validate.selfPosition.value
-                    local targetpos = attackTable.validate.targetPosition.value
-                    store.attackReach = ((selfpos - targetpos).Magnitude * 100) // 1 / 100
-                    store.attackReachUpdate = tick() + 1
-
-                    if Reach.Enabled or HitBoxes.Enabled then
-                        attackTable.validate.raycast = attackTable.validate.raycast or {}
-                        attackTable.validate.selfPosition.value += CFrame.lookAt(selfpos, targetpos).LookVector * math.max((selfpos - targetpos).Magnitude - 14.399, 0)
-                    end
-
-                    if suc and plr then
-                        if not select(2, whitelist:get(plr)) then return end
-                    end
-
-                    return call:SendToServer(attackTable, ...)
-                end
-            }
-        elseif remoteName == 'StepOnSnapTrap' and TrapDisabler.Enabled then
+       	if remoteName == 'StepOnSnapTrap' and TrapDisabler.Enabled then
             return { SendToServer = function() end }
-        end
-        return call
+		elseif type(res) == "table" and res._custom then
+			return res
+		end
+        return OldGet(self, remoteName)
     end
 
     bedwars.BlockController.isBlockBreakable = function(self, breakTable, plr)
@@ -3382,7 +3388,28 @@ run(function()
 	local anims, AnimDelay, AnimTween, armC0 = vape.Libraries.auraanims, tick()
 	local AttackRemote = {FireServer = function() end}
 	task.spawn(function()
-		AttackRemote = bedwars.Client:Get(remotes.AttackEntity).instance
+		AttackRemote = remotes.AttackEntity
+		AttackRemote.FireServer = function(self, attackTable, ...)
+			local suc, plr = pcall(function()
+				return playersService:GetPlayerFromCharacter(attackTable.entityInstance)
+			end)
+
+			local selfpos = attackTable.validate.selfPosition.value
+			local targetpos = attackTable.validate.targetPosition.value
+			store.attackReach = ((selfpos - targetpos).Magnitude * 100) // 1 / 100
+			store.attackReachUpdate = tick() + 1
+
+			if Reach.Enabled or HitBoxes.Enabled then
+				attackTable.validate.raycast = attackTable.validate.raycast or {}
+				attackTable.validate.selfPosition.value += CFrame.lookAt(selfpos, targetpos).LookVector * math.max((selfpos - targetpos).Magnitude - 14.399, 0)
+			end
+
+			if suc and plr then
+				if not select(2, whitelist:get(plr)) then return end
+			end
+
+			return self:SendToServer(attackTable, ...)
+		end
 	end)
 
 	local lastSwingServerTime = 0
@@ -3449,6 +3476,7 @@ run(function()
 	local OneTapCooldown = {Value = 5}
 
 	local preserveSwordIcon = false
+	local sigridcheck = false
 
 	Killaura = vape.Categories.Blatant:CreateModule({
 		Name = 'Killaura',
@@ -3536,6 +3564,7 @@ run(function()
 					store.KillauraTarget = nil
 					pcall(function() vapeTargetInfo.Targets.Killaura = nil end)
 					if sword then
+						if sigridcheck and entitylib.isAlive and lplr.Character:FindFirstChild("elk") then return end
 						local isClaw = string.find(string.lower(tostring(sword and sword.itemType or "")), "summoner_claw")
 						local plrs = entitylib.AllPosition({
 							Range = Range.Value,
@@ -3928,6 +3957,13 @@ run(function()
 	LegitAura = Killaura:CreateToggle({
 		Name = 'Swing only',
 		Tooltip = 'Only attacks while swinging manually'
+	})
+	Killaura:CreateToggle({
+		Name = "Sigrid Check",
+		Default = false,
+		Function = function(call)
+			sigridcheck = call
+		end
 	})
 end)
 
@@ -8268,7 +8304,7 @@ run(function()
 								end
 							end
 						end
-						task.wait(0.1)
+						task.wait(0.9)
 					until not ChestSteal.Enabled
 				end
 			end
