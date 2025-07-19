@@ -1098,7 +1098,7 @@ local namespaceCache = {}
 
 local remoteThrottleTable = {}
 local REMOTE_THROTTLE_TIME = {
-    SwordHit = 0.1,
+    SwordHit = 0,
     ChestGetItem = 1.0,
     SetObservedChest = 0.2,
     _default = 0.1
@@ -3581,7 +3581,7 @@ run(function()
 							local localfacing = entitylib.character.RootPart.CFrame.LookVector * Vector3.new(1, 0, 1)
 
 							for _, v in plrs do
-								if workspace:GetServerTimeNow() - bedwars.SwordController.lastAttack < OneTapCooldown.Value/10 then continue end
+								--if workspace:GetServerTimeNow() - bedwars.SwordController.lastAttack < OneTapCooldown.Value/10 then continue end
 								local delta = (v.RootPart.Position - selfpos)
 								local angle = math.acos(localfacing:Dot((delta * Vector3.new(1, 0, 1)).Unit))
 								if angle > (math.rad(AngleSlider.Value) / 2) then continue end
@@ -3643,7 +3643,7 @@ run(function()
                                                 targetPosition = {value = actualRoot.Position},
                                                 selfPosition = {value = pos}
                                             },
-                                            lastSwingServerTimeDelta = lastSwingServerTimeDelta
+                                            --lastSwingServerTimeDelta = lastSwingServerTimeDelta
                                         })
 									end
 								end
@@ -3733,13 +3733,13 @@ run(function()
 			return val == 1 and 'stud' or 'studs'
 		end
 	})
-	OneTapCooldown = Killaura:CreateSlider({
+	--[[OneTapCooldown = Killaura:CreateSlider({
 		Name = "OneTap Cooldown",
 		Function = function() end,
 		Min = 0,
 		Max = 5,
 		Default = 4.2
-	})
+	})--]]
 	RangeCircle = Killaura:CreateToggle({
 		Name = "Range Visualiser",
 		Function = function(call)
@@ -3967,7 +3967,7 @@ run(function()
 	})
 end)
 
-run(function()
+--[[run(function()
 	local old
 	local oldSwing
 	local AutoChargeTime
@@ -3983,7 +3983,7 @@ run(function()
 				old = bedwars.SwordController.sendServerRequest
 				bedwars.SwordController.sendServerRequest = function(self, ...)
 					if (os.clock() - chargeSwingTime) < AutoChargeTime.Value then return end
-					self.lastSwingServerTimeDelta = 0.5
+					--self.lastSwingServerTimeDelta = 0.5
 					chargeSwingTime = os.clock()
 					canSwing = true
 	
@@ -4022,7 +4022,7 @@ run(function()
 		Default = 0.4,
 		Decimal = 100
 	})
-end)
+end)--]]
 	
 run(function()
 	local Value

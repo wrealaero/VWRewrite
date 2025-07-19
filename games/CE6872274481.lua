@@ -5246,7 +5246,7 @@ run(function()
 
 							for _, v in plrs do
 								--if not ({whitelist:get(v)})[2] then continue end
-								if workspace:GetServerTimeNow() - bedwars.SwordController.lastAttack < OneTapCooldown.Value/10 then continue end
+								--if workspace:GetServerTimeNow() - bedwars.SwordController.lastAttack < OneTapCooldown.Value/10 then continue end
 								if Targets.Walls.Enabled then
 									if not Wallcheck(lplr.Character, v.Character) then continue end
 								end
@@ -5313,7 +5313,7 @@ run(function()
 												targetPosition = {value = actualRoot.Position},
 												selfPosition = {value = pos}
 											},
-                                            lastSwingServerTimeDelta = lastSwingServerTimeDelta
+                                            --lastSwingServerTimeDelta = lastSwingServerTimeDelta
 										})
 									end
 								end
@@ -5404,13 +5404,13 @@ run(function()
 			return val == 1 and 'stud' or 'studs'
 		end
 	})
-	OneTapCooldown = Killaura:CreateSlider({
+	--[[OneTapCooldown = Killaura:CreateSlider({
 		Name = "OneTap Cooldown",
 		Function = function() end,
 		Min = 0,
 		Max = 5,
 		Default = 4.2
-	})
+	})--]]
 	RangeCircle = Killaura:CreateToggle({
 		Name = "Range Visualiser",
 		Function = function(call)

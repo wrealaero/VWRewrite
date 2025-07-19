@@ -7346,7 +7346,7 @@ if not shared.CheatEngineMode then
 		local KnitInit, Knit
 		repeat
 			KnitInit, Knit = pcall(function()
-				return debug.getupvalue(require(game:GetService("Players").LocalPlayer.PlayerScripts.TS.knit).setup, 6)
+				return debug.getupvalue(require(game:GetService("Players").LocalPlayer.PlayerScripts.TS.knit).setup, 9)
 			end)
 			if KnitInit then break end
 			task.wait()
