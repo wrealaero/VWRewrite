@@ -239,175 +239,142 @@ run(function()
 end)
 
 run(function()
-    local WeatherMods = { Enabled = false }
-    local WeatherMode = { Value = "Snow" }
-    local ParticleSpread = { Value = 35 }
-    local ParticleRate = { Value = 28 }
-    local ParticleHigh = { Value = 100 }
-
-    WeatherMods = vape.Categories.Misc:CreateModule({
-        Name = "WeatherMods",
-        Tooltip = "Changes the weather (Snow or Rain)",
+    local GameWeather = { Enabled = false }
+    local GameWeatherMode = { Value = "Snow" }
+    local WeatherSpread = { Value = 60 }
+    local WeatherRate = { Value = 80 }
+    local WeatherHigh = { Value = 120 }
+    local RainModule = nil
+    local Rain = nil
+    GameWeather = vape.Categories.Misc:CreateModule({
+        Name = 'GameWeather',
+        Tooltip = 'Changes the weather.',
         Function = function(callback)
             if callback then
                 task.spawn(function()
-                    local weatherPart = Instance.new("Part")
-                    weatherPart.Size = Vector3.new(240, 0.5, 240)
-                    weatherPart.Name = "WeatherParticle"
-                    weatherPart.Transparency = 1
-                    weatherPart.CanCollide = false
-                    weatherPart.Position = Vector3.new(0, 120, 286)
-                    weatherPart.Anchored = true
-                    weatherPart.Parent = game.Workspace
-
-                    local particleEmitter = Instance.new("ParticleEmitter")
-                    particleEmitter.VelocitySpread = ParticleSpread.Value
-                    particleEmitter.Rate = ParticleRate.Value
-                    particleEmitter.EmissionDirection = Enum.NormalId.Bottom
-                    particleEmitter.SpreadAngle = Vector2.new(35, 35)
-                    particleEmitter.Lifetime = NumberRange.new(8, 14)
-                    particleEmitter.Speed = NumberRange.new(12, 20) 
-                    particleEmitter.Parent = weatherPart
-
-                    if WeatherMode.Value == "Rain" then
-                        particleEmitter.Texture = "rbxassetid://257489726" 
-                        particleEmitter.Size = NumberSequence.new({
-                            NumberSequenceKeypoint.new(0, 0.2, 0),
-                            NumberSequenceKeypoint.new(0.5, 0.3, 0.1),
-                            NumberSequenceKeypoint.new(1, 0, 0)
-                        })
-                        particleEmitter.Transparency = NumberSequence.new({
-                            NumberSequenceKeypoint.new(0, 0.3, 0),
-                            NumberSequenceKeypoint.new(0.5, 0.5, 0),
-                            NumberSequenceKeypoint.new(1, 1, 0)
-                        })
-                        particleEmitter.RotSpeed = NumberRange.new(0) 
-                        particleEmitter.Rotation = NumberRange.new(0)
-                        particleEmitter.Acceleration = Vector3.new(0, -5, 0) 
+                    if GameWeatherMode.Value == 'Snow' then
+                        local snowpart = Instance.new("Part")
+                        snowpart.Size = Vector3.new(240,0.5,240)
+                        snowpart.Name = "SnowParticle"
+                        snowpart.Transparency = 1
+                        snowpart.CanCollide = false
+                        snowpart.Position = Vector3.new(0,120,286)
+                        snowpart.Anchored = true
+                        snowpart.Parent = workspace
+                        local snow = Instance.new("ParticleEmitter")
+                        snow.RotSpeed = NumberRange.new(300)
+                        snow.VelocitySpread = WeatherSpread.Value
+                        snow.Rate = WeatherRate.Value
+                        snow.Texture = "rbxassetid://8158344433"
+                        snow.Rotation = NumberRange.new(110)
+                        snow.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0,0.16939899325371,0),NumberSequenceKeypoint.new(0.23365999758244,0.62841498851776,0.37158501148224),NumberSequenceKeypoint.new(0.56209099292755,0.38797798752785,0.2771390080452),NumberSequenceKeypoint.new(0.90577298402786,0.51912599802017,0),NumberSequenceKeypoint.new(1,1,0)})
+                        snow.Lifetime = NumberRange.new(8,14)
+                        snow.Speed = NumberRange.new(8,18)
+                        snow.EmissionDirection = Enum.NormalId.Bottom
+                        snow.SpreadAngle = Vector2.new(35,35)
+                        snow.Size = NumberSequence.new({NumberSequenceKeypoint.new(0,0,0),NumberSequenceKeypoint.new(0.039760299026966,1.3114800453186,0.32786899805069),NumberSequenceKeypoint.new(0.7554469704628,0.98360699415207,0.44038599729538),NumberSequenceKeypoint.new(1,0,0)})
+                        snow.Parent = snowpart
+                        local windsnow = Instance.new("ParticleEmitter")
+                        windsnow.Acceleration = Vector3.new(0,0,1)
+                        windsnow.RotSpeed = NumberRange.new(100)
+                        windsnow.VelocitySpread = WeatherSpread.Value
+                        windsnow.Rate = WeatherRate.Value
+                        windsnow.Texture = "rbxassetid://8158344433"
+                        windsnow.EmissionDirection = Enum.NormalId.Bottom
+                        windsnow.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0,0.16939899325371,0),NumberSequenceKeypoint.new(0.23365999758244,0.62841498851776,0.37158501148224),NumberSequenceKeypoint.new(0.56209099292755,0.38797798752785,0.2771390080452),NumberSequenceKeypoint.new(0.90577298402786,0.51912599802017,0),NumberSequenceKeypoint.new(1,1,0)})
+                        windsnow.Lifetime = NumberRange.new(8,14)
+                        windsnow.Speed = NumberRange.new(8,18)
+                        windsnow.Rotation = NumberRange.new(110)
+                        windsnow.SpreadAngle = Vector2.new(35,35)
+                        windsnow.Size = NumberSequence.new({NumberSequenceKeypoint.new(0,0,0),NumberSequenceKeypoint.new(0.039760299026966,1.3114800453186,0.32786899805069),NumberSequenceKeypoint.new(0.7554469704628,0.98360699415207,0.44038599729538),NumberSequenceKeypoint.new(1,0,0)})
+                        windsnow.Parent = snowpart
+                        repeat task.wait(0)
+                            if entityLibrary.isAlive then 
+                                snowpart.Position = entityLibrary.character.HumanoidRootPart.Position + Vector3.new(0, WeatherHigh.Value, 0)
+                            end
+                        until not shared.VapeExecuted
                     else
-                        particleEmitter.Texture = "rbxassetid://8158344433"
-                        particleEmitter.Size = NumberSequence.new({
-                            NumberSequenceKeypoint.new(0, 0, 0),
-                            NumberSequenceKeypoint.new(0.039760299026966, 1.3114800453186, 0.32786899805069),
-                            NumberSequenceKeypoint.new(0.7554469704628, 0.98360699415207, 0.44038599729538),
-                            NumberSequenceKeypoint.new(1, 0, 0)
-                        })
-                        particleEmitter.Transparency = NumberSequence.new({
-                            NumberSequenceKeypoint.new(0, 0.16939899325371, 0),
-                            NumberSequenceKeypoint.new(0.23365999758244, 0.62841498851776, 0.37158501148224),
-                            NumberSequenceKeypoint.new(0.56209099292755, 0.38797798752785, 0.2771390080452),
-                            NumberSequenceKeypoint.new(0.90577298402786, 0.51912599802017, 0),
-                            NumberSequenceKeypoint.new(1, 1, 0)
-                        })
-                        particleEmitter.RotSpeed = NumberRange.new(300)
-                        particleEmitter.Rotation = NumberRange.new(110)
-                        particleEmitter.Acceleration = Vector3.new(0, 0, 0) 
-                    end
-
-                    if WeatherMode.Value == "Snow" then
-                        local windEmitter = Instance.new("ParticleEmitter")
-                        windEmitter.Acceleration = Vector3.new(0, 0, 1)
-                        windEmitter.RotSpeed = NumberRange.new(100)
-                        windEmitter.VelocitySpread = ParticleSpread.Value
-                        windEmitter.Rate = ParticleRate.Value
-                        windEmitter.Texture = "rbxassetid://8158344433"
-                        windEmitter.EmissionDirection = Enum.NormalId.Bottom
-                        windEmitter.Transparency = NumberSequence.new({
-                            NumberSequenceKeypoint.new(0, 0.16939899325371, 0),
-                            NumberSequenceKeypoint.new(0.23365999758244, 0.62841498851776, 0.37158501148224),
-                            NumberSequenceKeypoint.new(0.56209099292755, 0.38797798752785, 0.2771390080452),
-                            NumberSequenceKeypoint.new(0.90577298402786, 0.51912599802017, 0),
-                            NumberSequenceKeypoint.new(1, 1, 0)
-                        })
-                        windEmitter.Lifetime = NumberRange.new(8, 14)
-                        windEmitter.Speed = NumberRange.new(8, 18)
-                        windEmitter.Rotation = NumberRange.new(110)
-                        windEmitter.SpreadAngle = Vector2.new(35, 35)
-                        windEmitter.Size = NumberSequence.new({
-                            NumberSequenceKeypoint.new(0, 0, 0),
-                            NumberSequenceKeypoint.new(0.039760299026966, 1.3114800453186, 0.32786899805069),
-                            NumberSequenceKeypoint.new(0.7554469704628, 0.98360699415207, 0.44038599729538),
-                            NumberSequenceKeypoint.new(1, 0, 0)
-                        })
-                        windEmitter.Parent = weatherPart
-                    end
-
-                    repeat
-                        task.wait()
-                        if entityLibrary.isAlive then
-                            weatherPart.Position = entityLibrary.character.HumanoidRootPart.Position + Vector3.new(0, ParticleHigh.Value, 0)
+                        if not RainModule then
+                            local res = loadstring(game:HttpGet('https://raw.githubusercontent.com/buildthomas/Rain/master/src/Rain.lua', true))
+                            if type(res) == "function" then
+                                RainModule = res()
+                            else
+                                warn("[Rain Module Failure]: "..tostring(res))
+                            end
                         end
-                    until not shared.VapeExecuted
+                        if not RainModule then
+                            errorNotification("Game Weather", "Failure loading Rain :c", 3)
+                            return
+                        end
+                        if not Rain then
+                            Rain = RainModule
+                        end
+                        Rain:SetIntensityRatio(math.clamp(WeatherRate.Value / 100, 0, 1))
+                        Rain:SetSpeedRatio(1)
+                        Rain:SetTransparency(0.02)
+                        Rain:SetColor(Color3.fromRGB(200, 220, 255))
+                        Rain:SetVolume(0.18)
+                        Rain:SetSoundId("http://www.roblox.com/asset/?ID=236148388")
+                        Rain:Enable()
+                        repeat task.wait(0.1)
+                            Rain:SetIntensityRatio(math.clamp(WeatherRate.Value / 100, 0, 1))
+                            Rain:SetSpeedRatio(0.9 + WeatherSpread.Value / 200)
+                            Rain:SetTransparency(0.02 + (100 - WeatherSpread.Value) / 500)
+                            Rain:SetColor(Color3.fromRGB(200, 220, 255))
+                            Rain:SetVolume(0.18)
+                            Rain:SetSoundId("http://www.roblox.com/asset/?ID=236148388")
+                        until not GameWeather.Enabled or GameWeatherMode.Value ~= 'Rain'
+                        Rain:Disable()
+                    end
                 end)
             else
-                for _, v in next, game.Workspace:GetChildren() do
-                    if v.Name == "WeatherParticle" then
+                for _, v in next, workspace:GetChildren() do
+                    if v.Name == "SnowParticle" then
                         v:Remove()
                     end
+                end
+                if Rain then
+                    Rain:Disable()
                 end
             end
         end
     })
-
-    ParticleSpread = WeatherMods:CreateSlider({
-        Name = "Particle Spread",
+    GameWeatherMode = GameWeather:CreateDropdown({
+        Name = 'Mode',
+        List = {
+            'Snow',
+            'Rain'
+        },
+        Default = 'Snow',
+        Tooltip = 'Mode to change the weather.',
+        Function = function() end
+    })
+    WeatherSpread = GameWeather:CreateSlider({
+        Name = "Spread",
         Min = 1,
         Max = 100,
         Function = function(val)
-            ParticleSpread.Value = val
-            for _, v in next, game.Workspace:GetChildren() do
-                if v.Name == "WeatherParticle" then
-                    for _, emitter in next, v:GetChildren() do
-                        if emitter:IsA("ParticleEmitter") then
-                            emitter.VelocitySpread = val
-                        end
-                    end
-                end
-            end
+            WeatherSpread.Value = val
         end,
-        Default = 35
+        Default = 60
     })
-
-    ParticleRate = WeatherMods:CreateSlider({
-        Name = "Particle Rate",
+    WeatherRate = GameWeather:CreateSlider({
+        Name = "Rate",
         Min = 1,
         Max = 100,
         Function = function(val)
-            ParticleRate.Value = val
-            for _, v in next, game.Workspace:GetChildren() do
-                if v.Name == "WeatherParticle" then
-                    for _, emitter in next, v:GetChildren() do
-                        if emitter:IsA("ParticleEmitter") then
-                            emitter.Rate = val
-                        end
-                    end
-                end
-            end
+            WeatherRate.Value = val
         end,
-        Default = 28
+        Default = 80
     })
-
-    ParticleHigh = WeatherMods:CreateSlider({
-        Name = "Particle Height",
+    WeatherHigh = GameWeather:CreateSlider({
+        Name = "Height",
         Min = 1,
         Max = 200,
         Function = function(val)
-            ParticleHigh.Value = val
+            WeatherHigh.Value = val
         end,
-        Default = 100
-    })
-
-    WeatherMode = WeatherMods:CreateDropdown({
-        Name = "Weather Mode",
-        List = {"Snow", "Rain"},
-        Function = function(val)
-            WeatherMode.Value = val
-            if WeatherMods.Enabled then
-                WeatherMods:Toggle()
-                WeatherMods:Toggle()
-            end
-        end,
-        Default = "Snow"
+        Default = 120
     })
 end)
 

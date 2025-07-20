@@ -218,6 +218,11 @@ writefile(baseDirectory.."commithash2.txt", commit)
 commit = 'efc3baf9f63845223a0ba9cc6bf52258032a706e'
 commit = shared.CustomCommit and tostring(shared.CustomCommit) or commit
 writefile(baseDirectory.."commithash2.txt", commit)
+pcall(function()
+    if not isfile("vape/assetversion.txt") then
+        writefile("vape/assetversion.txt", "")
+    end
+end)
 local function vapeGithubRequest(scripturl, isImportant)
     if isfile(baseDirectory..scripturl) then
         if not shared.VoidDev then
