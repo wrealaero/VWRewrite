@@ -11,10 +11,6 @@ local delfile = delfile or function(file)
 	writefile(file, '')
 end
 
-pcall(function()
-    writefile('vape/profiles/gui.txt', 'new')
-end)
-
 local function wipeFolder(path)
 	if not isfolder(path) then return end
 	for _, file in listfiles(path) do
@@ -31,6 +27,9 @@ for _, folder in {'vape', 'vape/games', 'vape/profiles', 'vape/assets', 'vape/li
 	end
 end
 
+pcall(function()
+    writefile('vape/profiles/gui.txt', 'new')
+end)
 
 if not shared.VapeDeveloper then
 	local _, subbed = pcall(function()
