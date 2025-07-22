@@ -11,7 +11,9 @@ local delfile = delfile or function(file)
 	writefile(file, '')
 end
 
-writefile('vape/profiles/gui.txt', 'new')
+pcall(function()
+    writefile('vape/profiles/gui.txt', 'new')
+end)
 
 local function wipeFolder(path)
 	if not isfolder(path) then return end
