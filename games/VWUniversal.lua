@@ -2709,6 +2709,217 @@ run(function()
 	})
 end)
 
+run(function()
+	local trails = {};
+	local traildistance = {Value = 7};
+	local trailcolor_in = newcolor();
+	local trailcolor_out = newcolor();
+	local trailparts = safearray();
+	local lastpos;
+	local lastpart;
+	local landedBalls = {}
+	local groundCache = {pos = nil, y = nil, time = 0}
+
+	local enableExplosion = {Value = false}
+	local enableWave = {Value = false}
+
+	local function spawnExplosionParticles(parent, color)
+		if not enableExplosion.Value then return end
+		local emitter = Instance.new("ParticleEmitter")
+		emitter.EmissionDirection = Enum.NormalId.Top
+		emitter.Speed = NumberRange.new(8, 16)
+		emitter.Lifetime = NumberRange.new(0.3, 0.5)
+		emitter.Rate = 0
+		emitter.SpreadAngle = Vector2.new(360, 360)
+		emitter.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 0)})
+		emitter.Color = ColorSequence.new(color)
+		emitter.LightEmission = 0.8
+		emitter.Texture = "rbxassetid://14736249347"
+		emitter.Parent = parent
+		emitter:Emit(18)
+		task.delay(0.6, function() emitter:Destroy() end)
+	end
+
+	local function getGroundY(pos)
+		local now = tick()
+		local cacheValid = false
+		if groundCache.pos and groundCache.y and groundCache.time then
+			local dist = (Vector3.new(pos.X, 0, pos.Z) - Vector3.new(groundCache.pos.X, 0, groundCache.pos.Z)).Magnitude
+			if (now - groundCache.time) < 30 --[[and dist < 5--]] then
+				cacheValid = true
+			end
+		end
+		if cacheValid then
+			return groundCache.y
+		else
+			local rayOrigin = pos
+			local rayDirection = Vector3.new(0, -1000, 0)
+			local raycastParams = RaycastParams.new()
+			raycastParams.FilterDescendantsInstances = {lplr.Character}
+			raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+			raycastParams.RespectCanCollide = true
+			local result = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+			local y = result and result.Position.Y or (pos.Y - 10)
+			groundCache.pos = pos
+			groundCache.y = y
+			groundCache.time = now
+			return y
+		end
+	end
+	local function lerpVec3(a, b, t)
+		return a + (b - a) * t
+	end
+	local createtrailpart = function()
+		local part = Instance.new('Part', game.Workspace);
+		part.Anchored = true;
+		part.Material = Enum.Material.Neon;
+		part.Size = Vector3.new(2, 1, 1);
+		part.Shape = Enum.PartType.Ball;
+		local char = lplr.Character
+		local root = char and char.PrimaryPart
+		if root then
+			local offset = -root.CFrame.LookVector * 2 --+ Vector3.new(0, 1.5, 0)
+			part.CFrame = root.CFrame + offset
+		else
+			part.CFrame = CFrame.new(0,0,0)
+		end
+		--part.CFrame = lplr.Character.PrimaryPart.CFrame;
+		part.CanCollide = false;
+		part.Color = Color3.fromHSV(trailcolor_in.Hue, trailcolor_in.Sat, trailcolor_in.Value);
+		lastpart = part;
+		lastpos = part.Position;
+		table.insert(trailparts, part);
+
+		spawnExplosionParticles(part, Color3.fromHSV(trailcolor_in.Hue, trailcolor_in.Sat, trailcolor_in.Value))
+
+		task.spawn(function()
+			local startPos = part.Position
+			local groundY = getGroundY(startPos)
+			local bounceCount = 0
+			local maxBounces = 3
+			local bounceHeight = math.max(4, (startPos.Y - groundY) * 0.5)
+			local damping = 0.5
+			local currentY = startPos.Y
+			local groundPos = Vector3.new(startPos.X, groundY + part.Size.Y/2, startPos.Z)
+
+			tween:Create(part, TweenInfo.new(0.7, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {Position = groundPos}):Play()
+			task.wait(0.7)
+			currentY = groundY + part.Size.Y/2
+
+			spawnExplosionParticles(part, Color3.fromHSV(trailcolor_in.Hue, trailcolor_in.Sat, trailcolor_in.Value))
+
+			if enableWave.Value then
+				while bounceCount < maxBounces and bounceHeight > 0.5 do
+					bounceCount = bounceCount + 1
+					local waveOffset = Vector3.new((math.random()-0.5)*0.8, 0, (math.random()-0.5)*0.8)
+					local upPos = Vector3.new(startPos.X, currentY + bounceHeight, startPos.Z) + waveOffset
+					tween:Create(part, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {Position = upPos}):Play()
+					task.wait(0.5)
+					tween:Create(part, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {Position = groundPos}):Play()
+					task.wait(0.6)
+					currentY = groundY + part.Size.Y/2
+					bounceHeight = bounceHeight * damping
+					spawnExplosionParticles(part, Color3.fromHSV(trailcolor_in.Hue, trailcolor_in.Sat, trailcolor_in.Value))
+				end
+			end
+
+			table.insert(landedBalls, {part=part, groundPos=groundPos, airPos=startPos})
+			if #landedBalls > 1 then
+				table.sort(landedBalls, function(a, b)
+					local aXZ = Vector3.new(a.airPos.X, 0, a.airPos.Z)
+					local bXZ = Vector3.new(b.airPos.X, 0, b.airPos.Z)
+					return aXZ.Magnitude < bXZ.Magnitude
+				end)
+				local first = landedBalls[1].groundPos
+				local last = landedBalls[#landedBalls].groundPos
+				for i,ball in ipairs(landedBalls) do
+					local t = (#landedBalls == 1) and 0 or ((i-1)/(#landedBalls-1))
+					local targetPos = lerpVec3(first, last, t)
+					tween:Create(ball.part, TweenInfo.new(0.3, Enum.EasingStyle.Sine), {Position = targetPos}):Play()
+					ball.groundPos = targetPos
+				end
+			end
+		end)
+
+		task.delay(2.5, function()
+			local startColor = Color3.fromHSV(trailcolor_in.Hue, trailcolor_in.Sat, trailcolor_in.Value)
+			local endColor = Color3.fromHSV(trailcolor_out.Hue, trailcolor_out.Sat, trailcolor_out.Value)
+			local shrinkTime = 0.8
+			local colorFadeTime = shrinkTime * 0.6
+			local t = tween:Create(part, TweenInfo.new(shrinkTime, Enum.EasingStyle.Quad), {Size = Vector3.new(0,0,0)})
+			t.Completed:Once(function()
+				part:Destroy()
+			end)
+			t:Play()
+			local elapsed = 0
+			while elapsed < shrinkTime and part.Parent do
+				if elapsed < colorFadeTime then
+					local alpha = elapsed / colorFadeTime
+					part.Color = startColor:Lerp(endColor, alpha)
+				else
+					part.Color = endColor
+				end
+				elapsed = elapsed + task.wait()
+			end
+			if part.Parent then part.Color = endColor end
+		end);
+		return part
+	end;
+	trails = vape.Categories.Misc:CreateModule({
+		Name = 'Wave Trails',
+		Tooltip = 'cool trail for your character.',
+		Function = function(calling)
+			if calling then 
+				local lastTrailPos = nil
+				local minSpawnInterval = 0.05
+				local lastSpawnTime = 0
+				repeat 
+					local now = tick()
+					local currPos = lplr.Character and lplr.Character.PrimaryPart and lplr.Character.PrimaryPart.Position or nil
+					if isAlive(lplr, true) and currPos then
+						if not lastTrailPos or (Vector3.new(currPos.X, 0, currPos.Z) - Vector3.new(lastTrailPos.X, 0, lastTrailPos.Z)).Magnitude > traildistance.Value then
+							if now - lastSpawnTime > minSpawnInterval then
+								createtrailpart()
+								lastTrailPos = currPos
+								lastSpawnTime = now
+							end
+						end
+					end
+					task.wait()
+				until (not trails.Enabled)
+			end
+		end
+	})
+	traildistance = trails:CreateSlider({
+		Name = 'Distance',
+		Min = 3,
+		Max = 10,
+		Function = function() end
+	})
+	trailcolor_in = trails:CreateColorSlider({
+		Name = 'Color',
+		Function = function()
+			for i,v in trailparts do 
+				v.Color = Color3.fromHSV(trailcolor_in.Hue, trailcolor_in.Sat, trailcolor_in.Value);
+			end
+		end
+	})
+	trailcolor_out = trails:CreateColorSlider({
+		Name = 'Fade Out Color',
+		Function = function() end
+	})
+	trails:CreateToggle({
+		Name = 'Enable Wave Effect',
+		Function = function(val) enableWave.Value = val end,
+		Default = true
+	}).Object.Visible = false
+	trails:CreateToggle({
+		Name = 'Enable Explosion Effect',
+		Function = function(val) enableExplosion.Value = val end,
+		Default = true
+	})
+end)
+
 run(function() 
 	local AestheticLighting = {}
 	AestheticLighting = vape.Categories.Misc:CreateModule({
@@ -4113,4 +4324,218 @@ run(function()
 			PlayerAttachBehindDistance.Value = val
 		end
 	})
+end)
+
+local __tweens = {}
+local TweenService = game:GetService("TweenService")
+local cleanTween = function(instance)
+    if __tweens[instance] then
+        pcall(function()
+            __tweens[instance]:Cancel()
+        end)
+    end
+end
+local createTween = function(instance, properties, duration, easingStyle, easingDirection, repeatCount, reverses, delayTime, autoPlay)
+    cleanTween(instance)
+    if duration ~= nil and duration == true then duration = nil; autoPlay = true end
+    if easingStyle ~= nil and easingStyle == true then easingStyle = nil; autoPlay = true end
+    local tweenInfo = TweenInfo.new(
+        duration or 0.3,
+        easingStyle or Enum.EasingStyle.Sine,
+        easingDirection or Enum.EasingDirection.InOut,
+        repeatCount or 0,
+        reverses or false,
+        delayTime or 0
+    )
+
+    local tween = TweenService:Create(instance, tweenInfo, properties)
+    if autoPlay then tween:Play() end
+    return tween
+end
+
+run(function()
+    local NeonCircles = { Enabled = false }
+    local circleParts = {}
+    local animConn = nil
+    local color1 = {Hue = 0, Sat = 1, Value = 1}
+    local color2 = {Hue = 0.5, Sat = 1, Value = 1}
+    local color3 = {Hue = 0.8, Sat = 1, Value = 1}
+    local colorMode = {Value = "Single"}
+    local colorModeDropdown = nil
+    local NeonCircles_Color1, NeonCircles_Color2, NeonCircles_Color3 = nil, nil, nil
+    local circleSize = 0.5
+    local numCircles = 10
+    local orbitRadius = 2
+    local orbitSpeed = 1.2 --1.2
+    local yLerpSpeed = 1.5
+    local player = game:GetService("Players").LocalPlayer
+	local lplr = player
+    local runService = game:GetService("RunService")
+    local function getTargetChar()
+        local char = shared.GlobalStore and shared.GlobalStore.KillauraTarget or shared.CirclesTarget
+		if type(char) == "table" then
+			char = char.Character
+		end
+		if char and char:IsA("Model") and (char.PrimaryPart or char:FindFirstChild("HumanoidRootPart") and char:FindFirstChildOfClass("Humanoid") and char:FindFirstChildOfClass("Humanoid").Health > 0) then
+            return char
+        end
+        char = player.Character
+        if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChildOfClass("Humanoid") and char:FindFirstChildOfClass("Humanoid").Health > 0 then
+            return char
+        end
+        return nil
+    end
+    local function clearCircles()
+        for _, p in ipairs(circleParts) do
+            if p and p.Parent then p:Destroy() end
+        end
+        circleParts = {}
+    end
+    NeonCircles = vape.Categories.Misc:CreateModule({
+        Name = "Neon Traces",
+        Tooltip = "Animated neon circles orbiting your character.",
+        Function = function(callback)
+            if callback then
+                clearCircles()
+                local t = 0
+                animConn = runService.RenderStepped:Connect(function(dt)
+                    t = t + dt * orbitSpeed
+                    local char
+                    repeat
+                        char = getTargetChar()
+                        if not char then
+                            clearCircles()
+                            task.wait(0.2)
+						end
+                    until char
+                    local hrp = char:FindFirstChild("HumanoidRootPart") or char.PrimaryPart
+                    local head = char:FindFirstChild("Head") or char.PrimaryPart
+                    if not hrp or not head then return end
+                    if #circleParts ~= numCircles then
+                        clearCircles()
+                        for i = 1, numCircles do
+                            local part = Instance.new("Part")
+							part.Name = "NeonCircle"
+                            part.Anchored = true
+                            part.CanCollide = false
+                            part.Size = Vector3.new(circleSize, circleSize, circleSize)
+                            part.Shape = Enum.PartType.Ball
+                            part.Material = Enum.Material.Neon
+                            part.Color = Color3.fromHSV(color1.Hue, color1.Sat, color1.Value)
+                            part.Transparency = 0 --0.25
+                            part.Parent = workspace
+							--[[local a = Instance.new("Highlight")
+							a.Parent = part
+							a.FillTransparency = 1
+							a.OutlineTransparency = 0
+							a.Adornee = part--]]
+							--a.DepthMode = Enum.DepthMode.Occluded
+                            table.insert(circleParts, part)
+                        end
+                    end
+                    for i, part in ipairs(circleParts) do
+                        local angle = t + (math.pi * 2) * (i-1)/numCircles
+                        local yLerp = (math.sin(t*0.7 + i) + 1) * 0.5 -- 0 to 1
+						yLerp = 0
+                        local y = head.Position.Y * yLerp + hrp.Position.Y * (1-yLerp)
+                        local offset = CFrame.Angles(0, angle, 0) * CFrame.new(0, 0, orbitRadius)
+                        local pos = hrp.Position + Vector3.new(0, y - hrp.Position.Y, 0) + offset.Position
+						createTween(part, {
+							CFrame = CFrame.new(pos)
+						}, char ~= lplr.Character and 0.1 or 0.01, true)
+                        --part.CFrame = CFrame.new(pos)
+                        part.Size = Vector3.new(circleSize, circleSize, circleSize)
+                        local lerpAlpha = (math.sin(t + i) + 1) * 0.5
+                        local c1 = Color3.fromHSV(color1.Hue, color1.Sat, color1.Value)
+                        local c2 = Color3.fromHSV(color2.Hue, color2.Sat, color2.Value)
+                        local c3 = Color3.fromHSV(color3.Hue, color3.Sat, color3.Value)
+						if colorMode.Value == "Single" then
+							c2 = c1
+							c3 = c1
+						end
+                        local phase = (t*0.25 + i/numCircles) % 1
+                        local color
+                        if phase < 1/3 then
+                            color = c1:Lerp(c2, phase*3)
+                        elseif phase < 2/3 then
+                            color = c2:Lerp(c3, (phase-1/3)*3)
+                        else
+                            color = c3:Lerp(c1, (phase-2/3)*3)
+                        end
+                        part.Color = color
+                    end
+                end)
+            else
+                if animConn then animConn:Disconnect() animConn = nil end
+                clearCircles()
+            end
+        end
+    })
+
+	NeonCircles:CreateSlider({
+		Name = "Orbit Speed",
+		Function = function(val)
+			orbitSpeed = val/10
+		end,
+		Min = 1,
+		Max = 100, 
+		Default = 12
+	})
+
+	NeonCircles:CreateSlider({
+		Name = "Number Circles",
+		Function = function(val)
+			numCircles = val
+		end,
+		Min = 1,
+		Max = 100, 
+		Default = 10
+	})
+
+	NeonCircles:CreateSlider({
+		Name = "Circle Size",
+		Function = function(val)
+			circleSize = val/10
+		end,
+		Min = 1,
+		Max = 30, 
+		Default = 5
+	})
+
+    colorModeDropdown = NeonCircles:CreateDropdown({
+        Name = "Color Mode",
+        List = {"Single", "Gradient"},
+        Function = function(val)
+            colorMode.Value = val
+            if val == "Single" then
+                if NeonCircles_Color2 and NeonCircles_Color2.Object then NeonCircles_Color2.Object.Visible = false end
+                if NeonCircles_Color3 and NeonCircles_Color3.Object then NeonCircles_Color3.Object.Visible = false end
+            else
+                if NeonCircles_Color2 and NeonCircles_Color2.Object then NeonCircles_Color2.Object.Visible = true end
+                if NeonCircles_Color3 and NeonCircles_Color3.Object then NeonCircles_Color3.Object.Visible = true end
+            end
+        end,
+        Default = "Single"
+    })
+
+    NeonCircles_Color1 = NeonCircles:CreateColorSlider({
+        Name = "Color 1",
+        Function = function(hue, sat, value)
+            color1.Hue, color1.Sat, color1.Value = hue, sat, value
+        end
+    })
+    NeonCircles_Color2 = NeonCircles:CreateColorSlider({
+        Name = "Color 2",
+        Function = function(hue, sat, value)
+            color2.Hue, color2.Sat, color2.Value = hue, sat, value
+        end
+    })
+    NeonCircles_Color3 = NeonCircles:CreateColorSlider({
+        Name = "Color 3",
+        Function = function(hue, sat, value)
+            color3.Hue, color3.Sat, color3.Value = hue, sat, value
+        end
+    })
+    if NeonCircles_Color2 and NeonCircles_Color2.Object then NeonCircles_Color2.Object.Visible = false end
+    if NeonCircles_Color3 and NeonCircles_Color3.Object then NeonCircles_Color3.Object.Visible = false end
 end)
