@@ -4539,3 +4539,13 @@ run(function()
     if NeonCircles_Color2 and NeonCircles_Color2.Object then NeonCircles_Color2.Object.Visible = false end
     if NeonCircles_Color3 and NeonCircles_Color3.Object then NeonCircles_Color3.Object.Visible = false end
 end)
+
+run(function()
+	local WaterAmbient = {Enabled = false}
+	WaterAmbient = vape.Categories.World:CreateModule({
+		Name = "Water Ambient",
+		Function = function(call)
+			workspace.Terrain:FillBlock(CFrame.new(Vector3.new(0, 0, 0)), Vector3.new(4096, 50, 4096), call and Enum.Material.Water or Enum.Material.Air)
+		end
+	})
+end)
