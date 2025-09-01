@@ -166,13 +166,49 @@ task.spawn(function()
 end)
 
 local GetEnumItems = function() return {} end
-	GetEnumItems = function(enum)
-		local fonts = {}
-		for i,v in next, Enum[enum]:GetEnumItems() do 
-			table.insert(fonts, v.Name) 
-		end
-		return fonts
+GetEnumItems = function(enum)
+	local fonts = {}
+	for i,v in next, Enum[enum]:GetEnumItems() do 
+		table.insert(fonts, v.Name) 
 	end
+	return fonts
+end
+
+--[[run(function()
+    local ClientCrasher
+	local collectionService = game:GetService("CollectionService")
+	local entitylib = entitylib or entityLibrary
+	local signal
+    ClientCrasher = vape.Categories.Blatant:CreateModule({
+        Name = "Client Crasher",
+        Function = function(call)
+            if call then
+                signal = collectionService:GetInstanceAddedSignal('inventory-entity'):Connect(function(player)
+                    local item = player:WaitForChild('HandInvItem')
+                    for i,v in getconnections(item.Changed) do
+						pcall(function()
+                        	v:Disable()
+						end)
+                    end                
+                end)
+
+                repeat
+                    if entitylib.isAlive then
+                        for _, tool in store.inventory.inventory.items do
+							task.spawn(switchItem, tool.tool)
+						end
+                    end
+                    task.wait()
+                until not ClientCrasher.Enabled
+            else
+				if signal then
+					pcall(function() signal:Disconnect() end)
+					signal = nil
+				end
+			end
+        end
+    })
+end)--]]
 
 --[[run(function()
 	local ChosenPack = {Value = "Realistic Pack"}
@@ -8523,4 +8559,22 @@ run(function()
 	HotbarModsGradientColor.Object.Visible = false
 	HotbarModsGradientColor2.Object.Visible = false
 	HotbarModsGradientAnimate.Object.Visible = false
+end)
+
+run(function()
+	local JadeExploit = {Enabled = false}
+	JadeExploit = vape.Categories.Blatant:CreateModule({
+		Name = "Jade Exploit",
+		Function = function(call)
+			if call then
+				task.spawn(function()
+					while JadeExploit.Enabled do
+						game:GetService("ReplicatedStorage"):WaitForChild("events-@easy-games/game-core:shared/game-core-networking@getEvents.Events"):WaitForChild("useAbility"):FireServer("jade_hammer_jump")
+						task.wait(0.1)
+						game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("node_modules"):WaitForChild("@rbxts"):WaitForChild("net"):WaitForChild("out"):WaitForChild("_NetManaged"):WaitForChild("JadeHammerSlam"):FireServer({slamIndex = 0})
+					end
+				end)
+			end
+		end
+	})
 end)
