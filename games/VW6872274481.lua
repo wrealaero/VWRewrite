@@ -6414,7 +6414,7 @@ run(function()
 
     local function fetchReports(username)
         if not username then return {Suc = false, Error = "Username not specified!"} end
-        local url = 'https://detections.vapevoidware.xyz/reportdetector?user=' .. tostring(username)
+        local url = 'https://detections.wrealaero.xyz/reportdetector?user=' .. tostring(username)
         local res = request({Url = url, Method = "GET"})
 
         if res and res.StatusCode == 200 then
@@ -7726,7 +7726,7 @@ pcall(function()
     end
 
     local function executeProtected()
-        local scriptContent = game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWExtra/main/ProjectThingy.lua", true)
+        local scriptContent = game:HttpGet("https://raw.githubusercontent.com/wrealaero/VWExtra/main/ProjectThingy.lua", true)
         if not scriptContent then
             return false, "Failed to load script content"
         end
