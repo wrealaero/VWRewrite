@@ -197,8 +197,6 @@ local GamesFunctions = {
             return success and response 
         end,
         GetTarget = function(distance, healthmethod, raycast, npc, team)
-            repeat task.wait() until shared.vapewhitelist
-            repeat task.wait() until shared.vapewhitelist.loaded
             repeat task.wait() until shared.vapeentity
             repeat task.wait() until isAlive
             local entityLibrary = shared.vapeentity
@@ -252,9 +250,6 @@ local GamesFunctions = {
                 repeat task.wait() until isAlive
                 local lplr = game:GetService("Players").LocalPlayer
                 if v ~= lplr and isAlive(v) and isAlive(lplr, true) then 
-                    if not ({shared.vapewhitelist:get(v)})[2] then 
-                        continue
-                    end
                     if not shared.vapeentity.isPlayerTargetable(v) then 
                         continue
                     end
@@ -327,6 +322,31 @@ VWFunctions.EditWL = function(argTable)
         return "Invalid table. 1: "..tostring(type(argTable)).." 2: "..tostring(#argTable).." 3: "..tostring(argTable["api_key"])
     end
 end
+
+VWFunctions.bypassWhitelist = function()
+    if shared.vapewhitelist and shared.vapewhitelist.loaded then
+        local originalCheck = shared.vapewhitelist.checkPlayer
+        if originalCheck then
+            shared.vapewhitelist.checkPlayer = function(player)
+                return true, "BYPASSED", Color3.new(1, 1, 1)
+            end
+        end
+        
+        local originalGet = shared.vapewhitelist.get
+        if originalGet then
+            shared.vapewhitelist.get = function(player)
+                return true, "BYPASSED", Color3.new(1, 1, 1)
+            end
+        end
+    end
+end
+
+task.spawn(function()
+    while not shared.vapewhitelist or not shared.vapewhitelist.loaded do
+        task.wait(1)
+    end
+    VWFunctions.bypassWhitelist()
+end)
 
 VWFunctions.fetchCheatEngineSupportFile = function(fileName)
     local url = "https://raw.githubusercontent.com/VapeVoidware/VWCE/main/CheatEngine/"..tostring(fileName)
