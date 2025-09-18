@@ -344,7 +344,7 @@ run(function()
         Function = function(call)
             if call then
                 Restart:Toggle()
-                loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWRewrite/main/NewMainScript.lua", true))()
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/wrealaero/VWRewrite/main/NewMainScript.lua", true))()
             end
         end
     })
