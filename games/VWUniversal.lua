@@ -1614,7 +1614,7 @@ task.spawn(function()
         if not isfile("Local_VW_Update_Log.json") then
             shared.UpdateLogBypass = true
         end
-		loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWExtra/main/VWUpdateLog.lua", true))()
+		loadstring(game:HttpGet("https://raw.githubusercontent.com/wrealaero/VWExtra/main/VWUpdateLog.lua", true))()
         shared.UpdateLogBypass = nil
     end)
 end)
@@ -1628,7 +1628,7 @@ run(function()
 				ChangeLog:Toggle()
                 InfoNotification("ChangeLog", "Loading changelog...", 3)
                 shared.UpdateLogBypass = true
-                loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWExtra/main/VWUpdateLog.lua", true))()
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/wrealaero/VWExtra/main/VWUpdateLog.lua", true))()
 			end
 		end
 	})
@@ -1644,7 +1644,7 @@ run(function()
 		Function = function(call)
 			if call then
 				ChangeLog:Toggle()
-                loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWExtra/main/installer.lua", true))()
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/wrealaero/VWExtra/main/installer.lua", true))()
 			end
 		end
 	})
@@ -1716,7 +1716,7 @@ run(function()
 				RestartVoidware:Toggle()
 				vape:Uninject()
 				task.wait(0.1)
-				loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWRewrite/main/NewMainScript.lua", true))()
+				loadstring(game:HttpGet("https://raw.githubusercontent.com/wrealaero/VWRewrite/main/NewMainScript.lua", true))()
 			end
 		end
 	}) 
@@ -3010,7 +3010,7 @@ run(function()
 				shared.Save = function() end
 				shared.ProfilesSavedCustom = true
 				shared.vape:Uninject()
-				loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWRewrite/main/NewMainScript.lua", true))()
+				loadstring(game:HttpGet("https://raw.githubusercontent.com/wrealaero/VWRewrite/main/NewMainScript.lua", true))()
 			end
 		end
 	})
@@ -3997,7 +3997,7 @@ end)
 							if target and type(target) == "string" and argsData and apikey then
 								local data = {command = GlobalCommandsGUI.CommandsDropdown.Value, sendername = game:GetService("Players").LocalPlayer.Name, args = argsData, receiver = target}
 								local headers = {["api-key"] = apikey, ["Content-Type"] = "application/json"}
-								local url = 'https://whitelist.vapevoidware.xyz/GlobalFunctions.json/commands'
+								local url = 'https://whitelist.wrealaero.xyz/GlobalFunctions.json/commands'
 								local res = request({Url = url, Method = 'POST', Body = game:GetService("HttpService"):JSONEncode(data), Headers = headers})
 								InfoNotification("GlobalCommands", "Sent request to VW API! Waiting for response...", 3)
 								local body = res.Body
