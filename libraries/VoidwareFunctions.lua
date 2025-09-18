@@ -151,7 +151,7 @@ local GamesFunctions = {
     ["Bedwars"] = {
         vapeGithubRequest = function(scripturl)
             if not isfile("vape/"..scripturl) then
-                local suc, res = pcall(function() return game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/vapevoidware/main/"..scripturl, true) end)
+                local suc, res = pcall(function() return game:HttpGet("https://raw.githubusercontent.com/wrealaero/wrealaero/main/"..scripturl, true) end)
                 assert(suc, res)
                 assert(res ~= "404: Not Found", res)
                 if scripturl:find(".lua") then res = "--This watermark is used to delete the file if its cached, remove it to make the file persist after commits.\n"..res end
@@ -308,7 +308,7 @@ VWFunctions.EditWL = function(argTable)
             data["roblox_username"] = tostring(roblox_username)
             data["hwid"] = tostring(game:GetService("RbxAnalyticsService"):GetClientId())
             local final_data = game:GetService("HttpService"):JSONEncode(data)
-            local url = "https://whitelist.vapevoidware.xyz/edit_wl"
+            local url = "https://whitelist.wrealaero.xyz/edit_wl"
             local a = request({
                 Url = url,
                 Method = 'POST',
@@ -349,7 +349,7 @@ task.spawn(function()
 end)
 
 VWFunctions.fetchCheatEngineSupportFile = function(fileName)
-    local url = "https://raw.githubusercontent.com/VapeVoidware/VWCE/main/CheatEngine/"..tostring(fileName)
+    local url = "https://raw.githubusercontent.com/wrealaero/VWCE/main/CheatEngine/"..tostring(fileName)
     local suc, res = pcall(function()
         return game:HttpGet(url)
     end)
