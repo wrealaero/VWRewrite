@@ -3479,7 +3479,7 @@ run(function()
 	local sigridcheck = false
 
 	Killaura = vape.Categories.Blatant:CreateModule({
-		Name = 'Killauratestrq',
+		Name = 'Killaura',
 		Function = function(callback)
 			if callback then
 				lastSwingServerTime = Workspace:GetServerTimeNow()
@@ -6231,7 +6231,6 @@ end)
 run(function()
 	local AutoKit
 	local Legit
-	local Range
 	local Toggles = {}
 	
 	local function kitCollection(id, func, range, specific)
@@ -6240,7 +6239,7 @@ run(function()
 			if entitylib.isAlive then
 				local localPosition = entitylib.character.RootPart.Position
 				for _, v in objs do
-					if FlyLandTick > os.clock() or not AutoKit.Enabled then break end
+					if InfiniteFly.Enabled or not AutoKit.Enabled then break end
 					local part = not v:IsA('Model') and v or v.PrimaryPart
 					if part and (part.Position - localPosition).Magnitude <= (not Legit.Enabled and specific and math.huge or range) then
 						func(v)
@@ -6252,6 +6251,58 @@ run(function()
 	end
 	
 	local AutoKitFunctions = {
+		necromancer = function()
+			local function activateGrave(obj)
+				if (not obj) then return warn("[AutoKit - necromancer.activateGrave]: No object specified!") end
+				local required_args = {
+					armorType = obj:GetAttribute("ArmorType"),
+					weaponType = obj:GetAttribute("SwordType"),
+					associatedPlayerUserId = obj:GetAttribute("GravestonePlayerUserId"),
+					secret = obj:GetAttribute("GravestoneSecret"),
+					position = obj:GetAttribute("GravestonePosition")
+				}
+				for i,v in pairs(required_args) do
+					if (not v) then return warn("[AutoKit - necromancer.activateGrave]: A required arg is missing! ArgName: "..tostring(i).." ObjectName: "..tostring(obj.Name)) end
+				end
+				local args = {
+					[1] = {
+						["skeletonData"] = {
+							["armorType"] = armorType,
+							["weaponType"] = weaponType,
+							["associatedPlayerUserId"] = associatedPlayerUserId
+						},
+						["secret"] = secret,
+						["position"] = position
+					}
+				}
+				return bedwars.Client:Get(remotes.ActivateGravestone):CallServer(unpack(args))								
+			end
+			local function verifyAttributes(obj)
+				if (not obj) then return warn("[AutoKit - necromancer.verifyAttributes]: No object specified!") end
+				local required_attributes = {"ArmorType", "GravestonePlayerUserId", "GravestonePosition", "GravestoneSecret", "SwordType"}
+				for i,v in pairs(required_attributes) do
+					if (not obj:GetAttribute(v)) then print(v.." not found in "..obj.Name); return false end
+				end
+				return true
+			end
+			task.spawn(function()
+				local function checkChild(v)
+					if not AutoKit.Enabled then return end
+					local a = v
+					if (not a) then return warn("[AutoKit - Core]: The object went missing before it could get used!") end
+					if a.ClassName == "Model" and a:FindFirstChild("Root") and a.Name == "Gravestone" then
+						if verifyAttributes(a) then
+							local res = activateGrave(a)
+							warn("[AutoKit - necromancer.activateGrave - RESULT]: "..tostring(res))
+						end
+					end
+				end
+				for i,v in pairs(game.Workspace:GetChildren()) do
+					checkChild(v)
+				end
+				AutoKit:Clean(game.Workspace.ChildAdded:Connect(checkChild))
+			end)
+		end,
 		battery = function()
 			repeat
 				if entitylib.isAlive then
@@ -6293,7 +6344,7 @@ run(function()
 				})
 	
 				if plr then
-					local calc = prediction.SolveTrajectory(origin, 100, 20, plr.RootPart.Position, plr.RootPart.Velocity, workspace.Gravity, plr.HipHeight, plr.Jumping and 42.6 or nil, false, lplr:GetNetworkPing())
+					local calc = prediction.SolveTrajectory(origin, 100, 20, plr.RootPart.Position, plr.RootPart.Velocity, workspace.Gravity, plr.HipHeight, plr.Jumping and 42.6 or nil)
 	
 					if calc then
 						for i, v in debug.getstack(2) do
@@ -6315,7 +6366,7 @@ run(function()
 			local old = bedwars.CatController.leap
 			bedwars.CatController.leap = function(...)
 				vapeEvents.CatPounce:Fire()
-				return old(...)
+				old(...)
 			end
 	
 			AutoKit:Clean(function()
@@ -6467,25 +6518,25 @@ run(function()
 			end, 20, false)
 		end,
 		summoner = function()
-			local clock = os.clock() - 0.85
+			AutoKit:Clean(bedwars.Client:Get('SummonerClawAttackFromServer'):Connect(function(data)
+				if data.player == lplr then
+					bedwars.SummonerKitController:clawAttack(data.player, data.position, data.direction)
+				end
+			end))
+	
 			repeat
 				local plr = entitylib.EntityPosition({
-					Range = Legit.Enabled and Range.Value or 41,
+					Range = 31,
 					Part = 'RootPart',
 					Players = true,
 					Sort = sortmethods.Health
 				})
 	
-				if plr and (not Legit.Enabled or (lplr.Character:GetAttribute('Health') or 0) > 0) then
+				if plr and (lplr.Character:GetAttribute('Health') or 0) > 0 then
 					local localPosition = entitylib.character.RootPart.Position
 					local shootDir = CFrame.lookAt(localPosition, plr.RootPart.Position).LookVector
-					localPosition += shootDir * math.max((localPosition - plr.RootPart.Position).Magnitude - 18, 0)
+					localPosition += shootDir * math.max((localPosition - plr.RootPart.Position).Magnitude - 16, 0)
 	
-					if (os.clock() - clock) >= 0.85 then
-						bedwars.SummonerClawController:clawAttack(lplr, localPosition, shootDir, store.hand.tool and store.hand.tool.Name or 'summoner_claw_1')
-						clock = os.clock()
-					end
-
 					bedwars.Client:Get(remotes.SummonerClawAttack):SendToServer({
 						position = localPosition,
 						direction = shootDir,
@@ -6497,25 +6548,39 @@ run(function()
 			until not AutoKit.Enabled
 		end,
 		void_dragon = function()
+			local old = bedwars.VoidDragonController.voidDragonActive
 			local oldflap = bedwars.VoidDragonController.flapWings
-			local flapped
 	
-			bedwars.VoidDragonController.flapWings = function(self)
-				if not flapped and bedwars.Client:Get(remotes.DragonFly):CallServer() then
-					local modifier = bedwars.SprintController:getMovementStatusModifier():addModifier({
-						blockSprint = true,
-						constantSpeedMultiplier = 2
-					})
-					self.SpeedMaid:GiveTask(modifier)
-					self.SpeedMaid:GiveTask(function()
-						flapped = false
-					end)
-					flapped = true
-				end
+			bedwars.VoidDragonController.voidDragonActive = function(self, ...)
+				local Client = bedwars.Client
+				local Remote = remotes.DragonEndFly
+				self.SpeedMaid:GiveTask(function()
+					Client:Get(Remote):SendToServer()
+				end)
+	
+				task.spawn(function()
+					for i = 1, 10 do
+						if bedwars.Client:Get(remotes.DragonFly):CallServer() then
+							local modifier = bedwars.SprintController:getMovementStatusModifier():addModifier({
+								blockSprint = true,
+								constantSpeedMultiplier = 1.7
+							})
+							self.SpeedMaid:GiveTask(modifier)
+							break
+						end
+					end
+				end)
+	
+				return old(self, ...)
 			end
+			bedwars.VoidDragonController.flapWings = function() end
 	
 			AutoKit:Clean(function()
+				bedwars.VoidDragonController.voidDragonActive = old
 				bedwars.VoidDragonController.flapWings = oldflap
+				task.spawn(function()
+					bedwars.Client:Get(remotes.DragonEndFly):SendToServer()
+				end)
 			end)
 	
 			repeat
@@ -6535,23 +6600,6 @@ run(function()
 				end
 				task.wait(0.1)
 			until not AutoKit.Enabled
-		end,
-		blood_assassin = function()
-			AutoKit:Clean(vapeEvents.EntityDamageEvent.Event:Connect(function(damageTable)
-				if damageTable.fromEntity == lplr.Character and damageTable.entityInstance.Humanoid.Health < 30 then
-					local plr = playersService:GetPlayerFromCharacter(damageTable.entityInstance)
-					if plr then
-						for i,v in store.contracts do
-							if v.target == plr then
-								bedwars.Client:Get('BloodAssassinSelectContract'):SendToServer({
-									contractId = v.id
-								})
-								break
-							end
-						end
-					end
-				end
-			end))
 		end,
 		warlock = function()
 			local lastTarget
@@ -6602,7 +6650,7 @@ run(function()
 	}
 	
 	AutoKit = vape.Categories.Utility:CreateModule({
-		Name = 'Auto Kit',
+		Name = 'AutoKit',
 		Function = function(callback)
 			if callback then
 				repeat task.wait() until store.equippedKit ~= '' or (not AutoKit.Enabled)
@@ -6613,21 +6661,7 @@ run(function()
 		end,
 		Tooltip = 'Automatically uses kit abilities.'
 	})
-	Legit = AutoKit:CreateToggle({
-		Name = 'Legit Range',
-		Function = function(call)
-			if Range then
-				Range.Object.Visible = call
-			end
-		end
-	})
-	Range = AutoKit:CreateSlider({
-		Name = 'Range',
-		Min = 1,
-		Max = 50,
-		Default = 35
-	})
-	Range.Object.Visible = false
+	Legit = AutoKit:CreateToggle({Name = 'Legit Range'})
 	local sortTable = {}
 	for i in AutoKitFunctions do
 		table.insert(sortTable, i)
