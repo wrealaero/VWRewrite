@@ -3479,7 +3479,7 @@ run(function()
 	local sigridcheck = false
 
 	Killaura = vape.Categories.Blatant:CreateModule({
-		Name = 'Killaura',
+		Name = 'Killauratestrq',
 		Function = function(callback)
 			if callback then
 				lastSwingServerTime = Workspace:GetServerTimeNow()
