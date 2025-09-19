@@ -151,7 +151,7 @@ local GamesFunctions = {
     ["Bedwars"] = {
         vapeGithubRequest = function(scripturl)
             if not isfile("vape/"..scripturl) then
-                local suc, res = pcall(function() return game:HttpGet("https://raw.githubusercontent.com/wrealaero/wrealaero/main/"..scripturl, true) end)
+                local suc, res = pcall(function() return game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/vapevoidware/main/"..scripturl, true) end)
                 assert(suc, res)
                 assert(res ~= "404: Not Found", res)
                 if scripturl:find(".lua") then res = "--This watermark is used to delete the file if its cached, remove it to make the file persist after commits.\n"..res end
@@ -197,6 +197,8 @@ local GamesFunctions = {
             return success and response 
         end,
         GetTarget = function(distance, healthmethod, raycast, npc, team)
+            repeat task.wait() until shared.vapewhitelist
+            repeat task.wait() until shared.vapewhitelist.loaded
             repeat task.wait() until shared.vapeentity
             repeat task.wait() until isAlive
             local entityLibrary = shared.vapeentity
@@ -250,6 +252,9 @@ local GamesFunctions = {
                 repeat task.wait() until isAlive
                 local lplr = game:GetService("Players").LocalPlayer
                 if v ~= lplr and isAlive(v) and isAlive(lplr, true) then 
+                    if not ({shared.vapewhitelist:get(v)})[2] then 
+                        continue
+                    end
                     if not shared.vapeentity.isPlayerTargetable(v) then 
                         continue
                     end
@@ -308,13 +313,35 @@ VWFunctions.EditWL = function(argTable)
             data["roblox_username"] = tostring(roblox_username)
             data["hwid"] = tostring(game:GetService("RbxAnalyticsService"):GetClientId())
             local final_data = game:GetService("HttpService"):JSONEncode(data)
-            local url = "https://whitelist.wrealaero.xyz/edit_wl"
+            local url = "https://raw.githubusercontent.com/yourusername/yourrepo/main/whitelist.json"
             local a = request({
                 Url = url,
-                Method = 'POST',
-                Headers = headers,
-                Body = final_data
+                Method = 'GET',
+                Headers = headers
             })
+            if a.Success then
+                local whitelistData = game:GetService("HttpService"):JSONDecode(a.Body)
+                local userId = game:GetService("Players"):GetUserIdFromNameAsync(roblox_username)
+                for _, entry in pairs(whitelistData) do
+                    if entry.userid == userId then
+                        if entry.tag_text then
+                            data["tag_text"] = entry.tag_text
+                        end
+                        if entry.tag_color then
+                            data["tag_color"] = entry.tag_color
+                        end
+                        break
+                    end
+                end
+                local update_url = "https://whitelist.vapevoidware.xyz/edit_wl"
+                local update_request = request({
+                    Url = update_url,
+                    Method = 'POST',
+                    Headers = headers,
+                    Body = game:GetService("HttpService"):JSONEncode(data)
+                })
+                return update_request
+            end
             return a
         end
     else
@@ -323,33 +350,8 @@ VWFunctions.EditWL = function(argTable)
     end
 end
 
-VWFunctions.bypassWhitelist = function()
-    if shared.vapewhitelist and shared.vapewhitelist.loaded then
-        local originalCheck = shared.vapewhitelist.checkPlayer
-        if originalCheck then
-            shared.vapewhitelist.checkPlayer = function(player)
-                return true, "BYPASSED", Color3.new(1, 1, 1)
-            end
-        end
-        
-        local originalGet = shared.vapewhitelist.get
-        if originalGet then
-            shared.vapewhitelist.get = function(player)
-                return true, "BYPASSED", Color3.new(1, 1, 1)
-            end
-        end
-    end
-end
-
-task.spawn(function()
-    while not shared.vapewhitelist or not shared.vapewhitelist.loaded do
-        task.wait(1)
-    end
-    VWFunctions.bypassWhitelist()
-end)
-
 VWFunctions.fetchCheatEngineSupportFile = function(fileName)
-    local url = "https://raw.githubusercontent.com/wrealaero/VWCE/main/CheatEngine/"..tostring(fileName)
+    local url = "https://raw.githubusercontent.com/VapeVoidware/VWCE/main/CheatEngine/"..tostring(fileName)
     local suc, res = pcall(function()
         return game:HttpGet(url)
     end)
