@@ -7705,7 +7705,7 @@ if not shared.CheatEngineMode then
 	end)
 end
 
-pcall(function()
+--[[pcall(function()
     local function sreadfile(filename)
         local suc, content = pcall(readfile, filename)
         if not suc then
@@ -7753,7 +7753,7 @@ pcall(function()
     if not suc then
         print("Script execution failed: " .. tostring(res))
     end
-end)
+end)--]]
 
 run(function()
     local BedAssist = {Enabled = false}
