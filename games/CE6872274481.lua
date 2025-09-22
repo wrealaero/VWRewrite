@@ -3651,6 +3651,68 @@ end)
 		Default = 0
 	})
 end)--]]
+run(function()
+	local replicatedStorage = game:GetService("ReplicatedStorage")
+	local kbUtil = replicatedStorage:WaitForChild("TS"):WaitForChild("damage")["knockback-util"]
+	local orig = {
+		kbDirectionStrength = 11750,
+		kbUpwardStrength = 10000
+	}
+
+    local Velocity
+    local Horizontal
+    local Vertical
+    local Chance
+    local TargetCheck
+    local rand, old = Random.new()
+    
+    Velocity = vape.Categories.Combat:CreateModule({
+        Name = 'Velocity',
+        Function = function(callback)
+            if callback then
+				task.spawn(function()
+					repeat
+						local check = (not TargetCheck.Enabled) or entitylib.EntityPosition({
+							Range = 50,
+							Part = 'RootPart',
+							Players = true
+						})
+		
+						if check then
+							kbUtil:SetAttribute("ConstantManager_kbDirectionStrength", orig.kbDirectionStrength * (Horizontal.Value / 100))
+							kbUtil:SetAttribute("ConstantManager_kbUpwardStrength", orig.kbDirectionStrength * (Vertical.Value / 100))
+						else
+							kbUtil:SetAttribute("ConstantManager_kbDirectionStrength", orig.kbDirectionStrength)
+							kbUtil:SetAttribute("ConstantManager_kbUpwardStrength", orig.kbDirectionStrength)
+						end
+
+						task.wait()
+					until not Velocity.Enabled
+				end)
+            else
+                task.wait()
+                kbUtil:SetAttribute("ConstantManager_kbDirectionStrength", orig.kbDirectionStrength)
+                kbUtil:SetAttribute("ConstantManager_kbUpwardStrength", orig.kbDirectionStrength)
+            end
+        end,
+        Tooltip = 'Reduces knockback taken'
+    })
+    Horizontal = Velocity:CreateSlider({
+        Name = 'Horizontal',
+        Min = 0,
+        Max = 100,
+        Default = 0,
+        Suffix = '%'
+    })
+    Vertical = Velocity:CreateSlider({
+        Name = 'Vertical',
+        Min = 0,
+        Max = 100,
+        Default = 0,
+        Suffix = '%'
+    })
+    TargetCheck = Velocity:CreateToggle({Name = 'Only when targeting'})
+end)
 
 run(function()
 	local StaffDetector
