@@ -34,7 +34,7 @@ if isfile('vape/games/'..vape.Place..'.lua') then
 else
 	if not shared.VapeDeveloper then
 		local suc, res = pcall(function() return 
-			game:HttpGet('https://raw.githubusercontent.com/7GrandDadPGN/VapeV4ForRoblox/'..readfile('vape/profiles/commit.txt')..'/games/'..vape.Place..'.lua', true) 
+			game:HttpGet('https://raw.githubusercontent.com/wrealaero/VapeV4ForRoblox/'..readfile('vape/profiles/commit.txt')..'/games/'..vape.Place..'.lua', true) 
 		end)
 		if suc and res ~= '404: Not Found' then
 			loadstring(downloadFile('vape/games/'..vape.Place..'.lua'), 'bridge duel')()
