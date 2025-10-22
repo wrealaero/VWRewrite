@@ -5046,7 +5046,7 @@ local function isFirstPerson()
 end
 
 --bedwars.ViewModel = workspace.CurrentCamera.Viewmodel.RightHand.RightWrist
-local oldrotation = bedwars.ViewModel.C0
+--local oldrotation = bedwars.ViewModel.C0
 
 local originalArmC0, originalNeckC0, originalRootC0
 
