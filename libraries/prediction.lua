@@ -191,6 +191,11 @@ function module.SolveTrajectory(origin, projectileSpeed, gravity, targetPos, tar
 	local p, q, r = targetVelocity.X, targetVelocity.Y, targetVelocity.Z
 	local h, j, k = disp.X, disp.Y, disp.Z
 	local l = -.5 * gravity
+
+	if playerJump ~= nil then
+		targetPos += Vector3.new(0, 2, 0)
+	end
+
 	--attemped gravity calculation, may return to it in the future.
 	if math.abs(q) > 0.01 and playerGravity and playerGravity > 0 then
 		local estTime = (disp.Magnitude / projectileSpeed)
@@ -220,6 +225,8 @@ function module.SolveTrajectory(origin, projectileSpeed, gravity, targetPos, tar
 		2*j*q + 2*h*p + 2*k*r,
 		j*j + h*h + k*k
 	)
+
+	local predictedPos
 	if solutions then
 		local posRoots = table.create(2)
 		for _, v in solutions do --filter out the negative roots
@@ -227,16 +234,29 @@ function module.SolveTrajectory(origin, projectileSpeed, gravity, targetPos, tar
 				table.insert(posRoots, v)
 			end
 		end
-		posRoots[1] = posRoots[1] or (disp.Magnitude / projectileSpeed)
 		if posRoots[1] then
 			local t = posRoots[1]
 			local d = (h + p*t)/t
 			local e = (j + q*t - l*t*t)/t
 			local f = (k + r*t)/t
-			return origin + Vector3.new(d, e, f)
+			predictedPos = origin + Vector3.new(d, e, f)
 		end
+	elseif gravity == 0 then
+		local t = (disp.Magnitude / projectileSpeed)
+		local d = (h + p*t)/t
+		local e = (j + q*t - l*t*t)/t
+		local f = (k + r*t)/t
+		predictedPos = origin + Vector3.new(d, e, f)
 	end
-	return
+
+	local multi = 0.95
+
+	if predictedPos and targetVelocity ~= Vector3.zero and tonumber(game:GetService('Stats'):FindFirstChild('PerformanceStats').Ping:GetValue()) > 170 then
+		local new = predictedPos * multi
+
+		predictedPos = Vector3.new(new.X, predictedPos.Y + 2, new.Z)
+	end
+	return predictedPos
 end
 
 return module

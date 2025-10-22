@@ -1,6 +1,11 @@
 if shared.RiseMode then
     return loadstring(game:HttpGet('https://raw.githubusercontent.com/VapeVoidware/VWRise/main/NewMainScript.lua'))()
 end
+local smooth = not game:IsLoaded()
+repeat task.wait() until game:IsLoaded()
+if smooth then
+    task.wait(10)
+end
 local isfile = isfile or function(file)
 	local suc, res = pcall(function()
 		return readfile(file)
