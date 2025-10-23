@@ -1373,12 +1373,19 @@ run(function()
             local handler = bedwars.BlockController:getHandlerRegistry():getHandler(block.Name)
             local cost, pos, target, path = math.huge
 
-            for _, v in (handler and handler:getContainedPositions(block) or {block.Position / 3}) do
-                local dpos, dcost, dpath = calculatePath(block, v * 3)
-                if dpos and dcost < cost then
-                    cost, pos, target, path = dcost, dpos, v * 3, dpath
-                end
-            end
+			local pos2 = (handler and handler:getContainedPositions(block) or {block.Position / 3})
+
+			table.sort(pos2, function(a, b)
+				return (entitylib.character.HumanoidRootPart.Position - (a * 3)).Magnitude <= (entitylib.character.HumanoidRootPart.Position - (b * 3)).Magnitude 
+			end)
+	
+			for _, v in pos2 do
+				local dpos, dcost, dpath = calculatePath(block, v * 3)
+				local dmag = dpos and (entitylib.character.HumanoidRootPart.Position - dpos).Magnitude
+				if dpos and dcost < cost and (wallcheck and not entitylib.Wallcheck(dpos, entitylib.character.RootPart.Position) or not wallcheck) and dmag < mag then
+					cost, pos, target, path = dcost, dpos, v * 3, dpath, dmag
+				end
+			end	
 
             if pos then
                 if (entitylib.character.RootPart.Position - pos).Magnitude > 30 then return end
@@ -8003,11 +8010,11 @@ run(function()
 end)
 	
 run(function()
-    local BedProtector
+	local BedProtector
 	local Priority
 	local Layers 
 	local CPS 
-
+	local Mode
 	local BlockTypeCheck 
 	local AutoSwitch 
 	local HandCheck 
@@ -8024,7 +8031,7 @@ run(function()
 	local function isAllowed(block)
 		if not BlockTypeCheck.Enabled then return true end
 		local allowed = {"wool", "stone_brick", "wood_plank_oak", "ceramic", "obsidian"}
-		for i,v in pairs(allowed) do
+		for _,v in pairs(allowed) do
 			if string.find(string.lower(tostring(block)), v) then 
 				return true
 			end
@@ -8116,8 +8123,53 @@ run(function()
     end
 
     local res_attempts = 0
+
+	local autoCheckLoop
+
+	local function autoCheck()
+		if not BedProtector.Enabled or Mode.Value ~= "Toggle" then return end
+
+		local bed = getBedNear()
+		if not bed then return end
+
+		local bedPos = bed.Position
+		local playerPos = entitylib.isAlive and entitylib.character.RootPart.Position or Vector3.zero
+		local distance = (playerPos - bedPos).Magnitude
+
+		if distance < 12 then
+			local blocks = getBlocks()
+			if #blocks == 0 then return end
+
+			local positions = getPyramid(Layers.Value - 1, 3)
+			for _, pos in ipairs(positions) do
+				local blockPos = bedPos + pos
+				if not getPlacedBlock(blockPos) then
+					bedwars.placeBlock(blockPos, blocks[1][1], false)
+					task.wait(1 / CPS.Value)
+				end
+			end
+		end
+	end
+
+	local function startAutoLoop()
+		if autoCheckLoop then return end
+		autoCheckLoop = task.spawn(function()
+			while BedProtector.Enabled and Mode.Value == "Toggle" do
+				autoCheck()
+				task.wait(1.5)
+			end
+			autoCheckLoop = nil
+		end)
+	end
+
+	local function stopAutoLoop()
+		if autoCheckLoop then
+			task.cancel(autoCheckLoop)
+			autoCheckLoop = nil
+		end
+	end
     
-    local function buildProtection(bedPos, blocks, layers, cps)
+	local function buildProtection(bedPos, blocks, layers, cps)
         local delay = 1 / cps 
         local blockIndex = 1
         local posIndex = 1
@@ -8157,15 +8209,19 @@ run(function()
         
         placeNextBlock()
     end
-    
+
 	BedProtector = vape.Categories.World:CreateModule({
         Name = 'BedProtector',
         Function = function(callback)
             if callback then
+				if Mode.Value == "Toggle" then
+					startAutoLoop()
+					return
+				end
+
                 local bed = getBedNear()
                 local bedPos = bed and bed.Position
                 if bedPos then
-
 					if HandCheck.Enabled and not AutoSwitch.Enabled then
 						if not (store.hand and store.hand.toolType == "block") then
 							errorNotification("BedProtector | Hand Check", "You aren't holding a block!", 1.5)
@@ -8195,16 +8251,17 @@ run(function()
                     
                     buildProtection(bedPos, blocks, Layers.Value, CPS.Value)
                 else
-                    notif('BedProtector', 'Please get closer to your bed!', 5)
+                    notif('BedProtector', 'Please get closer to your bed!', 3)
                     BedProtector:Toggle()
                 end
             else
+				stopAutoLoop()
                 res_attempts = 0
             end
         end,
         Tooltip = 'Automatically places strong blocks around the bed with customizable speed.'
     })
-
+	
     Layers = BedProtector:CreateSlider({
         Name = "Layers",
         Function = function() end,
@@ -8227,6 +8284,19 @@ run(function()
 		Name = "Auto Switch",
 		Function = function() end,
 		Default = true
+	})
+
+	Mode = BedProtector:CreateDropdown({
+		Name = 'Mode',
+		List = {'Toggle', 'On Key'},
+		Function = function(val)
+			if val == "Toggle" and BedProtector.Enabled then
+				startAutoLoop()
+			else
+				stopAutoLoop()
+			end
+		end,
+		Default = "On Key"
 	})
 
 	HandCheck = BedProtector:CreateToggle({
