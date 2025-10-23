@@ -16,6 +16,38 @@ local vapeEvents = setmetatable({}, {
 	end
 })
 
+local internalConfig = {
+	initialisationDebug = false,
+	blacklist = {
+		"RemoteInternal"
+	}
+}
+local internalConstructor = {}; internalConstructor = {
+	__index = function(self, key)
+		if key == "new" then
+			return function(id)
+				if internalConfig.initialisationDebug then
+					warn("[VOIDWARE INTERNAL]: New Instance ["..tostring(id).."]")
+				end
+				return setmetatable({__id = id}, internalConstructor)
+			end
+		end
+	end,
+	__call = function(self, debug)
+		if not self.__id then
+			warn(debug.traceback("[VOIDWARE INTERNAL]: Called without initialisation!"))
+			return
+		end
+		if table.find(internalConfig.blacklist, tostring(self.__id)) then return end
+		warn("["..tostring(self.__id).."]: "..tostring(debug))
+	end,
+	__tostring = function()
+		return "VOIDWARE INTERNAL"
+	end
+}
+
+local internalDebug = setmetatable({}, internalConstructor)
+
 local playersService = cloneref(game:GetService('Players'))
 local replicatedStorage = cloneref(game:GetService('ReplicatedStorage'))
 local runService = cloneref(game:GetService('RunService'))
@@ -972,6 +1004,8 @@ run(function()
 			return false
 		end
 		if isNPC(v.Name) then
+			if not v.PrimaryPart then task.wait(1) end
+			if not v:FindFirstChild("HumanoidRootPart") then task.wait(1) end
 			if v.PrimaryPart then
 				v.Name = v.Name.." | "..tostring(#checked)
 				entitylib.addEntity(v, nil, function() return true end)
@@ -3584,6 +3618,9 @@ run(function()
 						})
 						if #plrs > 0 then
 							switchItem(sword.tool, 0)
+							if store.equippedKit == "ember" and shared.EmberAutoKit and sword.itemType == "infernal_saber" then
+								bedwars.Client:Get(remotes.HellBladeRelease):FireServer({chargeTime = 1, player = lplr, weapon = sword.tool})
+							end
 							local selfpos = entitylib.character.RootPart.Position
 							local localfacing = entitylib.character.RootPart.CFrame.LookVector * Vector3.new(1, 0, 1)
 
@@ -6258,6 +6295,9 @@ run(function()
 	end
 	
 	local AutoKitFunctions = {
+		ember = function()
+			shared.EmberAutoKit = true
+		end,
 		necromancer = function()
 			local function activateGrave(obj)
 				if (not obj) then return warn("[AutoKit - necromancer.activateGrave]: No object specified!") end
@@ -6655,15 +6695,34 @@ run(function()
 			until not AutoKit.Enabled
 		end
 	}
+
+	local conn
+	local vdebug = internalDebug.new("AutoKit")
 	
 	AutoKit = vape.Categories.Utility:CreateModule({
 		Name = 'AutoKit',
 		Function = function(callback)
 			if callback then
+				conn = lplr:GetAttributeChangedSignal("PlayingAsKits"):Connect(function()
+					local new = lplr:GetAttribute("PlayingAsKits")
+					vdebug("Equipped Kit Signal Change detected!")
+					if new ~= store.equippedKit then
+						vdebug("Equipped Kit: "..tostring(new))
+						store.equippedKit = new
+						AutoKit:Toggle()
+						task.wait(0.1)
+						AutoKit:Toggle()
+					end
+				end)
 				repeat task.wait() until store.equippedKit ~= '' or (not AutoKit.Enabled)
 				if AutoKit.Enabled and AutoKitFunctions[store.equippedKit] and Toggles[store.equippedKit].Enabled then
 					AutoKitFunctions[store.equippedKit]()
 				end
+			else
+				pcall(function()
+					conn:Disconnect()
+				end)
+				shared.EmberAutoKit = nil
 			end
 		end,
 		Tooltip = 'Automatically uses kit abilities.'
