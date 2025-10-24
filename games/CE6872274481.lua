@@ -5921,9 +5921,11 @@ run(function()
 					end)
 					local LongJumpOrigin = entityLibrary.isAlive and entityLibrary.character.HumanoidRootPart.Position
 					local tntcheck
+					local foundItem = false
 					for i,v in pairs(damagemethods) do
 						local item = getItem(i)
 						if item then
+							foundItem = true
 							if i == "tnt" then
 								local pos = getScaffold(LongJumpOrigin)
 								tntcheck = Vector3.new(pos.X, LongJumpOrigin.Y, pos.Z)
@@ -5933,6 +5935,11 @@ run(function()
 							end
 							break
 						end
+					end
+					if not foundItem then
+						warningNotification("LongJump", "Unable to find tool to use Long Jump with :c", 3)
+						LongJump:Toggle()
+						return
 					end
 					local changecheck
 					LongJumpacprogressbarframe.Visible = true

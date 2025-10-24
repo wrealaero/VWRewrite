@@ -4259,18 +4259,25 @@ run(function()
 						start = nil
 					end
 				end))
-	
+
 				if store.hand and LongJumpMethods[store.hand.tool.Name] then
 					task.spawn(LongJumpMethods[store.hand.tool.Name], getItem(store.hand.tool.Name), start, (CameraDir.Enabled and gameCamera or entitylib.character.RootPart).CFrame.LookVector)
 					return
 				end
-	
+				
+				local foundItem = false
 				for i, v in LongJumpMethods do
 					local item = getItem(i)
 					if item or store.equippedKit == i then
+						foundItem = true
 						task.spawn(v, item, start, (CameraDir.Enabled and gameCamera or entitylib.character.RootPart).CFrame.LookVector)
 						break
 					end
+				end
+				if not foundItem then
+					warningNotification("LongJump", "Unable to find tool to use Long Jump with :c", 3)
+					LongJump:Toggle()
+					return
 				end
 			else
 				JumpTick = tick()
