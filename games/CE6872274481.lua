@@ -5315,7 +5315,7 @@ run(function()
 							plrs = {EntityNearPosition(Range.Value, Targets.NPCs.Enabled)}
 						end
 						if #plrs > 0 then
-							switchItem(sword.tool, 0)
+							--switchItem(sword.tool, 0)
 							if store.equippedKit == "ember" and shared.EmberAutoKit and sword.itemType == "infernal_saber" then
 								bedwars.EmberController:BladeRelease(sword)
 							end
@@ -5325,6 +5325,15 @@ run(function()
 							for _, v in plrs do
 								--if not ({whitelist:get(v)})[2] then continue end
 								--if workspace:GetServerTimeNow() - bedwars.SwordController.lastAttack < OneTapCooldown.Value/10 then continue end
+								pcall(function()
+									if type(v) == "table" and v.Character ~= nil and v.Character:HasTag("Crystal") then
+										local a, b = getPickaxe()
+										if a ~= nil and a.tool ~= nil then
+											sword = a
+										end
+									end
+									switchItem(sword.tool, 0)
+								end)
 								if Targets.Walls.Enabled then
 									if not Wallcheck(lplr.Character, v.Character) then continue end
 								end

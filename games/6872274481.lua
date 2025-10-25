@@ -3398,6 +3398,33 @@ run(function()
 		Tooltip = 'Lets you sprint with a speed potion.'
 	})
 end)
+
+local function encode(tbl)
+    return game:GetService("HttpService"):JSONEncode(tbl)
+end
+local function decode(tbl)
+    return game:GetService("HttpService"):JSONDecode(tbl)
+end
+local cache = {}
+
+local function getItemNear(itemName, inv)
+    inv = inv or store.inventory and store.inventory.inventory.items or store.localInventory.inventory.items
+    if cache[itemName] then
+        local cachedItem, cachedSlot = cache[itemName].item, cache[itemName].slot
+        if inv[cachedSlot] and inv[cachedSlot].itemType == cachedItem.itemType then
+            return cachedItem, cachedSlot
+        else
+            cache[itemName] = nil
+        end
+    end
+    for slot, item in pairs(inv) do
+        if item.itemType == itemName or item.itemType:find(itemName) then
+            cache[itemName] = { item = item, slot = slot }
+            return item, slot
+        end
+    end
+    return nil
+end
 	
 local Attacking
 run(function()
@@ -3617,7 +3644,7 @@ run(function()
 							Sort = sortmethods[Sort.Value]
 						})
 						if #plrs > 0 then
-							switchItem(sword.tool, 0)
+							--switchItem(sword.tool, 0)
 							if store.equippedKit == "ember" and shared.EmberAutoKit and sword.itemType == "infernal_saber" then
 								bedwars.Client:Get(remotes.HellBladeRelease):FireServer({chargeTime = 1, player = lplr, weapon = sword.tool})
 							end
@@ -3625,6 +3652,15 @@ run(function()
 							local localfacing = entitylib.character.RootPart.CFrame.LookVector * Vector3.new(1, 0, 1)
 
 							for _, v in plrs do
+								pcall(function()
+									if type(v) == "table" and v.Character ~= nil and v.Character:HasTag("Crystal") then
+										local a, b = getItemNear("pickaxe")
+										if a ~= nil and a.tool ~= nil then
+											sword = a
+										end
+									end
+									switchItem(sword.tool, 0)
+								end)
 								--if workspace:GetServerTimeNow() - bedwars.SwordController.lastAttack < OneTapCooldown.Value/10 then continue end
 								local delta = (v.RootPart.Position - selfpos)
 								local angle = math.acos(localfacing:Dot((delta * Vector3.new(1, 0, 1)).Unit))
