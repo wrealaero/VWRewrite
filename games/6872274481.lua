@@ -4753,13 +4753,21 @@ run(function()
 		
 		local con
 		if isMobile then
-			con = UserInputService.TouchTapInWorld:Connect(function(touchPos)
-				if not hovering then updateOutline(nil); return end
-				if not ProjectileAimbot.Enabled then pcall(function() con:Disconnect() end); updateOutline(nil); return end
+			con = UserInputService.TouchTapInWorld:Connect(function(input, gameProcessed)
+				if gameProcessed or not hovering then 
+					updateOutline(nil); 
+					return 
+				end
+				if not ProjectileAimbot.Enabled then 
+					pcall(function() con:Disconnect() end); 
+					updateOutline(nil); 
+					return 
+				end
+				local touchPos = input.Position
 				local ray = workspace.CurrentCamera:ScreenPointToRay(touchPos.X, touchPos.Y)
 				local result = workspace:Raycast(ray.Origin, ray.Direction * 1000)
 				if result and result.Instance then
-					selectTarget(target)
+					selectTarget(result.Instance)
 				end
 			end)
 			table.insert(CoreConnections, con)
@@ -4791,15 +4799,19 @@ run(function()
 						})
 					end
 					updateOutline(plr)
+
 					
-					if plr and (plr.Character.PrimaryPart.Position - originPos).Magnitude <= Range.Value then
-						plr.HipHeight = plr.Character:FindFirstChild("Humanoid") and plr.Character:FindFirstChild("Humanoid").HipHeight or 2
+					if plr and plr.Character and plr.Character.PrimaryPart and (plr.Character.PrimaryPart.Position - originPos).Magnitude <= Range.Value then
+						local humanoid = plr.Character:FindFirstChild("Humanoid")
+						if not humanoid then return old(...) end
+						plr.HipHeight = humanoid.HipHeight or 2
+						local isJumping = humanoid.Jump
 						local pos = shootpos or self:getLaunchPosition(origin)
 						if not pos then
 							return old(...)
 						end
 	
-						if (not OtherProjectiles.Enabled) and not projmeta.projectile:find('arrow') then
+						if (not OtherProjectiles.Enabled) and not (projmeta.projectile and projmeta.projectile:find('arrow')) then
 							return old(...)
 						end
 	
@@ -4819,11 +4831,21 @@ run(function()
 							playerGravity = 6
 						end
 
+						local targetPartName = TargetPart.Value
+						local target_obj
+						if targetPartName == "RootPart" then
+							target_obj = plr.Character.PrimaryPart
+						else
+							target_obj = plr.Character:FindFirstChild(targetPartName)
+						end
+						if not target_obj then return old(...) end
+						local targetPos = target_obj.Position
+						local targetVel = (projmeta.projectile == 'telepearl' and Vector3.zero or target_obj.Velocity)
+
 						if store.hand and store.hand.tool and store.hand.tool.Name:find("spellbook") then
-							local targetPos = plr.RootPart.Position
 							local selfPos = lplr.Character.PrimaryPart.Position
 							local expectedTime = (selfPos - targetPos).Magnitude / 160
-							targetPos += (plr.RootPart.Velocity * expectedTime)
+							targetPos += (targetVel * expectedTime)
 							return {
 								initialVelocity = (selfPos - targetPos).Unit * -160,
 								positionFrom = offsetpos,
@@ -4832,10 +4854,9 @@ run(function()
 								drawDurationSeconds = 5
 							}
 						elseif store.hand and store.hand.tool and store.hand.tool.Name:find("chakram") then
-							local targetPos = plr.RootPart.Position
 							local selfPos = lplr.Character.PrimaryPart.Position
 							local expectedTime = (selfPos - targetPos).Magnitude / 80
-							targetPos += (plr.RootPart.Velocity * expectedTime)
+							targetPos += (targetVel * expectedTime)
 							return {
 								initialVelocity = (selfPos - targetPos).Unit * -80,
 								positionFrom = offsetpos,
@@ -4844,18 +4865,25 @@ run(function()
 								drawDurationSeconds = 5
 							}
 						end
-						
-						TargetPart.Value = TargetPart.Value == "RootPart" and "PrimaryPart" or TargetPart.Value
-						local newlook = CFrame.new(offsetpos, plr.Character[TargetPart.Value].Position) * CFrame.new(projmeta.projectile == 'owl_projectile' and Vector3.zero or Vector3.new(bedwars.BowConstantsTable.RelX, bedwars.BowConstantsTable.RelY, bedwars.BowConstantsTable.RelZ))
-						local calc = prediction.SolveTrajectory(newlook.p, projSpeed, gravity, plr.Character[TargetPart.Value].Position, projmeta.projectile == 'telepearl' and Vector3.zero or plr.Character[TargetPart.Value].Velocity, playerGravity, plr.HipHeight, plr.Jumping and 42.6 or nil, rayCheck)
+						local relOffset = Vector3.new(0, 0, 0)
+						if bedwars.BowConstantsTable then
+							relOffset = Vector3.new(bedwars.BowConstantsTable.RelX, bedwars.BowConstantsTable.RelY, bedwars.BowConstantsTable.RelZ)
+						end
+						local newlook = CFrame.new(offsetpos, targetPos) * CFrame.new(projmeta.projectile == 'owl_projectile' and Vector3.zero or relOffset)
+						local calc = prediction.SolveTrajectory(newlook.Position, projSpeed, gravity, targetPos, targetVel, playerGravity, plr.HipHeight, isJumping and 42.6 or nil, rayCheck)
 						if calc then
+							targetinfo.Targets = targetinfo.Targets or {}
 							targetinfo.Targets[plr] = tick() + 1
+							local drawDuration = 5
+							if projmeta.drawDurationSeconds then
+								drawDuration = projmeta.drawDurationSeconds
+							end
 							return {
-								initialVelocity = CFrame.new(newlook.Position, calc).LookVector * projSpeed,
+								initialVelocity = (calc - newlook.Position).Unit * projSpeed,
 								positionFrom = offsetpos,
 								deltaT = lifetime,
 								gravitationalAcceleration = gravity,
-								drawDurationSeconds = 5
+								drawDurationSeconds = drawDuration
 							}
 						end
 					end
@@ -5137,11 +5165,11 @@ run(function()
 	local handle = {
 		Lumen = function(ent, item, ammo, projectile, itemMeta)
 			if not item.tool then return end
-			if not ent then return end
+			if not ent or not ent.Character then return end
 			local selfPos = selfPosition()
 			if not selfPos then return end
 	
-			local vec = ent.RootPart.Position * Vector3.new(1, 0, 1)
+			local vec = ent.Character.PrimaryPart.Position * Vector3.new(1, 0, 1)
 			lplr.Character.PrimaryPart.CFrame = CFrame.lookAt(lplr.Character.PrimaryPart.Position, Vector3.new(vec.X, lplr.Character.PrimaryPart.Position.Y + 0.001, vec.Z))
 	
 			local mag = lplr.Character.PrimaryPart.CFrame.LookVector*80
@@ -5161,6 +5189,7 @@ run(function()
 				workspace:GetServerTimeNow() - 0.045
 			)
 
+			targetinfo.Targets = targetinfo.Targets or {}
 			targetinfo.Targets[ent] = tick() + 1
 			
 			pcall(function()
@@ -5169,20 +5198,22 @@ run(function()
 		end,
 		Umeko = function(ent, item, ammo, projectile, itemMeta)
 			if not item.tool then return end
-			if not ent then return end
+			if not ent or not ent.Character then return end
 			local selfPos = selfPosition()
 			if not selfPos then return end
 	
-			local vec = ent.RootPart.Position * Vector3.new(1, 0, 1)
+			local vec = ent.Character.PrimaryPart.Position * Vector3.new(1, 0, 1)
 			lplr.Character.PrimaryPart.CFrame = CFrame.lookAt(lplr.Character.PrimaryPart.Position, Vector3.new(vec.X, lplr.Character.PrimaryPart.Position.Y + 0.001, vec.Z))
 	
-			switchItem(item.tool)
+			pcall(switchItem, item.tool)
 
-			local targetPos = ent.RootPart.Position
+			local targetPos = ent.Character.PrimaryPart.Position
+			local targetVel = ent.Character.PrimaryPart.Velocity
 
 			local expectedTime = (selfPos - targetPos).Magnitude / 160
-			targetPos += (ent.RootPart.Velocity * expectedTime)
+			targetPos += (targetVel * expectedTime)
 
+			targetinfo.Targets = targetinfo.Targets or {}
 			targetinfo.Targets[ent] = tick() + 1
 
 			projectileRemote:InvokeServer(
@@ -5206,20 +5237,22 @@ run(function()
 		end,
 		Whim = function(ent, item, ammo, projectile, itemMeta)
 			if not item.tool then return end
-			if not ent then return end
+			if not ent or not ent.Character then return end
 			local selfPos = selfPosition()
 			if not selfPos then return end
 	
-			local vec = ent.RootPart.Position * Vector3.new(1, 0, 1)
+			local vec = ent.Character.PrimaryPart.Position * Vector3.new(1, 0, 1)
 			lplr.Character.PrimaryPart.CFrame = CFrame.lookAt(lplr.Character.PrimaryPart.Position, Vector3.new(vec.X, lplr.Character.PrimaryPart.Position.Y + 0.001, vec.Z))
 	
-			switchItem(item.tool)
+			pcall(switchItem, item.tool) -- pcall to avoid errors if switchItem undefined
 
-			local targetPos = ent.RootPart.Position
+			local targetPos = ent.Character.PrimaryPart.Position
+			local targetVel = ent.Character.PrimaryPart.Velocity
 
 			local expectedTime = (selfPos - targetPos).Magnitude / 160
-			targetPos += (ent.RootPart.Velocity * expectedTime)
+			targetPos += (targetVel * expectedTime)
 
+			targetinfo.Targets = targetinfo.Targets or {}
 			targetinfo.Targets[ent] = tick() + 1
 
 			projectileRemote:InvokeServer(
@@ -5263,15 +5296,16 @@ run(function()
 				if not owl then return end
 
 				if not item.tool then return end
-				if not ent then return end
+				if not ent or not ent.Character then return end
 				local selfPos = selfPosition()
 				if not selfPos then return end
 
-				local targetPosition = ent.RootPart.Position
-				local direction = (targetPosition - lplr.Character.HumanoidRootPart.Position).unit
+				local targetPosition = ent.Character.PrimaryPart.Position
+				local direction = (targetPosition - lplr.Character.HumanoidRootPart.Position).Unit
 
 				local target = getPlayerFromUserId(tostring(owl:GetAttribute("Target")))
-				local ProjectileRefId, direction, fromPosition, initialVelocity = specialGUID(), direction, nil, direction
+				if not target or not target.Character then return end
+				local ProjectileRefId, fromPosition, initialVelocity = specialGUID(), target.Character.HumanoidRootPart.Position, direction
 				local suc = pcall(function()
 					fromPosition = target.Character.HumanoidRootPart.Position
 				end)
@@ -5284,6 +5318,7 @@ run(function()
 					initialVelocity = initialVelocity
 				})
 			end
+			getOwl()
 		end
 	}
 	
@@ -5301,11 +5336,15 @@ run(function()
 									Players = true,
 									NPCs = true
 								})
-								if ent then
+								if ent and ent.Character then
 									if Targets.Walls.Enabled then
 										if not Wallcheck(lplr.Character, ent.Character) then return end
 									end
-									local pos = entitylib.character.RootPart.Position
+									local pos = entitylib.character and entitylib.character.RootPart and entitylib.character.RootPart.Position or selfPosition()
+									local humanoid = ent.Character:FindFirstChild("Humanoid")
+									if not humanoid then return end
+									local hipHeight = humanoid.HipHeight or 2
+									local isJumping = humanoid.Jump
 									for _, data in getProjectiles() do
 										local item, ammo, projectile, itemMeta = unpack(data)
 										if (FireDelays[item.itemType] or 0) < tick() then
@@ -5324,17 +5363,27 @@ run(function()
 											end
 											rayCheck.FilterDescendantsInstances = {workspace.Map}
 											local meta = bedwars.ProjectileMeta[projectile]
-											local projSpeed, gravity = meta.launchVelocity, meta.gravitationalAcceleration or 196.2
-											local calc = prediction.SolveTrajectory(pos, projSpeed, gravity, ent.RootPart.Position, ent.RootPart.Velocity, workspace.Gravity, ent.HipHeight, ent.Jumping and 42.6 or nil, rayCheck)
+											if not meta then continue end
+											local projSpeed, gravity = meta.launchVelocity or 100, meta.gravitationalAcceleration or 196.2
+											local targetPos = ent.Character.PrimaryPart.Position
+											local targetVel = ent.Character.PrimaryPart.Velocity
+											local calc = prediction.SolveTrajectory(pos, projSpeed, gravity, targetPos, targetVel, workspace.Gravity, hipHeight, isJumping and 42.6 or nil, rayCheck)
 											if calc then
+												targetinfo.Targets = targetinfo.Targets or {}
 												targetinfo.Targets[ent] = tick() + 1
-												local switched = switchItem(item.tool)
-			
+												local switched = pcall(switchItem, item.tool)
+												
+												local relOffset = Vector3.new(0, 0, 0)
+												if bedwars.BowConstantsTable then
+													relOffset = Vector3.new(bedwars.BowConstantsTable.RelX, bedwars.BowConstantsTable.RelY, bedwars.BowConstantsTable.RelZ)
+												end
+												
 												task.spawn(function()
-													local dir, id = CFrame.lookAt(pos, calc).LookVector, httpService:GenerateGUID(true)
-													local shootPosition = (CFrame.new(pos, calc) * CFrame.new(Vector3.new(-bedwars.BowConstantsTable.RelX, -bedwars.BowConstantsTable.RelY, -bedwars.BowConstantsTable.RelZ))).Position
+													local dir = CFrame.lookAt(pos, calc).LookVector
+													local id = HttpService:GenerateGUID(true)
+													local shootPosition = (CFrame.new(pos, calc) * CFrame.new(-relOffset)).Position
 													bedwars.ProjectileController:createLocalProjectile(meta, ammo, projectile, shootPosition, id, dir * projSpeed, {drawDurationSeconds = 1})
-													local res = projectileRemote:InvokeServer(item.tool, ammo, projectile, shootPosition, pos, dir * projSpeed, id, {drawDurationSeconds = 1, shotId = httpService:GenerateGUID(false)}, workspace:GetServerTimeNow() - 0.045)
+													local res = projectileRemote:InvokeServer(item.tool, ammo, projectile, shootPosition, pos, dir * projSpeed, id, {drawDurationSeconds = 1, shotId = HttpService:GenerateGUID(false)}, workspace:GetServerTimeNow() - 0.045)
 													if not res then
 														FireDelays[item.itemType] = tick()
 													else
@@ -5346,7 +5395,7 @@ run(function()
 													end
 												end)
 			
-												FireDelays[item.itemType] = tick() + itemMeta.fireDelaySec
+												FireDelays[item.itemType] = tick() + (itemMeta.fireDelaySec or 0.3)
 												if switched then
 													task.wait(0.05)
 												end

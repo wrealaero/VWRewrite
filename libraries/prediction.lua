@@ -1,6 +1,7 @@
 --[[
 	Prediction Library
 	Source: https://devforum.roblox.com/t/predict-projectile-ballistics-including-gravity-and-motion/1842434
+	Fixed: Raycast syntax
 ]]
 local module = {}
 local eps = 1e-9
@@ -196,7 +197,11 @@ function module.SolveTrajectory(origin, projectileSpeed, gravity, targetPos, tar
 		targetPos += Vector3.new(0, 2, 0)
 	end
 
-	--attemped gravity calculation, may return to it in the future.
+	--[[
+		Attempted gravity calculation for falling targets (disabled by default due to bugs; uncomment to enable).
+		FIXED: Corrected raycast syntax to workspace:Raycast(origin, direction, params).
+	]]
+	--[[
 	if math.abs(q) > 0.01 and playerGravity and playerGravity > 0 then
 		local estTime = (disp.Magnitude / projectileSpeed)
 		local origq = q
@@ -204,7 +209,8 @@ function module.SolveTrajectory(origin, projectileSpeed, gravity, targetPos, tar
 		for i = 1, 100 do
 			q -= (.5 * playerGravity) * estTime
 			local velo = targetVelocity * 0.016
-			local ray = workspace.Raycast(workspace, Vector3.new(targetPos.X, targetPos.Y, targetPos.Z), Vector3.new(velo.X, (q * estTime) - playerHeight, velo.Z), params)
+			local direction = Vector3.new(velo.X, (q * estTime) - playerHeight, velo.Z)
+			local ray = workspace:Raycast(targetPos, direction, params)
 			if ray then
 				local newTarget = ray.Position + Vector3.new(0, playerHeight, 0)
 				estTime -= math.sqrt(((targetPos - newTarget).Magnitude * 2) / playerGravity)
@@ -217,6 +223,7 @@ function module.SolveTrajectory(origin, projectileSpeed, gravity, targetPos, tar
 			end
 		end
 	end
+	--]]
 
 	local solutions = module.solveQuartic(
 		l*l,
@@ -228,13 +235,14 @@ function module.SolveTrajectory(origin, projectileSpeed, gravity, targetPos, tar
 
 	local predictedPos
 	if solutions then
-		local posRoots = table.create(2)
-		for _, v in solutions do --filter out the negative roots
+		local posRoots = {}
+		for _, v in solutions do
 			if v > 0 then
 				table.insert(posRoots, v)
 			end
 		end
-		if posRoots[1] then
+		table.sort(posRoots)
+		if #posRoots > 0 then
 			local t = posRoots[1]
 			local d = (h + p*t)/t
 			local e = (j + q*t - l*t*t)/t
@@ -249,13 +257,12 @@ function module.SolveTrajectory(origin, projectileSpeed, gravity, targetPos, tar
 		predictedPos = origin + Vector3.new(d, e, f)
 	end
 
-	local multi = 0.95
-
-	if predictedPos and targetVelocity ~= Vector3.zero and tonumber(game:GetService('Stats'):FindFirstChild('PerformanceStats').Ping:GetValue()) > 170 then
-		local new = predictedPos * multi
-
-		predictedPos = Vector3.new(new.X, predictedPos.Y + 2, new.Z)
+	local ping = tonumber(game:GetService('Stats'):FindFirstChild('PerformanceStats').Ping:GetValue()) or 0
+	if predictedPos and targetVelocity ~= Vector3.zero and ping > 170 then
+		local leadTime = (ping / 1000) / 2
+		predictedPos += targetVelocity * leadTime
 	end
+
 	return predictedPos
 end
 
