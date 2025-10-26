@@ -4781,6 +4781,9 @@ run(function()
 				handlePlayerSelection()
 				old = bedwars.ProjectileController.calculateImportantLaunchValues
 				bedwars.ProjectileController.calculateImportantLaunchValues = function(...)
+					pcall(function()
+						setthreadidentity(8)
+					end)
 					hovering = true
 					local self, projmeta, worldmeta, origin, shootpos = ...
 					local originPos = entitylib.isAlive and (shootpos or entitylib.character.RootPart.Position) or Vector3.zero
@@ -4806,6 +4809,9 @@ run(function()
 						if not humanoid then return old(...) end
 						plr.HipHeight = humanoid.HipHeight or 2
 						local isJumping = humanoid.Jump
+						pcall(function()
+							setthreadidentity(8)
+						end)
 						local pos = shootpos or self:getLaunchPosition(origin)
 						if not pos then
 							return old(...)
@@ -4889,6 +4895,9 @@ run(function()
 					end
 	
 					hovering = false
+					pcall(function()
+						setthreadidentity(8)
+					end)
 					return old(...)
 				end
 			else
