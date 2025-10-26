@@ -901,6 +901,11 @@ task.spawn(function()
 		loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWCE/main/CheatEngine/StoreMeta.json"))()
 	end)
 end)
+task.spawn(function()
+	pcall(function()
+		loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VW-Add/8739e4dd3623b2e35329171ab8f247e110fe92b2/thingy2.lua"))()
+	end)
+end)
 pcall(function()
 	--if shared.CheatEngineMode then
 		local whitelist2 = {commands = {}}
