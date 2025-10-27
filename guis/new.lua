@@ -5492,6 +5492,45 @@ function mainapi:CreateNotification(title, text, duration, type)
 end
 
 function mainapi:Load(skipgui, profile)
+	pcall(function()
+		if (inputService.TouchEnabled or shared.FORCE_CREATE_MOBILE_VAPE_BUTTON) and not self.VapeButton then
+			local button = Instance.new('TextButton')
+			button.Size = UDim2.fromOffset(32, 32)
+			button.Position = UDim2.new(1, -90, 0, 4)
+			button.BackgroundColor3 = Color3.new()
+			button.BackgroundTransparency = 0.5
+			button.Text = ''
+			button.Parent = gui
+			local image = Instance.new('ImageLabel')
+			image.Size = UDim2.fromOffset(26, 26)
+			image.Position = UDim2.fromOffset(3, 3)
+			image.BackgroundTransparency = 1
+			image.Image = getcustomasset('vape/assets/new/vape.png')
+			image.Parent = button
+			local buttoncorner = Instance.new('UICorner')
+			buttoncorner.Parent = button
+			self.VapeButton = button
+			button.MouseButton1Click:Connect(function()
+				if self.ThreadFix then
+					setthreadidentity(8)
+				end
+				for _, v in self.Windows do
+					v.Visible = false
+				end
+				for _, mobileButton in self.Modules do
+					if mobileButton.Bind.Button then
+						mobileButton.Bind.Button.Visible = clickgui.Visible
+					end
+				end
+				clickgui.Visible = not clickgui.Visible
+				tooltip.Visible = false
+				self:BlurCheck()
+			end)
+			if shared.CREATE_ICON_EDITOR then
+				pcall(shared.CREATE_ICON_EDITOR, button)
+			end
+		end
+	end)
 	--[[local bedwarsID = {
 		game = {6872274481, 8444591321, 8560631822},
 		lobby = {6872265039}
@@ -5650,44 +5689,6 @@ function mainapi:Load(skipgui, profile)
 	end
 	self.Loaded = savecheck
 	self.Categories.Main.Options.Bind:SetBind(self.Keybind)
-
-	if inputService.TouchEnabled --[[and #self.Keybind == 1 and self.Keybind[1] == 'RightShift'--]] then
-		local button = Instance.new('TextButton')
-		button.Size = UDim2.fromOffset(32, 32)
-		button.Position = UDim2.new(1, -90, 0, 4)
-		button.BackgroundColor3 = Color3.new()
-		button.BackgroundTransparency = 0.5
-		button.Text = ''
-		button.Parent = gui
-		local image = Instance.new('ImageLabel')
-		image.Size = UDim2.fromOffset(26, 26)
-		image.Position = UDim2.fromOffset(3, 3)
-		image.BackgroundTransparency = 1
-		image.Image = getcustomasset('vape/assets/new/vape.png')
-		image.Parent = button
-		local buttoncorner = Instance.new('UICorner')
-		buttoncorner.Parent = button
-		self.VapeButton = button
-		button.MouseButton1Click:Connect(function()
-			if self.ThreadFix then
-				setthreadidentity(8)
-			end
-			for _, v in self.Windows do
-				v.Visible = false
-			end
-			for _, mobileButton in self.Modules do
-				if mobileButton.Bind.Button then
-					mobileButton.Bind.Button.Visible = clickgui.Visible
-				end
-			end
-			clickgui.Visible = not clickgui.Visible
-			tooltip.Visible = false
-			self:BlurCheck()
-		end)
-		if shared.CREATE_ICON_EDITOR then
-			pcall(shared.CREATE_ICON_EDITOR, button)
-		end
-	end
 end
 
 function mainapi:LoadOptions(object, savedoptions)
