@@ -3711,8 +3711,8 @@ run(function()
 									if isClaw then
 										KaidaController:request(v.Character)
 									else
-										AttackRemote:FireServer({
-                                            weapon = sword.tool,
+										--[[AttackRemote:FireServer({
+                                            weapon = v.Character and v.Character:HasTag("Crystal") and a and a.tool or sword.tool,
                                             entityInstance = v.Character,
                                             chargedAttack = {chargeRatio = 0},
                                             validate = {
@@ -3724,7 +3724,22 @@ run(function()
                                                 selfPosition = {value = pos}
                                             },
                                             --lastSwingServerTimeDelta = lastSwingServerTimeDelta
-                                        })
+                                        })--]]
+										actualRoot.CFrame = CFrame.new(pos)
+										AttackRemote:FireServer({
+											weapon = v.Character and v.Character:HasTag("Crystal") and a and a.tool or sword.tool,
+											chargedAttack = {chargeRatio = 0},
+											lastSwingServerTimeDelta = 0,
+											entityInstance = v.Character,
+											validate = {
+												raycast = {
+													cameraPosition = {value = pos},
+													cursorDirection = {value = dir}
+												},
+												targetPosition = {value = pos},
+												selfPosition = {value = pos}
+											}
+										})
 									end
 								end
 							end
