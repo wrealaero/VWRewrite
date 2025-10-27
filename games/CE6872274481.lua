@@ -5388,20 +5388,19 @@ run(function()
 									if isClaw then
 										bedwars.KaidaController:request(v.Character)
 									else
-										actualRoot.CFrame = CFrame.new(pos)
 										AttackRemote:FireServer({
 											weapon = sword.tool,
 											chargedAttack = {chargeRatio = 0},
-											lastSwingServerTimeDelta = 0,
 											entityInstance = v.Character,
 											validate = {
 												raycast = {
 													cameraPosition = {value = pos},
 													cursorDirection = {value = dir}
 												},
-												targetPosition = {value = pos},
+												targetPosition = {value = actualRoot.Position},
 												selfPosition = {value = pos}
-											}
+											},
+                                            --lastSwingServerTimeDelta = lastSwingServerTimeDelta
 										})
 									end
 								end
