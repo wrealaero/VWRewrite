@@ -5651,7 +5651,7 @@ function mainapi:Load(skipgui, profile)
 	self.Loaded = savecheck
 	self.Categories.Main.Options.Bind:SetBind(self.Keybind)
 
-	if inputService.TouchEnabled and #self.Keybind == 1 and self.Keybind[1] == 'RightShift' then
+	if inputService.TouchEnabled --[[and #self.Keybind == 1 and self.Keybind[1] == 'RightShift'--]] then
 		local button = Instance.new('TextButton')
 		button.Size = UDim2.fromOffset(32, 32)
 		button.Position = UDim2.new(1, -90, 0, 4)
@@ -5684,6 +5684,9 @@ function mainapi:Load(skipgui, profile)
 			tooltip.Visible = false
 			self:BlurCheck()
 		end)
+		if shared.CREATE_ICON_EDITOR then
+			pcall(shared.CREATE_ICON_EDITOR, button)
+		end
 	end
 end
 
