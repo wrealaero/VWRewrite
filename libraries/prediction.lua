@@ -257,7 +257,13 @@ function module.SolveTrajectory(origin, projectileSpeed, gravity, targetPos, tar
 		predictedPos = origin + Vector3.new(d, e, f)
 	end
 
-	local ping = tonumber(game:GetService('Stats'):FindFirstChild('PerformanceStats').Ping:GetValue()) or 0
+	pcall(function()
+		setthreadidentity(8)
+	end)
+	local suc, ping = pcall(function()
+		return tonumber(game:GetService('Stats'):FindFirstChild('PerformanceStats').Ping:GetValue())
+	end)
+	if not suc then ping = 0 end
 	if predictedPos and targetVelocity ~= Vector3.zero and ping > 170 then
 		local leadTime = (ping / 1000) / 2
 		predictedPos += targetVelocity * leadTime
