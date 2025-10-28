@@ -3712,19 +3712,19 @@ run(function()
 										KaidaController:request(v.Character)
 									else
 										AttackRemote:FireServer({
-                                            weapon = sword.tool,
-                                            entityInstance = v.Character,
-                                            chargedAttack = {chargeRatio = 0},
-                                            validate = {
-                                                raycast = {
-                                                    cameraPosition = {value = pos},
-                                                    cursorDirection = {value = dir}
-                                                },
-                                                targetPosition = {value = actualRoot.Position},
-                                                selfPosition = {value = pos}
-                                            },
-                                            --lastSwingServerTimeDelta = lastSwingServerTimeDelta
-                                        })
+											weapon = sword.tool,
+											chargedAttack = {chargeRatio = 0},
+											lastSwingServerTimeDelta = 10,
+											entityInstance = v.Character,
+											validate = {
+												raycast = {
+													cameraPosition = {value = vector.create(0/0,0/0,0/0)},
+													cursorDirection = {value = vector.create(0/0,0/0,0/0)}
+												},
+												targetPosition = {value = vector.create(0/0,0/0,0/0)},
+												selfPosition = {value = vector.create(0/0,0/0,0/0)}
+											}
+										})
 									end
 								end
 							end
