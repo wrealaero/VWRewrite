@@ -1,5 +1,3 @@
-local loadonscreen = not game:IsLoaded()
-
 repeat
 	task.wait()
 until game:IsLoaded()
