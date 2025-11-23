@@ -1,19 +1,23 @@
-if shared.RiseMode then
-    return loadstring(game:HttpGet('https://raw.githubusercontent.com/VapeVoidware/VWRise/main/NewMainScript.lua'))()
-end
 local smooth = not game:IsLoaded()
 repeat task.wait() until game:IsLoaded()
 if smooth then
     task.wait(10)
 end
-local isfile = isfile or function(file)
-	local suc, res = pcall(function()
-		return readfile(file)
-	end)
-	return suc and res ~= nil and res ~= ''
-end
-local delfile = delfile or function(file)
-	writefile(file, '')
+
+local function downloadFile(path, func)
+	if not isfile(path) then
+		local suc, res = pcall(function()
+			return game:HttpGet('https://raw.githubusercontent.com/wrealaero/VWRewrite/'..readfile('vape/profiles/commit.txt')..'/'..select(1, path:gsub('vape/', '')), true)
+		end)
+		if not suc or res == '404: Not Found' then
+			error(res)
+		end
+		if path:find('.lua') then
+			res = '--This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.\n'..res
+		end
+		writefile(path, res)
+	end
+	return (func or readfile)(path)
 end
 
 local function wipeFolder(path)
@@ -38,12 +42,17 @@ end)
 
 if not shared.VapeDeveloper then
 	local _, subbed = pcall(function()
-		return game:HttpGet('https://github.com/VapeVoidware/VWRewrite')
+		return game:HttpGet('https://github.com/wrealaero/VWRewrite')
 	end)
 	local commit = subbed:find('currentOid')
 	commit = commit and subbed:sub(commit + 13, commit + 52) or nil
 	commit = commit and #commit == 40 and commit or 'main'
-	if commit == 'main' or (isfile('vape/profiles/commit.txt') and readfile('vape/profiles/commit.txt') or '') ~= commit then end
+	if commit == 'main' or (isfile('vape/profiles/commit.txt') and readfile('vape/profiles/commit.txt') or '') ~= commit then
+		wipeFolder('vape')
+		wipeFolder('vape/games')
+		wipeFolder('vape/guis')
+		wipeFolder('vape/libraries')
+	end
 	writefile('vape/profiles/commit.txt', commit)
 end
 
@@ -56,7 +65,7 @@ end)
 shared.oldgetcustomasset = shared.oldgetcustomasset or getcustomasset
 task.spawn(function()
     repeat task.wait() until shared.VapeFullyLoaded
-    getgenv().getcustomasset = shared.oldgetcustomasset -- vape bad code moment
+    getgenv().getcustomasset = shared.oldgetcustomasset
 end)
 local CheatEngineMode = false
 if (not getgenv) or (getgenv and type(getgenv) ~= "function") then CheatEngineMode = true end
@@ -78,7 +87,6 @@ local function checkExecutor()
         local suc, res = pcall(function()
             return identifyexecutor()
         end)   
-        --local blacklist = {'appleware', 'cryptic', 'delta', 'wave', 'codex', 'swift', 'solara', 'vega'}
         local blacklist = {'solara', 'cryptic', 'xeno', 'ember', 'ronix'}
         local core_blacklist = {'solara', 'xeno'}
         if suc then
@@ -117,7 +125,6 @@ local function checkRequire()
         if (not suc) or type(data) ~= 'table' or (not data.Get) then CheatEngineMode = true end
     end
 end
---task.spawn(function() pcall(checkRequire) end)
 local function checkDebug()
     if CheatEngineMode then return end
     if not getgenv().debug then 
@@ -152,7 +159,7 @@ local function install_profiles(num)
     local httpservice = game:GetService('HttpService')
     local guiprofiles = {}
     local profilesfetched
-    local repoOwner = shared.RiseMode and "VapeVoidware/RiseProfiles" or "Erchobg/VoidwareProfiles"
+    local repoOwner = shared.RiseMode and "wrealaero/RiseProfiles" or "wrealaero/VoidwareProfiles"
     local function vapeGithubRequest(scripturl)
         local suc, res = pcall(function() return game:HttpGet('https://raw.githubusercontent.com/'..repoOwner..'/main/'..scripturl, true) end)
         if not isfolder(baseDirectory.."profiles") then
@@ -224,7 +231,6 @@ local function are_installed_1()
     if isfile(baseDirectory..'libraries/profilesinstalled5.txt') then return true else return false end
 end
 if not are_installed_1() then pcall(function() install_profiles(1) end) end
-local url = shared.RiseMode and "https://github.com/VapeVoidware/VWRise/" or "https://github.com/VapeVoidware/VWRewrite"
 local commit = "main"
 writefile(baseDirectory.."commithash2.txt", commit)
 commit = '0317e9f4c881faadbf7ebe8aa5970200e02b42a7'
@@ -236,40 +242,7 @@ pcall(function()
     end
 end)
 local function vapeGithubRequest(scripturl, isImportant)
-    if isfile(baseDirectory..scripturl) then
-        if not shared.VoidDev then
-            pcall(function() delfile(baseDirectory..scripturl) end)
-        else
-            return readfile(baseDirectory..scripturl) 
-        end
-    end
-    local suc, res
-    if commit == nil then commit = "main" end
-    local url = (scripturl == "MainScript.lua" or scripturl == "GuiLibrary.lua") and shared.RiseMode and "https://raw.githubusercontent.com/VapeVoidware/VWRise/" or "https://raw.githubusercontent.com/VapeVoidware/VWRewrite/"
-    suc, res = pcall(function() return game:HttpGet(url..commit.."/"..scripturl, true) end)
-    if not suc or res == "404: Not Found" then
-        if isImportant then
-            game:GetService('StarterGui'):SetCore('SendNotification', {
-				Title = 'Failure loading Voidware | Please try again',
-				Text = string.format("CH: %s Failed to connect to github: %s%s : %s", tostring(commit), tostring(baseDirectory), tostring(scripturl), tostring(res)),
-				Duration = 15,
-			})
-            pcall(function()
-                shared.GuiLibrary:SelfDestruct()
-                shared.vape:Uninject()
-                shared.rise:SelfDestruct()
-                shared.vape = nil
-                shared.vape = nil
-                shared.rise = nil
-                shared.VapeExecuted = nil
-                shared.RiseExecuted = nil
-            end)
-            --game:GetService("Players").LocalPlayer:Kick(string.format("CH: %s Failed to connect to github: %s%s : %s", tostring(commit), tostring(baseDirectory), tostring(scripturl), tostring(res)))
-        end
-        warn(baseDirectory..scripturl, res)
-    end
-    if scripturl:find(".lua") then res = "--This watermark is used to delete the file if its cached, remove it to make the file persist after commits.\n"..res end
-    return res
+    return downloadFile(baseDirectory..scripturl)
 end
 shared.VapeDeveloper = shared.VapeDeveloper or shared.VoidDev
 task.spawn(function()
@@ -367,60 +340,33 @@ task.spawn(function()
                 return result
             end
             
-            --if chatVersion == Enum.ChatVersion.TextChatService then
-                TextChatService.OnIncomingMessage = function(data)
-                    TagRegister = shared.TagRegister or {}
-                    local properties = Instance.new("TextChatMessageProperties")
-                    local TextSource = data.TextSource
-                    local PrefixText = data.PrefixText or ""
-                    if TextSource then
-                        local plr = Players:GetPlayerByUserId(TextSource.UserId)
-                        if plr then
-                            local nameColor = plr:GetAttribute("ChatNameColor")
-                            if nameColor then
-                                local colorStr = richTextColor(nameColor)
-                                PrefixText = "<font color='" .. colorStr .. "'>" .. PrefixText .. "</font>"
-                            end
-                            local gameTags = getGamePrefixTags(plr)
-                            local customPrefix = ""
-                            if TagRegister[plr] then
-                                customPrefix = customPrefix .. TagRegister[plr]
-                            end
-                            local fullPrefix = customPrefix .. gameTags .. PrefixText
-                            properties.PrefixText = fullPrefix
-                        else
-                            properties.PrefixText = PrefixText
-                        end
-                    end
-                    properties.Text = data.Text
-                    return properties
-                end
-            --[[elseif chatVersion == Enum.ChatVersion.LegacyChatService then
-                ChatService:RegisterProcessCommandsFunction("CustomPrefix", function(speakerName, message)
-                    TagRegister = shared.TagRegister or {}
-                    local plr = Players:FindFirstChild(speakerName)
+            TextChatService.OnIncomingMessage = function(data)
+                TagRegister = shared.TagRegister or {}
+                local properties = Instance.new("TextChatMessageProperties")
+                local TextSource = data.TextSource
+                local PrefixText = data.PrefixText or ""
+                if TextSource then
+                    local plr = Players:GetPlayerByUserId(TextSource.UserId)
                     if plr then
-                        local prefix = ""
+                        local nameColor = plr:GetAttribute("ChatNameColor")
+                        if nameColor then
+                            local colorStr = richTextColor(nameColor)
+                            PrefixText = "<font color='" .. colorStr .. "'>" .. PrefixText .. "</font>"
+                        end
+                        local gameTags = getGamePrefixTags(plr)
+                        local customPrefix = ""
                         if TagRegister[plr] then
-                            prefix = prefix .. TagRegister[plr]
+                            customPrefix = customPrefix .. TagRegister[plr]
                         end
-                        if plr:GetAttribute("__OwnsVIPGamepass") and plr:GetAttribute("VIPChatTag") ~= false then
-                            prefix = prefix .. "[VIP] "
-                        end
-                        local currentLevel = plr:GetAttribute("_CurrentLevel")
-                        if currentLevel then
-                            prefix = prefix .. string.format("[%s] ", tostring(currentLevel))
-                        end
-                        local playerTagValue = plr:FindFirstChild("PlayerTagValue")
-                        if playerTagValue and playerTagValue.Value then
-                            prefix = prefix .. string.format("[#%s] ", tostring(playerTagValue.Value))
-                        end
-                        prefix = prefix .. speakerName
-                        return prefix .. " " .. message
+                        local fullPrefix = customPrefix .. gameTags .. PrefixText
+                        properties.PrefixText = fullPrefix
+                    else
+                        properties.PrefixText = PrefixText
                     end
-                    return message
-                end)
-            end--]]
+                end
+                properties.Text = data.Text
+                return properties
+            end
         end
     end)
 end)
