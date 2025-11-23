@@ -59,72 +59,6 @@ local savingTable = {
 	"VoidDev"
 }
 
-local function vapeGithubRequest(scripturl, isImportant)
-    if isfile('vape/'..scripturl) and not shared.VoidDev then
-        pcall(function() delfile('vape/'..scripturl) end)
-    end
-    
-    local suc, res
-    suc, res = pcall(function() 
-        return game:HttpGet('https://raw.githubusercontent.com/wrealaero/VWRewrite/main/'..scripturl, true) 
-    end)
-    
-    if not suc or res == "404: Not Found" then
-        if isImportant then
-            warn("Failed to load: vape/"..scripturl)
-        end
-        return nil
-    end
-    
-    if scripturl:find(".lua") then 
-        res = "--This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.\n"..res 
-    end
-    
-    if not isfile('vape/'..scripturl) then
-        writefile('vape/'..scripturl, res)
-    end
-    
-    return res
-end
-
-local function pload(fileName, isImportant, required)
-    fileName = tostring(fileName)
-    if string.find(fileName, "CustomModules") and string.find(fileName, "Voidware") then
-        fileName = string.gsub(fileName, "Voidware", "VW")
-    end        
-    
-    if shared.VoidDev and shared.DebugMode then 
-        warn(fileName, isImportant, required, debug.traceback(fileName)) 
-    end
-    
-    local res = vapeGithubRequest(fileName, isImportant)
-    
-    if not res then
-        if isImportant then
-            error("Failed to load critical file: "..fileName)
-        end
-        return nil
-    end
-    
-    local func, err = loadstring(res)
-    
-    if type(func) ~= "function" then 
-        if isImportant then
-            warn("Failure loading critical file: vape/"..fileName..": "..tostring(debug.traceback(err)))
-        end
-        return nil
-    end
-    
-    if required then 
-        return func()
-    else 
-        return func() 
-    end
-end
-
-shared.pload = pload
-getgenv().pload = pload
-
 local oldtbl = {}
 local function finishLoading()
 	vape.Init = nil
@@ -214,6 +148,7 @@ if not isfolder('vape/assets/'..gui) then
 end
 
 local VWFunctions = loadstring(game:HttpGet("https://raw.githubusercontent.com/wrealaero/VWRewrite/main/libraries/VoidwareFunctions.lua", true))()
+--pload('libraries/VoidwareFunctions.lua', true, true)
 VWFunctions.GlobaliseObject("VoidwareFunctions", VWFunctions)
 VWFunctions.GlobaliseObject("VWFunctions", VWFunctions)
 
@@ -226,17 +161,29 @@ shared.GuiLibrary = vape
 shared.VapeExecuted = true
 
 getgenv().InfoNotification = function(title, msg, dur)
+	--warn('info', tostring(title), tostring(msg), tostring(dur))
 	vape:CreateNotification(title, msg, dur)
 end
 getgenv().warningNotification = function(title, msg, dur)
+	--warn('warn', tostring(title), tostring(msg), tostring(dur))
 	vape:CreateNotification(title, msg, dur, 'warning')
 end
 getgenv().errorNotification = function(title, msg, dur)
+	--warn("error", tostring(title), tostring(msg), tostring(dur))
 	vape:CreateNotification(title, msg, dur, 'alert')
 end
 if shared.CheatEngineMode then
 	InfoNotification("Voidware | CheatEngineMode", "Due to your executor not supporting some functions \n some modules might be missing!", 5) 
 end
+--[[pcall(function()
+	if (not isfile('vape/discord2.txt')) then
+		task.spawn(function() InfoNotification("Whitelist", "Was whitelisted and your whitelist dissapeared? Join back the discord server :D       ", 30) end)
+		task.spawn(function() InfoNotification("Discord", "New server! discord.gg/voidware!              ", 30) end)
+		task.spawn(function() warningNotification("Discord", "New server! discord.gg/voidware!             ", 30) end)
+		task.spawn(function() errorNotification("Discord", "New server! discord.gg/voidware!              ", 30) end)
+		writefile('vape/discord2.txt', '')
+	end
+end)--]]
 
 local bedwarsID = {
 	game = {6872274481, 8444591321, 8560631822},
@@ -255,6 +202,7 @@ if not shared.VapeIndependent then
 	end
 	local fileName1 = game.PlaceId..".lua"
 	local fileName2 = game.PlaceId..".lua"
+	--local fileName3
 	local isGame = table.find(bedwarsID.game, game.PlaceId)
 	local isLobby = table.find(bedwarsID.lobby, game.PlaceId)
 	local CE = shared.CheatEngineMode and "CE" or ""
@@ -274,7 +222,7 @@ if not shared.VapeIndependent then
 	else
 		warn("[CheatEngineMode]: ", tostring(shared.CheatEngineMode))
 		warn("[TestingMode]: ", tostring(shared.TestingMode))
-		warn("[FileName1]: ", tostring(fileName1), " [FileName2]: ", tostring(fileName2))
+		warn("[FileName1]: ", tostring(fileName1), " [FileName2]: ", tostring(fileName2), " [FileName3]: ", tostring(fileName3))
 
 		pload('games/'..tostring(fileName1))
 		if not shared.NoVoidwareModules then
