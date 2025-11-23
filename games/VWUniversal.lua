@@ -1667,7 +1667,6 @@ run(function() local ReinstallProfiles = {}
 				GuiLibrary:Uninject()
 				delfile(baseDirectory..'Libraries/profilesinstalled4.txt')
 				delfolder(baseDirectory..'Profiles')
-				pload('NewMainScript.lua', true)
 			end
 		end
 	}) 
