@@ -1,3 +1,4 @@
+--This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.
 
 repeat task.wait() until game:IsLoaded()
 repeat task.wait() until shared.GuiLibrary
@@ -1667,6 +1668,7 @@ run(function() local ReinstallProfiles = {}
 				GuiLibrary:Uninject()
 				delfile(baseDirectory..'Libraries/profilesinstalled4.txt')
 				delfolder(baseDirectory..'Profiles')
+				pload('NewMainScript.lua', true)
 			end
 		end
 	}) 
