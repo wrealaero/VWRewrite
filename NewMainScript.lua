@@ -370,32 +370,5 @@ task.spawn(function()
         end
     end)
 end)
-local function pload(fileName, isImportant, required)
-    fileName = tostring(fileName)
-    if string.find(fileName, "CustomModules") and string.find(fileName, "Voidware") then
-        fileName = string.gsub(fileName, "Voidware", "VW")
-    end        
-    if shared.VoidDev and shared.DebugMode then warn(fileName, isImportant, required, debug.traceback(fileName)) end
-    local res = vapeGithubRequest(fileName, isImportant)
-    local a = loadstring(res)
-    local suc, err = true, ""
-    if type(a) ~= "function" then suc = false; err = tostring(a) else if required then return a() else a() end end
-    if (not suc) then 
-        if isImportant then
-            if (not string.find(string.lower(err), "vape already injected")) and (not string.find(string.lower(err), "rise already injected")) then
-				warn("[".."Failure loading critical file! : "..baseDirectory..tostring(fileName).."]: "..tostring(debug.traceback(err)))
-            end
-        else
-            task.spawn(function()
-                repeat task.wait() until errorNotification
-                if not string.find(res, "404: Not Found") then 
-					errorNotification('Failure loading: '..baseDirectory..tostring(fileName), tostring(debug.traceback(err)), 30, 'alert')
-                end
-            end)
-        end
-    end
-end
-shared.pload = pload
-getgenv().pload = pload
 
-return pload('main.lua', true)
+return ('main.lua', true)
