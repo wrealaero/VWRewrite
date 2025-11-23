@@ -7,7 +7,7 @@ end
 local function downloadFile(path, func)
 	if not isfile(path) then
 		local suc, res = pcall(function()
-			return game:HttpGet('https://raw.githubusercontent.com/wrealaero/VWRewrite/'..readfile('vape/profiles/commit.txt')..'/'..select(1, path:gsub('vape/', '')), true)
+			return game:HttpGet('https://raw.githubusercontent.com/wrealaero/VWRewrite/main/'..select(1, path:gsub('vape/', '')), true)
 		end)
 		if not suc or res == '404: Not Found' then
 			error(res)
@@ -41,19 +41,7 @@ pcall(function()
 end)
 
 if not shared.VapeDeveloper then
-	local _, subbed = pcall(function()
-		return game:HttpGet('https://github.com/wrealaero/VWRewrite')
-	end)
-	local commit = subbed:find('currentOid')
-	commit = commit and subbed:sub(commit + 13, commit + 52) or nil
-	commit = commit and #commit == 40 and commit or 'main'
-	if commit == 'main' or (isfile('vape/profiles/commit.txt') and readfile('vape/profiles/commit.txt') or '') ~= commit then
-		wipeFolder('vape')
-		wipeFolder('vape/games')
-		wipeFolder('vape/guis')
-		wipeFolder('vape/libraries')
-	end
-	writefile('vape/profiles/commit.txt', commit)
+	writefile('vape/profiles/commit.txt', 'main')
 end
 
 task.spawn(function()
@@ -203,9 +191,9 @@ local function install_profiles(num)
     task.spawn(function()
         local res1
         if num == 1 then
-            res1 = "https://api.github.com/repos/"..repoOwner.."/contents/Rewrite"
+            res1 = "Profiles"
         end
-        res = game:HttpGet(res1, true)
+        res = game:HttpGet('https://api.github.com/repos/'..repoOwner..'/contents/'..res1, true)
         if res ~= '404: Not Found' then 
             for i,v in next, game:GetService("HttpService"):JSONDecode(res) do 
                 if type(v) == 'table' and v.name then 
@@ -233,7 +221,7 @@ end
 if not are_installed_1() then pcall(function() install_profiles(1) end) end
 local commit = "main"
 writefile(baseDirectory.."commithash2.txt", commit)
-commit = '0317e9f4c881faadbf7ebe8aa5970200e02b42a7'
+commit = 'main'
 commit = shared.CustomCommit and tostring(shared.CustomCommit) or commit
 writefile(baseDirectory.."commithash2.txt", commit)
 pcall(function()
@@ -369,7 +357,7 @@ task.spawn(function()
             end
         end
     end)
-end)
+end
 local function pload(fileName, isImportant, required)
     fileName = tostring(fileName)
     if string.find(fileName, "CustomModules") and string.find(fileName, "Voidware") then
@@ -399,3 +387,4 @@ shared.pload = pload
 getgenv().pload = pload
 
 return pload('main.lua', true)
+
