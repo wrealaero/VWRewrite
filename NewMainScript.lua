@@ -1,13 +1,63 @@
-local smooth = not game:IsLoaded()
-repeat task.wait() until game:IsLoaded()
-if smooth then
-    task.wait(10)
+local loadonscreen = not game:IsLoaded()
+
+repeat
+	task.wait()
+until game:IsLoaded()
+
+if loadonscreen then
+	task.wait(2)
 end
+
+if shared.vape then
+	shared.vape:Uninject()
+end
+
+local config = {
+    Developer = shared.VapeDeveloper or false,
+    Closet = getgenv().closet or false,
+    Commit = "main"
+}
+
+local developer = config.Developer
+local closet = config.Closet
+local commit = config.Commit
+
+if not commit or commit == "main" then
+    local suc = pcall(function()
+        local response = game:HttpGet('https://api.github.com/repos/wrealaero/VWRewrite/branches/main', true)
+        local data = game:GetService('HttpService'):JSONDecode(response)
+        commit = data.commit.sha
+    end)
+    
+    if not suc or not commit then
+        commit = 'main'
+    end
+end
+
+getgenv().closet = closet
+
+local cloneref = cloneref or function(ref) return ref end
+local inputService = cloneref(game:GetService('UserInputService'))
+local tweenService = cloneref(game:GetService('TweenService'))
+local httpService = cloneref(game:GetService('HttpService'))
+
+local debug = debug
+if table.find({'Xeno'}, ({identifyexecutor()})[1]) then
+	debug = table.clone(debug)
+	debug.getupvalue = nil
+	debug.getconstant = nil
+	debug.setstack = nil
+	getgenv().debug = debug
+end
+
+local canDebug = debug.getupvalue ~= nil
 
 local function downloadFile(path, func)
 	if not isfile(path) then
 		local suc, res = pcall(function()
-			return game:HttpGet('https://raw.githubusercontent.com/wrealaero/VWRewrite/'..readfile('vape/profiles/commit.txt')..'/'..select(1, path:gsub('vape/', '')), true)
+			local subbed = path:gsub('vape/', '')
+			subbed = subbed:gsub(' ', '%%20')
+			return game:HttpGet('https://raw.githubusercontent.com/wrealaero/VWRewrite/'..(readfile('vape/profiles/commit.txt') or commit)..'/'..subbed, true)
 		end)
 		if not suc or res == '404: Not Found' then
 			error(res)
@@ -30,7 +80,7 @@ local function wipeFolder(path)
 	end
 end
 
-for _, folder in {'vape', 'vape/games', 'vape/profiles', 'vape/assets', 'vape/libraries', 'vape/guis'} do
+for _, folder in {'vape', 'vape/communication', 'vape/translations', 'vape/games', 'vape/cache', 'vape/games/bedwars', 'vape/profiles', 'vape/assets', 'vape/libraries', 'vape/libraries/Environments', 'vape/guis'} do
 	if not isfolder(folder) then
 		makefolder(folder)
 	end
@@ -40,48 +90,55 @@ pcall(function()
     writefile('vape/profiles/gui.txt', 'new')
 end)
 
-if not shared.VapeDeveloper then
-	local _, subbed = pcall(function()
-		return game:HttpGet('https://github.com/wrealaero/VWRewrite')
-	end)
-	local commit = subbed:find('currentOid')
-	commit = commit and subbed:sub(commit + 13, commit + 52) or nil
-	commit = commit and #commit == 40 and commit or 'main'
-	if commit == 'main' or (isfile('vape/profiles/commit.txt') and readfile('vape/profiles/commit.txt') or '') ~= commit then
+if not developer then
+	local Updated = (commit == 'main' or (isfile('vape/profiles/commit.txt') and readfile('vape/profiles/commit.txt') or '') ~= commit)
+	
+	writefile('vape/profiles/commit.txt', commit)
+
+	if Updated then
 		wipeFolder('vape')
 		wipeFolder('vape/games')
 		wipeFolder('vape/guis')
 		wipeFolder('vape/libraries')
 	end
-	writefile('vape/profiles/commit.txt', commit)
+	
+	if #listfiles('vape/profiles') <= 2 then
+		local preloaded = pcall(function()
+			local req = httpService:JSONDecode(game:HttpGet('https://api.github.com/repos/wrealaero/VWRewrite/contents/profiles'))
+			for _, v in req do
+				if v.path ~= 'profiles/commit.txt' then
+					downloadFile(`vape/{v.path}`)
+				end
+			end
+		end)
+		
+		if not preloaded then
+			warn(`Failed to download preset config, will retry later.`)
+		end
+	end
+
+	if #listfiles('vape/translations') <= 2 then
+		local req = httpService:JSONDecode(game:HttpGet('https://api.github.com/repos/wrealaero/VWRewrite/contents/translations'))
+		for _, v in req do
+			pcall(downloadFile, `vape/{v.path}`)
+		end
+	end
+	
+	if not canDebug and Updated then
+		local req = httpService:JSONDecode(game:HttpGet('https://api.github.com/repos/wrealaero/VWRewrite/contents/cache'))
+		for _, v in req do
+			pcall(downloadFile, `vape/{v.path}`)
+		end
+	end
 end
 
-task.spawn(function()
-    pcall(function()
-        if game:GetService("Players").LocalPlayer.Name == "abbey_9942" then game:GetService("Players").LocalPlayer:Kick('') end
-    end)
-end)
-
-shared.oldgetcustomasset = shared.oldgetcustomasset or getcustomasset
-task.spawn(function()
-    repeat task.wait() until shared.VapeFullyLoaded
-    getgenv().getcustomasset = shared.oldgetcustomasset
-end)
 local CheatEngineMode = false
 if (not getgenv) or (getgenv and type(getgenv) ~= "function") then CheatEngineMode = true end
 if getgenv and not getgenv().shared then CheatEngineMode = true; getgenv().shared = {}; end
 if getgenv and not getgenv().debug then CheatEngineMode = true; getgenv().debug = {traceback = function(string) return string end} end
 if getgenv and not getgenv().require then CheatEngineMode = true; end
 if getgenv and getgenv().require and type(getgenv().require) ~= "function" then CheatEngineMode = true end
-local debugChecks = {
-    Type = "table",
-    Functions = {
-        "getupvalue",
-        "getupvalues",
-        "getconstants",
-        "getproto"
-    }
-}
+
 local function checkExecutor()
     if identifyexecutor ~= nil and type(identifyexecutor) == "function" then
         local suc, res = pcall(function()
@@ -108,8 +165,17 @@ local function checkExecutor()
         end
     end
 end
-task.spawn(function() pcall(checkExecutor) end)
-task.spawn(function() pcall(function() if isfile("VW_API_KEY.txt") then delfile("VW_API_KEY.txt") end end) end)
+
+task.spawn(checkExecutor)
+
+task.spawn(function() 
+    pcall(function() 
+        if isfile("VW_API_KEY.txt") then 
+            delfile("VW_API_KEY.txt") 
+        end 
+    end) 
+end)
+
 local function checkRequire()
     if CheatEngineMode then return end
     local bedwarsID = {
@@ -125,8 +191,19 @@ local function checkRequire()
         if (not suc) or type(data) ~= 'table' or (not data.Get) then CheatEngineMode = true end
     end
 end
+
 local function checkDebug()
     if CheatEngineMode then return end
+    local debugChecks = {
+        Type = "table",
+        Functions = {
+            "getupvalue",
+            "getupvalues", 
+            "getconstants",
+            "getproto"
+        }
+    }
+    
     if not getgenv().debug then 
         CheatEngineMode = true 
     else 
@@ -146,68 +223,32 @@ local function checkDebug()
         end
     end
 end
+
 if (not CheatEngineMode) then checkDebug() end
 if shared.ForceDisableCE then CheatEngineMode = false; shared.CheatEngineMode = false end
 shared.CheatEngineMode = shared.CheatEngineMode or CheatEngineMode
-if (not isfolder('vape')) then makefolder('vape') end
-if (not isfolder('rise')) then makefolder('rise') end
-if (not isfolder('vape/Libraries')) then makefolder('vape/Libraries') end
-if (not isfolder('rise/Libraries')) then makefolder('rise/Libraries') end
-local baseDirectory = shared.RiseMode and "rise/" or "vape/"
-local function install_profiles(num)
-    if not num then return warn("No number specified!") end
-    local httpservice = game:GetService('HttpService')
-    local guiprofiles = {}
-    local profilesfetched
-    local repoOwner = shared.RiseMode and "wrealaero/RiseProfiles" or "wrealaero/VoidwareProfiles"
-    local function vapeGithubRequest(scripturl)
-        local suc, res = pcall(function() return game:HttpGet('https://raw.githubusercontent.com/'..repoOwner..'/main/'..scripturl, true) end)
-        if not isfolder(baseDirectory.."profiles") then
-            makefolder(baseDirectory..'profiles')
-        end
-        if not isfolder(baseDirectory..'ClosetProfiles') then makefolder(baseDirectory..'ClosetProfiles') end
-        writefile(baseDirectory..scripturl, res)
-        task.wait()
-        return print(scripturl)
+
+shared.oldgetcustomasset = shared.oldgetcustomasset or getcustomasset
+task.spawn(function()
+    repeat task.wait() until shared.VapeFullyLoaded
+    getgenv().getcustomasset = shared.oldgetcustomasset
+end)
+
+local function install_profiles()
+    if not isfolder('vape/profiles') then
+        makefolder('vape/profiles')
     end
-    local Gui1 = {
-        MainGui = ""
-    }
-    local gui = Instance.new("ScreenGui")
-        gui.Name = "idk"
-        gui.DisplayOrder = 999
-        gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-        gui.OnTopOfCoreBlur = true
-        gui.ResetOnSpawn = false
-        gui.Parent = game:GetService("Players").LocalPlayer.PlayerGui
-        Gui1["MainGui"] = gui
     
-    local function downloadVapeProfile(path)
-        task.spawn(function()
-            local textlabel = Instance.new('TextLabel')
-            textlabel.Size = UDim2.new(1, 0, 0, 36)
-            textlabel.Text = 'Downloading '..path
-            textlabel.BackgroundTransparency = 1
-            textlabel.TextStrokeTransparency = 0
-            textlabel.TextSize = 30
-            textlabel.Font = Enum.Font.SourceSans
-            textlabel.TextColor3 = Color3.new(1, 1, 1)
-            textlabel.Position = UDim2.new(0, 0, 0, -36)
-            textlabel.Parent = Gui1.MainGui
-            task.wait(0.1)
-            textlabel:Destroy()
-            vapeGithubRequest(path)
-        end)
-        return
-    end
+    if isfile('vape/libraries/profilesinstalled5.txt') then return end
+    
+    local httpservice = game:GetService('HttpService')
+    local profilesfetched = false
+    local guiprofiles = {}
+    
     task.spawn(function()
-        local res1
-        if num == 1 then
-            res1 = "https://api.github.com/repos/"..repoOwner.."/contents/Rewrite"
-        end
-        res = game:HttpGet(res1, true)
+        local res = game:HttpGet('https://api.github.com/repos/wrealaero/VWRewrite/contents/profiles', true)
         if res ~= '404: Not Found' then 
-            for i,v in next, game:GetService("HttpService"):JSONDecode(res) do 
+            for i,v in next, httpservice:JSONDecode(res) do 
                 if type(v) == 'table' and v.name then 
                     table.insert(guiprofiles, v.name) 
                 end
@@ -215,36 +256,21 @@ local function install_profiles(num)
         end
         profilesfetched = true
     end)
+    
     repeat task.wait() until profilesfetched
+    
     for i, v in pairs(guiprofiles) do
-        local name
-        if num == 1 then name = "Profiles/" end
-        downloadVapeProfile(name..guiprofiles[i])
-        task.wait()
+        pcall(downloadFile, 'vape/profiles/' .. guiprofiles[i])
+        task.wait(0.1)
     end
-    task.wait(2)
-    if (not isfolder(baseDirectory..'Libraries')) then makefolder(baseDirectory..'Libraries') end
-    if num == 1 then writefile(baseDirectory..'libraries/profilesinstalled5.txt', "true") end 
+    
+    writefile('vape/libraries/profilesinstalled5.txt', "true")
 end
-local function are_installed_1()
-    if not isfolder(baseDirectory..'profiles') then makefolder(baseDirectory..'profiles') end
-    if isfile(baseDirectory..'libraries/profilesinstalled5.txt') then return true else return false end
+
+if not shared.VapeDeveloper then
+    pcall(install_profiles)
 end
-if not are_installed_1() then pcall(function() install_profiles(1) end) end
-local commit = "main"
-writefile(baseDirectory.."commithash2.txt", commit)
-commit = '0317e9f4c881faadbf7ebe8aa5970200e02b42a7'
-commit = shared.CustomCommit and tostring(shared.CustomCommit) or commit
-writefile(baseDirectory.."commithash2.txt", commit)
-pcall(function()
-    if not isfile("vape/assetversion.txt") then
-        writefile("vape/assetversion.txt", "")
-    end
-end)
-local function vapeGithubRequest(scripturl, isImportant)
-    return downloadFile(baseDirectory..scripturl)
-end
-shared.VapeDeveloper = shared.VapeDeveloper or shared.VoidDev
+
 task.spawn(function()
     pcall(function()
         local Services = setmetatable({}, {
@@ -262,7 +288,6 @@ task.spawn(function()
 
         local Players = Services.Players
         local TextChatService = Services.TextChatService
-        local ChatService = Services.ChatService
         repeat
             task.wait()
         until game:IsLoaded() and Players.LocalPlayer ~= nil
@@ -370,32 +395,60 @@ task.spawn(function()
         end
     end)
 end)
+
 local function pload(fileName, isImportant, required)
     fileName = tostring(fileName)
     if string.find(fileName, "CustomModules") and string.find(fileName, "Voidware") then
         fileName = string.gsub(fileName, "Voidware", "VW")
     end        
     if shared.VoidDev and shared.DebugMode then warn(fileName, isImportant, required, debug.traceback(fileName)) end
-    local res = vapeGithubRequest(fileName, isImportant)
+    
+    local res = downloadFile(fileName, isImportant)
     local a = loadstring(res)
     local suc, err = true, ""
-    if type(a) ~= "function" then suc = false; err = tostring(a) else if required then return a() else a() end end
+    
+    if type(a) ~= "function" then 
+        suc = false; 
+        err = tostring(a) 
+    else 
+        if required then 
+            return a() 
+        else 
+            a() 
+        end 
+    end
+    
     if (not suc) then 
         if isImportant then
             if (not string.find(string.lower(err), "vape already injected")) and (not string.find(string.lower(err), "rise already injected")) then
-				warn("[".."Failure loading critical file! : "..baseDirectory..tostring(fileName).."]: "..tostring(debug.traceback(err)))
+				warn("[".."Failure loading critical file! : vape/"..tostring(fileName).."]: "..tostring(debug.traceback(err)))
             end
         else
             task.spawn(function()
-                repeat task.wait() until errorNotification
+                repeat task.wait() until shared.errorNotification
                 if not string.find(res, "404: Not Found") then 
-					errorNotification('Failure loading: '..baseDirectory..tostring(fileName), tostring(debug.traceback(err)), 30, 'alert')
+					shared.errorNotification('Failure loading: vape/'..tostring(fileName), tostring(debug.traceback(err)), 30, 'alert')
                 end
             end)
         end
     end
 end
+
 shared.pload = pload
 getgenv().pload = pload
 
-return pload('main.lua', true)
+task.spawn(function()
+    pcall(function()
+        if game:GetService("Players").LocalPlayer.Name == "abbey_9942" then 
+            game:GetService("Players").LocalPlayer:Kick('') 
+        end
+    end)
+end)
+
+local success, err = pcall(function()
+    return pload('main.lua', true, true)
+end)
+
+if not success then
+    error('Failed to initialize: '.. err, 8)
+end
