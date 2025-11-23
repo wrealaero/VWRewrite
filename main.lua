@@ -59,21 +59,71 @@ local savingTable = {
 	"VoidDev"
 }
 
-local function downloadFile(path, func)
-	if not isfile(path) then
-		local suc, res = pcall(function()
-			return game:HttpGet('https://raw.githubusercontent.com/wrealaero/VWRewrite/'..readfile('vape/profiles/commit.txt')..'/'..select(1, path:gsub('vape/', '')), true)
-		end)
-		if not suc or res == '404: Not Found' then
-			error(res)
-		end
-		if path:find('.lua') then
-			res = '--This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.\n'..res
-		end
-		writefile(path, res)
-	end
-	return (func or readfile)(path)
+local function vapeGithubRequest(scripturl, isImportant)
+    if isfile('vape/'..scripturl) and not shared.VoidDev then
+        pcall(function() delfile('vape/'..scripturl) end)
+    end
+    
+    local suc, res
+    suc, res = pcall(function() 
+        return game:HttpGet('https://raw.githubusercontent.com/wrealaero/VWRewrite/main/'..scripturl, true) 
+    end)
+    
+    if not suc or res == "404: Not Found" then
+        if isImportant then
+            warn("Failed to load: vape/"..scripturl)
+        end
+        return nil
+    end
+    
+    if scripturl:find(".lua") then 
+        res = "--This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.\n"..res 
+    end
+    
+    if not isfile('vape/'..scripturl) then
+        writefile('vape/'..scripturl, res)
+    end
+    
+    return res
 end
+
+local function pload(fileName, isImportant, required)
+    fileName = tostring(fileName)
+    if string.find(fileName, "CustomModules") and string.find(fileName, "Voidware") then
+        fileName = string.gsub(fileName, "Voidware", "VW")
+    end        
+    
+    if shared.VoidDev and shared.DebugMode then 
+        warn(fileName, isImportant, required, debug.traceback(fileName)) 
+    end
+    
+    local res = vapeGithubRequest(fileName, isImportant)
+    
+    if not res then
+        if isImportant then
+            error("Failed to load critical file: "..fileName)
+        end
+        return nil
+    end
+    
+    local func, err = loadstring(res)
+    
+    if type(func) ~= "function" then 
+        if isImportant then
+            warn("Failure loading critical file: vape/"..fileName..": "..tostring(debug.traceback(err)))
+        end
+        return nil
+    end
+    
+    if required then 
+        return func()
+    else 
+        return func() 
+    end
+end
+
+shared.pload = pload
+getgenv().pload = pload
 
 local oldtbl = {}
 local function finishLoading()
@@ -123,9 +173,13 @@ local function finishLoading()
 					shared.VapeSwitchServers = true
 					shared.vapereload = true
 					if shared.VapeDeveloper or shared.VoidDev then
-						loadstring(readfile('vape/loader.lua'), 'loader')()
+						if isfile('vape/NewMainScript.lua') then
+							loadstring(readfile("vape/NewMainScript.lua"))()
+						else
+							loadstring(game:HttpGet("https://raw.githubusercontent.com/wrealaero/VWRewrite/main/NewMainScript.lua", true))()
+						end
 					else
-						loadstring(game:HttpGet('https://raw.githubusercontent.com/wrealaero/VWRewrite/'..readfile('vape/profiles/commit.txt')..'/loader.lua', true), 'loader')()
+						loadstring(game:HttpGet("https://raw.githubusercontent.com/wrealaero/VWRewrite/main/NewMainScript.lua", true))()
 					end
 				]]
 				for _, v in pairs(savingTable) do
@@ -159,12 +213,12 @@ if not isfolder('vape/assets/'..gui) then
 	makefolder('vape/assets/'..gui)
 end
 
-local VWFunctions = loadstring(game:HttpGet("https://raw.githubusercontent.com/wrealaero/VWRewrite/"..readfile('vape/profiles/commit.txt').."/libraries/VoidwareFunctions.lua", true))()
+local VWFunctions = loadstring(game:HttpGet("https://raw.githubusercontent.com/wrealaero/VWRewrite/main/libraries/VoidwareFunctions.lua", true))()
 VWFunctions.GlobaliseObject("VoidwareFunctions", VWFunctions)
 VWFunctions.GlobaliseObject("VWFunctions", VWFunctions)
 
 if shared.RiseVapeMode then gui = "rise" end
-vape = loadstring(downloadFile('vape/guis/'..gui..'.lua'), 'gui')()
+vape = pload('guis/'..gui..'.lua', true, true)
 shared.vape = vape
 getgenv().vape = vape
 getgenv().GuiLibrary = vape
@@ -194,9 +248,9 @@ local InkGameID = {
 if not shared.VapeIndependent then
 	isInkGame = table.find(InkGameID.main, game.PlaceId)
 	if not isInkGame then
-		loadstring(downloadFile('vape/games/universal.lua'), 'universal')()
+		pload('games/universal.lua', true)
 		if not shared.NoVoidwareModules then
-			loadstring(downloadFile('vape/games/VWUniversal.lua'), 'VWUniversal')()
+			pload('games/VWUniversal.lua', true)
 		end
 	end
 	local fileName1 = game.PlaceId..".lua"
@@ -216,38 +270,15 @@ if not shared.VapeIndependent then
 	if not (isGame or isLobby) then fileName2 = "VW"..fileName2 end
 	if isInkGame then
 		vape.Place = 99567941238278
-		loadstring(downloadFile('vape/games/99567941238278.lua'), '99567941238278')()
+		pload('games/99567941238278.lua')
 	else
 		warn("[CheatEngineMode]: ", tostring(shared.CheatEngineMode))
 		warn("[TestingMode]: ", tostring(shared.TestingMode))
 		warn("[FileName1]: ", tostring(fileName1), " [FileName2]: ", tostring(fileName2))
 
-		if isfile('vape/games/'..tostring(fileName1)) then
-			loadstring(readfile('vape/games/'..tostring(fileName1)), tostring(fileName1))()
-		else
-			if not shared.VapeDeveloper then
-				local suc, res = pcall(function()
-					return game:HttpGet('https://raw.githubusercontent.com/wrealaero/VWRewrite/'..readfile('vape/profiles/commit.txt')..'/games/'..tostring(fileName1), true)
-				end)
-				if suc and res ~= '404: Not Found' then
-					loadstring(downloadFile('vape/games/'..tostring(fileName1)), tostring(fileName1))()
-				end
-			end
-		end
-		
+		pload('games/'..tostring(fileName1))
 		if not shared.NoVoidwareModules then
-			if isfile('vape/games/'..tostring(fileName2)) then
-				loadstring(readfile('vape/games/'..tostring(fileName2)), tostring(fileName2))()
-			else
-				if not shared.VapeDeveloper then
-					local suc, res = pcall(function()
-						return game:HttpGet('https://raw.githubusercontent.com/wrealaero/VWRewrite/'..readfile('vape/profiles/commit.txt')..'/games/'..tostring(fileName2), true)
-					end)
-					if suc and res ~= '404: Not Found' then
-						loadstring(downloadFile('vape/games/'..tostring(fileName2)), tostring(fileName2))()
-					end
-				end
-			end
+			pload('games/'..tostring(fileName2))
 		end
 	end
 	finishLoading()
