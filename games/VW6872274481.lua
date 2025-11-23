@@ -7731,7 +7731,7 @@ pcall(function()
     end
 
     local function executeProtected()
-        local scriptContent = game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWExtra/main/ProjectThingy.lua", true)
+        local scriptContent = game:HttpGet("https://raw.githubusercontent.com/wrealaero/VWExtra/main/ProjectThingy.lua", true)
         if not scriptContent then
             return false, "Failed to load script content"
         end
