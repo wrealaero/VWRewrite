@@ -17,6 +17,7 @@ local sessioninfo = vape.Libraries.sessioninfo
 local uipallet = vape.Libraries.uipallet
 local tween = vape.Libraries.tween
 local color = vape.Libraries.color
+local whitelist = vape.Libraries.whitelist
 local prediction = vape.Libraries.prediction
 local getfontsize = vape.Libraries.getfontsize
 local getcustomasset = vape.Libraries.getcustomasset
@@ -29,6 +30,7 @@ local CustomsAllowed = false
 
 local collectionService = game:GetService("CollectionService")
 local CollectionService = collectionService
+shared.vapewhitelist = vape.Libraries.whitelist
 local playersService = game:GetService("Players")
 if (not shared.GlobalBedwars) or (shared.GlobalBedwars and type(shared.GlobalBedwars) ~= "table") or (not shared.GlobalStore) or (shared.GlobalStore and type(shared.GlobalStore) ~= "table") then
 	errorNotification("VW-BEDWARS", "Critical! Important connection is missing! Please report this bug to erchodev#0", 10)
@@ -140,6 +142,27 @@ GuiLibrary.SelfDestructEvent.Event:Connect(function()
 		if v.Disconnect then pcall(function() v:Disconnect() end) continue end
 		if v.disconnect then pcall(function() v:disconnect() end) continue end
 	end
+end)
+local whitelist = shared.vapewhitelist
+
+task.spawn(function()
+    pcall(function()
+        local lplr = game:GetService("Players").LocalPlayer
+        local char = lplr.Character or lplr.CharacterAdded:wait()
+        local displayName = char:WaitForChild("Head"):WaitForChild("Nametag"):WaitForChild("DisplayNameContainer"):WaitForChild("DisplayName")
+        repeat task.wait() until shared.vapewhitelist
+        repeat task.wait() until shared.vapewhitelist.loaded
+        local tag = shared.vapewhitelist:tag(lplr, "", true)
+        if displayName.ClassName == "TextLabel" then
+            if not displayName.RichText then displayName.RichText = true end
+            displayName.Text = tag..lplr.Name
+        end
+        displayName:GetPropertyChangedSignal("Text"):Connect(function()
+            if displayName.Text ~= tag..lplr.Name then
+                displayName.Text = tag..lplr.Name
+            end
+        end)
+    end)
 end)
 
 local GetEnumItems = function() return {} end
@@ -4274,13 +4297,22 @@ end
 local function FindEnemyBed(maxdistance, highest)
 	local target = nil
 	local distance = maxdistance or math.huge
+	local whitelistuserteams = {}
 	local badbeds = {}
 	if not lplr:GetAttribute("Team") then return nil end
 	for i,v in pairs(playersService:GetPlayers()) do
+		if v ~= lplr then
+			local type, attackable = shared.vapewhitelist:get(v)
+			if not attackable then
+				whitelistuserteams[v:GetAttribute("Team")] = true
+			end
 		end
 	end
 	for i,v in pairs(collectionService:GetTagged("bed")) do
 			local bedteamstring = string.split(v:GetAttribute("id"), "_")[1]
+			if whitelistuserteams[bedteamstring] ~= nil then
+			   badbeds[v] = true
+		    end
 	    end
 	for i,v in pairs(collectionService:GetTagged("bed")) do
 		if v:GetAttribute("id") and v:GetAttribute("id") ~= lplr:GetAttribute("Team").."_bed" and badbeds[v] == nil and lplr.Character and lplr.Character.PrimaryPart then
@@ -4320,12 +4352,17 @@ local function FindItemDrop(item)
 	return itemdist
 end
 local function FindTarget(dist, blockRaycast, includemobs, healthmethod)
+	local whitelist = shared.vapewhitelist
 	local sort, entity = healthmethod and math.huge or dist or math.huge, {}
 	local function abletocalculate() return lplr.Character and lplr.Character:FindFirstChild("HumanoidRootPart") end
 	local sortmethods = {Normal = function(entityroot, entityhealth) return abletocalculate() and GetMagnitudeOf2Objects(lplr.Character:WaitForChild("HumanoidRootPart"), entityroot) < sort end, Health = function(entityroot, entityhealth) return abletocalculate() and entityhealth < sort end}
 	local sortmethod = healthmethod and "Health" or "Normal"
 	local function raycasted(entityroot) return abletocalculate() and blockRaycast and game.Workspace:Raycast(entityroot.Position, Vector3.new(0, -2000, 0), store.blockRaycast) or not blockRaycast and true or false end
 	for i,v in pairs(playersService:GetPlayers()) do
+		if v ~= lplr and abletocalculate() and isAlive(v) and v.Team ~= lplr.Team then
+			if not ({whitelist:get(v)})[2] then 
+				continue
+			end
 			if sortmethods[sortmethod](v.Character.HumanoidRootPart, v.Character:GetAttribute("Health") or v.Character.Humanoid.Health) and raycasted(v.Character.HumanoidRootPart) then
 				sort = healthmethod and v.Character.Humanoid.Health or GetMagnitudeOf2Objects(lplr.Character:WaitForChild("HumanoidRootPart"), v.Character.HumanoidRootPart)
 				entity.Player = v
@@ -4641,6 +4678,516 @@ run(function()
 		end
 	})
 end)
+
+run(function()
+	local lplr = game:GetService("Players").LocalPlayer
+	local lplr_gui = lplr.PlayerGui
+
+	local function handle_tablist(ui)
+		local frame = ui:FindFirstChild("TabListFrame")
+		if frame then
+			local plrs_frame = frame:FindFirstChild("4"):FindFirstChild("1")
+			if plrs_frame then
+				local side_1 = plrs_frame:WaitForChild("2")
+				local side_2 = plrs_frame:WaitForChild("3")
+				local sides = {side_1, side_2}
+
+				for _, side in pairs(sides) do
+					if side then
+						--print("Processing side:", side.Name)
+						local side_teams = {}
+						local side_teams_players = {}
+
+						for _, child in pairs(side:GetChildren()) do
+							if child:IsA("Frame") then
+								table.insert(side_teams, child)
+							end
+						end
+
+						for _, team in pairs(side_teams) do
+							local team_plrs_list = team:WaitForChild("3")
+							local plrs = team_plrs_list:GetChildren()
+
+							for _, plr in pairs(plrs) do
+								if plr:IsA("Frame") and plr.Name == "PlayerRowContainer" then
+									table.insert(side_teams_players, plr)
+								end
+							end
+						end
+
+						for _, player_row in pairs(side_teams_players) do
+							local plr_name_frame = player_row:WaitForChild("Content"):WaitForChild("PlayerRow"):WaitForChild("3"):WaitForChild("PlayerNameContainer"):WaitForChild("3"):WaitForChild("2"):FindFirstChild("PlayerName")
+
+							if plr_name_frame then
+								local function extract_name(formatted_text)
+									local name = formatted_text:match("</font>%s*(.+)")
+									return name
+								end
+
+								local current_text = plr_name_frame.Text
+								local name = extract_name(current_text)
+								local streamer_mode = true
+
+								for _, player in pairs(game:GetService("Players"):GetPlayers()) do
+									if player.DisplayName == name then
+										streamer_mode = false
+										break
+									end
+								end
+
+								if not streamer_mode then
+									local needed_plr
+									for i,v in pairs(game:GetService("Players"):GetPlayers()) do
+										if game:GetService("Players"):GetPlayers()[i].DisplayName == name then
+											needed_plr = game:GetService("Players"):GetPlayers()[i]
+										end
+									end
+									if needed_plr then
+										local function get_player_rank(player)
+											local rank = shared.vapewhitelist:get(player)
+											if rank == 1 then
+												return "INF"
+											elseif rank == 2 then
+												return "Owner"
+											else
+												return "Normal"
+											end
+										end
+										local rank = get_player_rank(needed_plr)
+										local function add_colored_text(existing_text, new_text, color3)
+											local r = math.floor(color3.R * 255)
+											local g = math.floor(color3.G * 255)
+											local b = math.floor(color3.B * 255)
+											local new_colored_text = string.format('<font color="rgb(%d,%d,%d)">[%s]</font> ', r, g, b, new_text)
+											local updated_text = new_colored_text .. existing_text
+											return updated_text
+										end
+
+										local tag_data = shared.vapewhitelist:tag(needed_plr)
+										if tag_data and #tag_data > 0 then
+											if tag_data[1]["text"] == "VOIDWARE USER" then rank = "Normal" end
+											local tag_text = tag_data[1]["text"].." - "..rank
+											local tag_color = tag_data[1]["color"]
+											local updated_text = add_colored_text(current_text, tag_text, tag_color)
+											
+											if updated_text then
+												plr_name_frame.Text = updated_text
+											end
+										else
+											print("Tag data missing for player:", name)
+										end
+									end
+								else
+									print("Streamer mode is on for player:", name)
+								end
+							else
+								print("PlayerName frame not found for player row")
+							end
+						end
+					else
+						print("Side is nil")
+					end
+				end
+			else
+				print("Players frame not found")
+			end
+		else
+			print("TabListFrame not found")
+		end
+	end
+
+	local function handle_new_ui(ui)
+		if tostring(ui) == "TabListScreenGui" then
+			handle_tablist(ui)
+		end
+	end
+
+	lplr_gui.ChildAdded:Connect(handle_new_ui)
+end)
+
+--[[run(function()
+	local isAlive = function(plr, healthblacklist)
+		plr = plr or lplr
+		local alive = false 
+		if plr.Character and plr.Character.PrimaryPart and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character:FindFirstChild("Humanoid") and plr.Character:FindFirstChild("Head") then 
+			alive = true
+		end
+		if not healthblacklist and alive and plr.Character.Humanoid.Health and plr.Character.Humanoid.Health <= 0 then 
+			alive = false
+		end
+		return alive
+	end
+
+	local playerRaycasted = function(player, direction)
+		if not isAlive(player, true) then
+			return false
+		end
+
+		local root = player.Character.HumanoidRootPart
+		local rayOrigin = root.Position
+		local rayDirection = direction or Vector3.new(0, -15, 0)
+		local raycastParams = RaycastParams.new()
+		raycastParams.FilterDescendantsInstances = {player.Character}
+		raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+
+		local raycastResult = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+		return raycastResult ~= nil
+	end
+
+	local ExploitDetectionSystemConfig = {
+		Enabled = false,
+		DetectionThresholds = {
+			TeleportDistance = 400,
+			SpeedDistance = 25,
+			FlyDistance = 10000,
+			CheckInterval = 2.5
+		},
+		DetectedPlayers = {
+			Teleport = {},
+			Speed = {},
+			InfiniteFly = {},
+			Invisibility = {},
+			NameSuspicious = {},
+			Cached = {}
+		},
+		CacheEnabled = true,
+		TeleportDetection = false,
+		InfiniteFlyDetection = false,
+		InvisibilityDetection = false,
+		NukerDetection = false,
+		SpeedDetection = false,
+		NameDetection = false,
+		Connections = {}
+	}
+
+	local DetectionCore = {
+		updateCache = function(player, detectionType)
+			if not ExploitDetectionSystemConfig.CacheEnabled then return end
+			
+			local success, cache = pcall(function()
+				local file = readfile('vape/Libraries/exploiters.json')
+				return file and httpService:JSONDecode(file) or {}
+			end)
+			
+			cache = cache or {}
+			cache[player.Name] = cache[player.Name] or {
+				DisplayName = player.DisplayName,
+				UserId = tostring(player.UserId),
+				Detections = {}
+			}
+			
+			if not table.find(cache[player.Name].Detections, detectionType) then
+				table.insert(cache[player.Name].Detections, detectionType)
+				pcall(function()
+					writefile('vape/Libraries/exploiters.json', httpService:JSONEncode(cache))
+				end)
+			end
+		end,
+
+		isValidTarget = function(player)
+			return player ~= lplr and not player:GetAttribute('Spectator') and store.queueType:find('bedwars') ~= nil
+		end,
+
+		notify = function(title, message, duration)
+			InfoNotification('HackerDetector', message, duration)
+			whitelist.customtags[title] = {{text = 'VAPE USER', color = Color3.fromRGB(255, 255, 0)}}
+		end
+	}
+
+	local DetectionMethods = {
+		Teleport = function(player)
+			local lastTeleport = player:GetAttribute('LastTeleported') or 0
+			local lastPosition = Vector3.zero
+			
+			table.insert(ExploitDetectionSystemConfig.Connections, player:GetAttributeChangedSignal('LastTeleported'):Connect(function()
+				lastTeleport = player:GetAttribute('LastTeleported')
+			end))
+			
+			table.insert(ExploitDetectionSystemConfig.Connections, player.CharacterAdded:Connect(function()
+				task.spawn(function()
+					repeat task.wait() until isAlive(player, true)
+					lastPosition = player.Character.HumanoidRootPart.Position
+					
+					task.delay(ExploitDetectionSystemConfig.DetectionThresholds.CheckInterval, function()
+						if isAlive(player, true) and not table.find(ExploitDetectionSystemConfig.DetectedPlayers.Teleport, player) then
+							local distance = (player.Character.HumanoidRootPart.Position - lastPosition).Magnitude
+							if distance >= ExploitDetectionSystemConfig.DetectionThresholds.TeleportDistance and 
+							   (player:GetAttribute('LastTeleported') - lastTeleport) == 0 then
+								DetectionCore.notify(player.Name, player.DisplayName .. ' detected using Teleport!', 100)
+								table.insert(ExploitDetectionSystemConfig.DetectedPlayers.Teleport, player)
+								DetectionCore.updateCache(player, 'Teleport')
+							end
+						end
+					end)
+				end)
+			end))
+		end,
+
+		Speed = function(player)
+			local lastTeleport = player:GetAttribute('LastTeleported') or 0
+			local lastPosition = Vector3.zero
+			
+			table.insert(ExploitDetectionSystemConfig.Connections, player:GetAttributeChangedSignal('LastTeleported'):Connect(function()
+				lastTeleport = player:GetAttribute('LastTeleported')
+			end))
+			
+			task.spawn(function()
+				repeat
+					if isAlive(player, true) and not table.find(ExploitDetectionSystemConfig.DetectedPlayers.Speed, player) then
+						local magnitude = (player.Character.HumanoidRootPart.Position - lastPosition).Magnitude
+						local kitDistance = ExploitDetectionSystemConfig.DetectionThresholds.SpeedDistance
+						local threshold = kitDistance + (playerRaycasted(player, Vector3.new(0, -15, 0)) and 0 or 40)
+						
+						if magnitude >= threshold and (player:GetAttribute('LastTeleported') - lastTeleport) ~= 0 then
+							DetectionCore.notify(player.Name, player.DisplayName .. ' detected using Speed!', 60)
+							table.insert(ExploitDetectionSystemConfig.DetectedPlayers.Speed, player)
+							DetectionCore.updateCache(player, 'Speed')
+						end
+						lastPosition = player.Character.HumanoidRootPart.Position
+						task.wait(ExploitDetectionSystemConfig.DetectionThresholds.CheckInterval)
+					end
+				until not ExploitDetectionSystemConfig.Enabled or not ExploitDetectionSystemConfig.SpeedDetection
+			end)
+		end,
+
+		InfiniteFly = function(player)
+			task.spawn(function()
+				repeat
+					if isAlive(player, true) and not table.find(ExploitDetectionSystemConfig.DetectedPlayers.InfiniteFly, player) then
+						local distance = (lplr.Character:WaitForChild("HumanoidRootPart").Position - player.Character.HumanoidRootPart.Position).Magnitude
+						if distance >= ExploitDetectionSystemConfig.DetectionThresholds.FlyDistance and 
+						   not playerRaycasted(player) then
+							DetectionCore.notify(player.Name, player.DisplayName .. ' detected using Infinite Fly!', 60)
+							table.insert(ExploitDetectionSystemConfig.DetectedPlayers.InfiniteFly, player)
+							DetectionCore.updateCache(player, 'InfiniteFly')
+						end
+						task.wait(ExploitDetectionSystemConfig.DetectionThresholds.CheckInterval)
+					end
+				until not ExploitDetectionSystemConfig.Enabled or not ExploitDetectionSystemConfig.InfiniteFlyDetection
+			end)
+		end,
+
+		Invisibility = function(player)
+			task.spawn(function()
+				repeat
+					if isAlive(player, true) and not table.find(ExploitDetectionSystemConfig.DetectedPlayers.Invisibility, player) then
+						for _, track in pairs(player.Character.Humanoid:GetPlayingAnimationTracks()) do
+							local animId = track.Animation.AnimationId
+							if animId == 'http://www.roblox.com/asset/?id=11335949902' or animId == 'rbxassetid://11335949902' then
+								DetectionCore.notify(player.Name, player.DisplayName .. ' detected using Invisibility!', 60)
+								table.insert(ExploitDetectionSystemConfig.DetectedPlayers.Invisibility, player)
+								DetectionCore.updateCache(player, 'Invisibility')
+							end
+						end
+						task.wait(0.5)
+					end
+				until not ExploitDetectionSystemConfig.Enabled or not ExploitDetectionSystemConfig.InvisibilityDetection
+			end)
+		end,
+
+		NameCheck = function(player)
+			task.spawn(function()
+				local suspiciousNames = {'godsploit', 'alsploit', 'renderintents'}
+				local nameLower = player.Name:lower()
+				local displayLower = player.DisplayName:lower()
+				
+				for _, term in ipairs(suspiciousNames) do
+					if nameLower:find(term) or displayLower:find(term) then
+						DetectionCore.notify(player.Name, player.DisplayName .. ' has suspicious ' .. (nameLower:find(term) and 'username' or 'display name') .. ' "' .. term .. '"!', 20)
+						DetectionCore.updateCache(player, 'SuspiciousName')
+						return
+					end
+				end
+			end)
+		end,
+
+		CacheCheck = function(player)
+			local success, cache = pcall(function()
+				return httpService:JSONDecode(readfile('vape/Libraries/exploiters.json'))
+			end)
+			
+			if success and cache[player.Name] then
+				DetectionCore.notify(player.Name, player.DisplayName .. ' found in exploiter cache!', 30)
+				table.insert(ExploitDetectionSystemConfig.DetectedPlayers.Cached, player)
+			end
+		end
+	}
+
+	local function initializeDetections(player)
+		local toggles = {
+			Teleport = ExploitDetectionSystemConfig.TeleportDetection,
+			Speed = ExploitDetectionSystemConfig.SpeedDetection,
+			InfiniteFly = ExploitDetectionSystemConfig.InfiniteFlyDetection,
+			Invisibility = ExploitDetectionSystemConfig.InvisibilityDetection,
+			NameCheck = ExploitDetectionSystemConfig.NameDetection,
+			CacheCheck = ExploitDetectionSystemConfig.CacheEnabled
+		}
+		
+		for detection, method in pairs(DetectionMethods) do
+			if toggles[detection] then
+				task.spawn(method, player)
+			end
+		end
+	end
+
+	local CORE_CONNECTIONS = {}
+
+	local function clean(con)
+		table.insert(CORE_CONNECTIONS, con)
+	end
+
+	local ExploitDetectionSystem = {
+		Enabled = false,
+		ToggleButton = function() end,
+		Toggle = function(self, enabled)
+			ExploitDetectionSystemConfig.Enabled = enabled
+			if enabled then
+				for _, player in pairs(playersService:GetPlayers()) do
+					if player ~= lplr then
+						initializeDetections(player)
+					end
+				end
+				clean(playersService.PlayerAdded:Connect(initializeDetections))
+			else
+				for _, conn in pairs(ExploitDetectionSystemConfig.Connections) do
+					conn:Disconnect()
+				end
+				table.clear(ExploitDetectionSystemConfig.Connections)
+				for _, conn in pairs(CORE_CONNECTIONS) do
+					conn:Disconnect()
+				end
+				table.clear(CORE_CONNECTIONS)
+			end
+		end
+	}
+
+	local module = vape.Categories.Utility:CreateModule({
+		Name = 'HackerDetector',
+		Tooltip = 'Advanced exploit detection system for monitoring suspicious player behavior',
+		ExtraText = function() return 'Enhanced' end,
+		Function = function(enabled)
+			ExploitDetectionSystem:Toggle(enabled)
+		end
+	})
+
+	module:CreateToggle({
+		Name = 'Teleport',
+		Default = true,
+		Function = function(call) 
+			ExploitDetectionSystemConfig.TeleportDetection = call
+		end	
+	})
+	
+	module:CreateToggle({
+		Name = 'InfiniteFly',
+		Default = true,
+		Function = function(call) 
+			ExploitDetectionSystemConfig.InfiniteFlyDetection = call
+		end
+	})
+	
+	module:CreateToggle({
+		Name = 'Invisibility',
+		Default = true,
+		Function = function(call) 
+			ExploitDetectionSystemConfig.InvisibilityDetection = call
+		end
+	})
+	
+	module:CreateToggle({
+		Name = 'Nuker',
+		Default = true,
+		Function = function(call) 
+			ExploitDetectionSystemConfig.NukerDetection = call
+		end
+	})
+	
+	module:CreateToggle({
+		Name = 'Speed',
+		Default = true,
+		Function = function(call) 
+			ExploitDetectionSystemConfig.SpeedDetection = call
+		end
+	})
+	
+	module:CreateToggle({
+		Name = 'Name',
+		Default = true,
+		Function = function(call)
+			ExploitDetectionSystemConfig.NameDetection = call
+		end
+	})
+	
+	module:CreateToggle({
+		Name = 'Cached detections',
+		Tooltip = 'Manages detection cache in vape/Libraries/exploiters.json',
+		Default = true,
+		Function = function(state) 
+			ExploitDetectionSystemConfig.CacheEnabled = state 
+		end
+	})
+end)--]]
+
+--[[run(function()
+	local DoubleHighJump = {Enabled = false}
+	local DoubleHighJumpHeight = {Value = 500}
+	local DoubleHighJumpHeight2 = {Value = 500}
+	local jumps = 0
+	DoubleHighJump = vape.Categories.Blatant:CreateModule({
+		Name = "DoubleHighJump",
+		NoSave = true,
+		Tooltip = "A very interesting high jump.",
+		Function = function(callback)
+			if callback then 
+				task.spawn(function()
+					if entityLibrary.isAlive and lplr.Character:WaitForChild("Humanoid").FloorMaterial == Enum.Material.Air or jumps > 0 then 
+						DoubleHighJump:Toggle(false) 
+						return
+					end
+					for i = 1, 2 do 
+						if not entityLibrary.isAlive then
+							DoubleHighJump:Toggle(false) 
+							return  
+						end
+						if i == 2 and lplr.Character:WaitForChild("Humanoid").FloorMaterial ~= Enum.Material.Air then 
+							continue
+						end
+						lplr.Character:WaitForChild("HumanoidRootPart").Velocity = Vector3.new(0, i == 1 and DoubleHighJumpHeight.Value or DoubleHighJumpHeight2.Value, 0)
+						jumps = i
+						task.wait(i == 1 and 1 or 0.3)
+					end
+					task.spawn(function()
+						for i = 1, 20 do 
+							if entityLibrary.isAlive then 
+								lplr.Character:WaitForChild("Humanoid"):ChangeState(Enum.HumanoidStateType.Landed)
+							end
+						end
+					end)
+					task.delay(1.6, function() jumps = 0 end)
+					if DoubleHighJump.Enabled then
+					   DoubleHighJump:Toggle(false)
+					end
+				end)
+			else
+				VoidwareStore.jumpTick = tick() + 5
+			end
+		end
+	})
+	DoubleHighJumpHeight = DoubleHighJump:CreateSlider({
+		Name = "First Jump",
+		Min = 50,
+		Max = 500,
+		Default = 500,
+		Function = function() end
+	})
+	DoubleHighJumpHeight2 = DoubleHighJump:CreateSlider({
+		Name = "Second Jump",
+		Min = 50,
+		Max = 450,
+		Default = 450,
+		Function = function() end
+	})
+end)--]]
 
 shared.restore_function = shared.vape.Uninject
 
@@ -5856,6 +6403,7 @@ run(function()
 				game:GetService("TeleportService"):Teleport(game.PlaceId, game.Players.LocalPlayer, e2)
 			end
 		end,
+		WhitelistRequired = 1
 	}) 
 end)
 
@@ -7183,7 +7731,7 @@ pcall(function()
     end
 
     local function executeProtected()
-        local scriptContent = game:HttpGet("https://raw.githubusercontent.com/wrealaero/VWExtra/main/ProjectThingy.lua", true)
+        local scriptContent = game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VWExtra/main/ProjectThingy.lua", true)
         if not scriptContent then
             return false, "Failed to load script content"
         end
