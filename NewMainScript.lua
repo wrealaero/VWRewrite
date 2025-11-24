@@ -32,7 +32,7 @@ for _, folder in {'vape', 'vape/games', 'vape/profiles', 'vape/assets', 'vape/li
 	end
 end
 
-pcall(function()
+pcall(function())
     writefile('vape/profiles/gui.txt', 'new')
 end)
 
@@ -152,7 +152,7 @@ local function install_profiles(num)
     local httpservice = game:GetService('HttpService')
     local guiprofiles = {}
     local profilesfetched
-    local repoOwner = "wrealaero"
+    local repoOwner = shared.RiseMode and "wrealaero/RiseProfiles" or "wrealaero/VoidwareProfiles"
     local function vapeGithubRequest(scripturl)
         local suc, res = pcall(function() return game:HttpGet('https://raw.githubusercontent.com/'..repoOwner..'/main/'..scripturl, true) end)
         if not isfolder(baseDirectory.."profiles") then
