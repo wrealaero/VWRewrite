@@ -1,236 +1,462 @@
+if shared.RiseMode then
+    return loadstring(game:HttpGet('https://raw.githubusercontent.com/wrealaero/VWRise/main/NewMainScript.lua'))()
+end
+local smooth = not game:IsLoaded()
 repeat task.wait() until game:IsLoaded()
-if shared.vape then shared.vape:Uninject(); shared.VapeExecuted = false end
-
-if identifyexecutor and ({identifyexecutor()})[1] == 'Argon' then
-	getgenv().setthreadidentity = nil
+if smooth then
+    task.wait(10)
 end
 
-getgenv().setthreadidentity = function() end
-getgenv().run = function(func)
-	local suc, err = pcall(function() func() end)
-	if (not suc) then
-		warn('Error in module! Error log: '..debug.traceback(tostring(err)))
-	end
-end
-
-local suc, err = pcall(function()
-	return getrenv().require(game:GetService("CoreGui").RobloxGui.Modules.ErrorPrompt)
-end)
-if (not suc) then shared.CheatEngineMode = true end
-
-local vape
-local loadstring = function(...)
-	local res, err = loadstring(...)
-	if err and vape then
-		vape:CreateNotification('Vape', 'Failed to load : '..err, 30, 'alert')
-	end
-	return res
-end
-if hookfunction == nil then getgenv().hookfunction = function() end end
-local queue_on_teleport = queue_on_teleport or function() end
 local isfile = isfile or function(file)
 	local suc, res = pcall(function()
 		return readfile(file)
 	end)
 	return suc and res ~= nil and res ~= ''
 end
-getgenv().cloneref = function(obj) return obj end
-local cloneref = cloneref or function(obj)
-	return obj
+local delfile = delfile or function(file)
+	writefile(file, '')
 end
-local playersService = cloneref(game:GetService('Players'))
 
-local isInkGame = false
-
-local savingTable = {
-	"TeleportExploitAutowinEnabled",
-	"NoVoidwareModules",
-	"VapeCustomProfile",
-	"ProfilesDisabled",
-	"CheatEngineMode",
-	"ClosetCheatMode",
-	"NoAutoExecute",
-	"VapeDeveloper",
-	"CustomCommit",
-	"RiseVapeMode",
-	"TestingMode",
-	"VapePrivate",
-	"RiseMode",
-	"VoidDev"
-}
-
-local oldtbl = {}
-local function finishLoading()
-	vape.Init = nil
-	vape:Load()
-	task.spawn(function()
-		repeat
-			shared.VapeFullyLoaded = vape.Loaded
-			vape:Save()
-			task.wait(10)
-		until not vape.Loaded
-	end)
-
-	if not isInkGame then
-		task.spawn(function()
-			repeat
-				shared.vape.ObjectsThatCanBeSaved = shared.vape.ObjectsThatCanBeSaved or {}
-				if oldtbl ~= vape.Modules then
-					oldtbl = vape.Modules
-					for i,v in pairs(vape.Modules) do
-						v.ToggleButton = function(...)
-							v:Toggle(...)
-						end
-						if tostring(i) == "Breaker" then
-							shared.vape.ObjectsThatCanBeSaved.NukerOptionsButton = {Api = v}
-						end
-						shared.vape.ObjectsThatCanBeSaved[tostring(i).."OptionsButton"] = {Api = v}
-					end
-				end
-				pcall(function()
-					local uipallet = vape.libraries.uipallet
-					local hue, saturation, value = Color3.toHSV(uipallet.Main)
-					shared.vape.ObjectsThatCanBeSaved["Gui ColorSliderColor"] = {Api = {Hue = vape.GUIColor.Hue, Sat = vape.GUIColor.Sat, Value = vape.GUIColor}}
-				end)
-				shared.GuiLibrary = shared.vape
-				task.wait(10)
-			until not vape.Loaded
+local function downloadFile(path, func)
+	if not isfile(path) then
+		local suc, res = pcall(function()
+			return game:HttpGet('https://raw.githubusercontent.com/wrealaero/VWRewrite/'..readfile('vape/profiles/commit.txt')..'/'..select(1, path:gsub('vape/', '')), true)
 		end)
-
-		local teleportedServers
-		vape:Clean(playersService.LocalPlayer.OnTeleport:Connect(function()
-			if (not teleportedServers) and (not shared.VapeIndependent) then
-				teleportedServers = true
-				local teleportScript = [[
-					repeat task.wait() until game:IsLoaded()
-					if getgenv and not getgenv().shared then shared.CheatEngineMode = true; getgenv().shared = {}; end
-					shared.VapeSwitchServers = true
-					shared.vapereload = true
-					if shared.VapeDeveloper or shared.VoidDev then
-						if isfile('vape/NewMainScript.lua') then
-							loadstring(readfile("vape/NewMainScript.lua"))()
-						else
-							loadstring(game:HttpGet("https://raw.githubusercontent.com/wrealaero/VWRewrite/main/NewMainScript.lua", true))()
-						end
-					else
-						loadstring(game:HttpGet("https://raw.githubusercontent.com/wrealaero/VWRewrite/main/NewMainScript.lua", true))()
-					end
-				]]
-				for _, v in pairs(savingTable) do
-					if shared[v] ~= nil then
-						teleportScript = 'shared.'..tostring(v).." = "..tostring(shared[v]).."\n"..teleportScript
-					end
-				end
-				if shared.VoidDev then
-					teleportScript = 'shared.VoidDev = true\n'..teleportScript
-				end
-				vape:Save()
-				queue_on_teleport(teleportScript)
-			end
-		end))
+		if not suc or res == '404: Not Found' then
+			error(res)
+		end
+		if path:find('.lua') then
+			res = '--This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.\n'..res
+		end
+		writefile(path, res)
 	end
+	return (func or readfile)(path)
+end
 
-	if isInkGame or not shared.vapereload then
-		if not vape.Categories then return end
-		if vape.Categories.Main.Options['GUI bind indicator'].Enabled then
-			vape:CreateNotification('Finished Loading', vape.VapeButton and 'Press the button in the top right to open GUI' or 'Press '..table.concat(vape.Keybind, ' + '):upper()..' to open GUI', 5)
+local function wipeFolder(path)
+	if not isfolder(path) then return end
+	for _, file in listfiles(path) do
+		if file:find('loader') then continue end
+		if isfile(file) and select(1, readfile(file):find('--This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.')) == 1 then
+			delfile(file)
 		end
 	end
 end
 
-if not isfile('vape/profiles/gui.txt') then
-	writefile('vape/profiles/gui.txt', 'new')
-end
-local gui = readfile('vape/profiles/gui.txt')
-
-if not isfolder('vape/assets/'..gui) then
-	makefolder('vape/assets/'..gui)
-end
-
-local VWFunctions = loadstring(game:HttpGet("https://raw.githubusercontent.com/wrealaero/VWRewrite/main/libraries/VoidwareFunctions.lua", true))()
---pload('libraries/VoidwareFunctions.lua', true, true)
-VWFunctions.GlobaliseObject("VoidwareFunctions", VWFunctions)
-VWFunctions.GlobaliseObject("VWFunctions", VWFunctions)
-
-if shared.RiseVapeMode then gui = "rise" end
-vape = pload('guis/'..gui..'.lua', true, true)
-shared.vape = vape
-getgenv().vape = vape
-getgenv().GuiLibrary = vape
-shared.GuiLibrary = vape
-shared.VapeExecuted = true
-
-getgenv().InfoNotification = function(title, msg, dur)
-	--warn('info', tostring(title), tostring(msg), tostring(dur))
-	vape:CreateNotification(title, msg, dur)
-end
-getgenv().warningNotification = function(title, msg, dur)
-	--warn('warn', tostring(title), tostring(msg), tostring(dur))
-	vape:CreateNotification(title, msg, dur, 'warning')
-end
-getgenv().errorNotification = function(title, msg, dur)
-	--warn("error", tostring(title), tostring(msg), tostring(dur))
-	vape:CreateNotification(title, msg, dur, 'alert')
-end
-if shared.CheatEngineMode then
-	InfoNotification("Voidware | CheatEngineMode", "Due to your executor not supporting some functions \n some modules might be missing!", 5) 
-end
---[[pcall(function()
-	if (not isfile('vape/discord2.txt')) then
-		task.spawn(function() InfoNotification("Whitelist", "Was whitelisted and your whitelist dissapeared? Join back the discord server :D       ", 30) end)
-		task.spawn(function() InfoNotification("Discord", "New server! discord.gg/voidware!              ", 30) end)
-		task.spawn(function() warningNotification("Discord", "New server! discord.gg/voidware!             ", 30) end)
-		task.spawn(function() errorNotification("Discord", "New server! discord.gg/voidware!              ", 30) end)
-		writefile('vape/discord2.txt', '')
+for _, folder in {'vape', 'vape/games', 'vape/profiles', 'vape/assets', 'vape/libraries', 'vape/guis'} do
+	if not isfolder(folder) then
+		makefolder(folder)
 	end
-end)--]]
+end
 
-local bedwarsID = {
-	game = {6872274481, 8444591321, 8560631822},
-	lobby = {6872265039}
+pcall(function()
+    writefile('vape/profiles/gui.txt', 'new')
+end)
+
+if not shared.VapeDeveloper then
+	local _, subbed = pcall(function()
+		return game:HttpGet('https://github.com/wrealaero/VWRewrite')
+	end)
+	local commit = subbed:find('currentOid')
+	commit = commit and subbed:sub(commit + 13, commit + 52) or nil
+	commit = commit and #commit == 40 and commit or 'main'
+	if commit == 'main' or (isfile('vape/profiles/commit.txt') and readfile('vape/profiles/commit.txt') or '') ~= commit then
+		wipeFolder('vape')
+		wipeFolder('vape/games')
+		wipeFolder('vape/guis')
+		wipeFolder('vape/libraries')
+	end
+	writefile('vape/profiles/commit.txt', commit)
+end
+
+task.spawn(function()
+    pcall(function()
+        if game:GetService("Players").LocalPlayer.Name == "abbey_9942" then game:GetService("Players").LocalPlayer:Kick('') end
+    end)
+end)
+
+shared.oldgetcustomasset = shared.oldgetcustomasset or getcustomasset
+task.spawn(function()
+    repeat task.wait() until shared.VapeFullyLoaded
+    getgenv().getcustomasset = shared.oldgetcustomasset
+end)
+
+local CheatEngineMode = false
+if (not getgenv) or (getgenv and type(getgenv) ~= "function") then CheatEngineMode = true end
+if getgenv and not getgenv().shared then CheatEngineMode = true; getgenv().shared = {}; end
+if getgenv and not getgenv().debug then CheatEngineMode = true; getgenv().debug = {traceback = function(string) return string end} end
+if getgenv and not getgenv().require then CheatEngineMode = true; end
+if getgenv and getgenv().require and type(getgenv().require) ~= "function" then CheatEngineMode = true end
+
+local debugChecks = {
+    Type = "table",
+    Functions = {
+        "getupvalue",
+        "getupvalues",
+        "getconstants",
+        "getproto"
+    }
 }
-local InkGameID = {
-	main = {99567941238278, 125009265613167}
-}
-if not shared.VapeIndependent then
-	isInkGame = table.find(InkGameID.main, game.PlaceId)
-	if not isInkGame then
-		pload('games/universal.lua', true)
-		if not shared.NoVoidwareModules then
-			pload('games/VWUniversal.lua', true)
-		end
-	end
-	local fileName1 = game.PlaceId..".lua"
-	local fileName2 = game.PlaceId..".lua"
-	--local fileName3
-	local isGame = table.find(bedwarsID.game, game.PlaceId)
-	local isLobby = table.find(bedwarsID.lobby, game.PlaceId)
-	local CE = shared.CheatEngineMode and "CE" or ""
-	if isGame then
-		if game.PlaceId ~= 6872274481 then vape.Place = 6872274481 end
-		fileName1 = CE.."6872274481.lua"
-		fileName2 = "VW6872274481.lua"
-	end
-	if isLobby then
-		fileName1 = CE.."6872265039.lua"
-		fileName2 = "VW6872265039.lua"
-	end
-	if not (isGame or isLobby) then fileName2 = "VW"..fileName2 end
-	if isInkGame then
-		vape.Place = 99567941238278
-		pload('games/99567941238278.lua')
-	else
-		warn("[CheatEngineMode]: ", tostring(shared.CheatEngineMode))
-		warn("[TestingMode]: ", tostring(shared.TestingMode))
-		warn("[FileName1]: ", tostring(fileName1), " [FileName2]: ", tostring(fileName2), " [FileName3]: ", tostring(fileName3))
 
-		pload('games/'..tostring(fileName1))
-		if not shared.NoVoidwareModules then
-			pload('games/'..tostring(fileName2))
-		end
-	end
-	finishLoading()
-else
-	vape.Init = finishLoading
-	return vape
+local function checkExecutor()
+    if identifyexecutor ~= nil and type(identifyexecutor) == "function" then
+        local suc, res = pcall(function()
+            return identifyexecutor()
+        end)   
+        local blacklist = {'solara', 'cryptic', 'xeno', 'ember', 'ronix'}
+        local core_blacklist = {'solara', 'xeno'}
+        if suc then
+            for i,v in pairs(blacklist) do
+                if string.find(string.lower(tostring(res)), v) then CheatEngineMode = true end
+            end
+            for i,v in pairs(core_blacklist) do
+                if string.find(string.lower(tostring(res)), v) then
+                    pcall(function()
+                        getgenv().queue_on_teleport = function() warn('queue_on_teleport disabled!') end
+                    end)
+                end
+            end
+            if string.find(string.lower(tostring(res)), "delta") then
+                getgenv().isnetworkowner = function()
+                    return true
+                end
+            end
+        end
+    end
 end
+task.spawn(function() pcall(checkExecutor) end)
+task.spawn(function() pcall(function() if isfile("VW_API_KEY.txt") then delfile("VW_API_KEY.txt") end end) end)
+
+local function checkRequire()
+    if CheatEngineMode then return end
+    local bedwarsID = {
+        game = {6872274481, 8444591321, 8560631822},
+        lobby = {6872265039}
+    }
+    if table.find(bedwarsID.game, game.PlaceId) then
+        repeat task.wait() until game:GetService("Players").LocalPlayer.Character
+        repeat task.wait() until game:GetService("Players").LocalPlayer.PlayerGui and game:GetService("Players").LocalPlayer.PlayerGui:FindFirstChild("TopBarAppGui")
+        local suc, data = pcall(function()
+            return require(game:GetService("ReplicatedStorage").TS.remotes).default.Client
+        end)
+        if (not suc) or type(data) ~= 'table' or (not data.Get) then CheatEngineMode = true end
+    end
+end
+
+local function checkDebug()
+    if CheatEngineMode then return end
+    if not getgenv().debug then 
+        CheatEngineMode = true 
+    else 
+        if type(debug) ~= debugChecks.Type then 
+            CheatEngineMode = true
+        else 
+            for i, v in pairs(debugChecks.Functions) do
+                if not debug[v] or (debug[v] and type(debug[v]) ~= "function") then 
+                    CheatEngineMode = true 
+                else
+                    local suc, res = pcall(debug[v]) 
+                    if tostring(res) == "Not Implemented" then 
+                        CheatEngineMode = true 
+                    end
+                end
+            end
+        end
+    end
+end
+if (not CheatEngineMode) then checkDebug() end
+if shared.ForceDisableCE then CheatEngineMode = false; shared.CheatEngineMode = false end
+shared.CheatEngineMode = shared.CheatEngineMode or CheatEngineMode
+
+if (not isfolder('vape')) then makefolder('vape') end
+if (not isfolder('rise')) then makefolder('rise') end
+if (not isfolder('vape/Libraries')) then makefolder('vape/Libraries') end
+if (not isfolder('rise/Libraries')) then makefolder('rise/Libraries') end
+
+local baseDirectory = shared.RiseMode and "rise/" or "vape/"
+
+local function install_profiles(num)
+    if not num then return warn("No number specified!") end
+    local httpservice = game:GetService('HttpService')
+    local guiprofiles = {}
+    local profilesfetched
+    local repoOwner = shared.RiseMode and "wrealaero/RiseProfiles" or "wrealaero/VoidwareProfiles"
+    local function vapeGithubRequest(scripturl)
+        local suc, res = pcall(function() return game:HttpGet('https://raw.githubusercontent.com/'..repoOwner..'/main/'..scripturl, true) end)
+        if not isfolder(baseDirectory.."profiles") then
+            makefolder(baseDirectory..'profiles')
+        end
+        if not isfolder(baseDirectory..'ClosetProfiles') then makefolder(baseDirectory..'ClosetProfiles') end
+        writefile(baseDirectory..scripturl, res)
+        task.wait()
+        return print(scripturl)
+    end
+    local Gui1 = {
+        MainGui = ""
+    }
+    local gui = Instance.new("ScreenGui")
+        gui.Name = "idk"
+        gui.DisplayOrder = 999
+        gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+        gui.OnTopOfCoreBlur = true
+        gui.ResetOnSpawn = false
+        gui.Parent = game:GetService("Players").LocalPlayer.PlayerGui
+        Gui1["MainGui"] = gui
+    
+    local function downloadVapeProfile(path)
+        task.spawn(function()
+            local textlabel = Instance.new('TextLabel')
+            textlabel.Size = UDim2.new(1, 0, 0, 36)
+            textlabel.Text = 'Downloading '..path
+            textlabel.BackgroundTransparency = 1
+            textlabel.TextStrokeTransparency = 0
+            textlabel.TextSize = 30
+            textlabel.Font = Enum.Font.SourceSans
+            textlabel.TextColor3 = Color3.new(1, 1, 1)
+            textlabel.Position = UDim2.new(0, 0, 0, -36)
+            textlabel.Parent = Gui1.MainGui
+            task.wait(0.1)
+            textlabel:Destroy()
+            vapeGithubRequest(path)
+        end)
+        return
+    end
+    task.spawn(function()
+        local res1
+        if num == 1 then
+            res1 = "https://api.github.com/repos/"..repoOwner.."/contents/Rewrite"
+        end
+        res = game:HttpGet(res1, true)
+        if res ~= '404: Not Found' then 
+            for i,v in next, game:GetService("HttpService"):JSONDecode(res) do 
+                if type(v) == 'table' and v.name then 
+                    table.insert(guiprofiles, v.name) 
+                end
+            end
+        end
+        profilesfetched = true
+    end)
+    repeat task.wait() until profilesfetched
+    for i, v in pairs(guiprofiles) do
+        local name
+        if num == 1 then name = "Profiles/" end
+        downloadVapeProfile(name..guiprofiles[i])
+        task.wait()
+    end
+    task.wait(2)
+    if (not isfolder(baseDirectory..'Libraries')) then makefolder(baseDirectory..'Libraries') end
+    if num == 1 then writefile(baseDirectory..'libraries/profilesinstalled5.txt', "true") end 
+end
+
+local function are_installed_1()
+    if not isfolder(baseDirectory..'profiles') then makefolder(baseDirectory..'profiles') end
+    if isfile(baseDirectory..'libraries/profilesinstalled5.txt') then return true else return false end
+end
+if not are_installed_1() then pcall(function() install_profiles(1) end) end
+
+local url = shared.RiseMode and "https://github.com/wrealaero/VWRise/" or "https://github.com/wrealaero/VWRewrite"
+local commit = "main"
+writefile(baseDirectory.."commithash2.txt", commit)
+commit = '0317e9f4c881faadbf7ebe8aa5970200e02b42a7'
+commit = shared.CustomCommit and tostring(shared.CustomCommit) or commit
+writefile(baseDirectory.."commithash2.txt", commit)
+
+pcall(function()
+    if not isfile("vape/assetversion.txt") then
+        writefile("vape/assetversion.txt", "")
+    end
+end)
+
+local function vapeGithubRequest(scripturl, isImportant)
+    if isfile(baseDirectory..scripturl) then
+        if not shared.VoidDev then
+            pcall(function() delfile(baseDirectory..scripturl) end)
+        else
+            return readfile(baseDirectory..scripturl) 
+        end
+    end
+    local suc, res
+    if commit == nil then commit = "main" end
+    local url = (scripturl == "MainScript.lua" or scripturl == "GuiLibrary.lua") and shared.RiseMode and "https://raw.githubusercontent.com/wrealaero/VWRise/" or "https://raw.githubusercontent.com/wrealaero/VWRewrite/"
+    suc, res = pcall(function() return game:HttpGet(url..commit.."/"..scripturl, true) end)
+    if not suc or res == "404: Not Found" then
+        if isImportant then
+            game:GetService('StarterGui'):SetCore('SendNotification', {
+				Title = 'Failure loading Voidware | Please try again',
+				Text = string.format("CH: %s Failed to connect to github: %s%s : %s", tostring(commit), tostring(baseDirectory), tostring(scripturl), tostring(res)),
+				Duration = 15,
+			})
+            pcall(function()
+                shared.GuiLibrary:SelfDestruct()
+                shared.vape:Uninject()
+                shared.rise:SelfDestruct()
+                shared.vape = nil
+                shared.vape = nil
+                shared.rise = nil
+                shared.VapeExecuted = nil
+                shared.RiseExecuted = nil
+            end)
+        end
+        warn(baseDirectory..scripturl, res)
+    end
+    if scripturl:find(".lua") then res = "--This watermark is used to delete the file if its cached, remove it to make the file persist after commits.\n"..res end
+    return res
+end
+
+shared.VapeDeveloper = shared.VapeDeveloper or shared.VoidDev
+
+task.spawn(function()
+    pcall(function()
+        local Services = setmetatable({}, {
+            __index = function(self, key)
+                local suc, service = pcall(game.GetService, game, key)
+                if suc and service then
+                    self[key] = service
+                    return service
+                else
+                    warn(`[Services] Warning: "{key}" is not a valid Roblox service.`)
+                    return nil
+                end
+            end
+        })
+
+        local Players = Services.Players
+        local TextChatService = Services.TextChatService
+        local ChatService = Services.ChatService
+        repeat
+            task.wait()
+        until game:IsLoaded() and Players.LocalPlayer ~= nil
+        local chatVersion = TextChatService and TextChatService.ChatVersion or Enum.ChatVersion.LegacyChatService
+        local TagRegister = shared.TagRegister or {}
+        if shared.FORCE_LOAD_CHAT_TAG or not shared.CheatEngineMode then
+            local function richTextColor(color)
+                return string.format("rgb(%d,%d,%d)", math.floor(color.R * 255 + 0.5), math.floor(color.G * 255 + 0.5), math.floor(color.B * 255 + 0.5))
+            end
+            
+            local function tableValues(tbl)
+                local values = {}
+                for key, _ in pairs(tbl) do
+                    table.insert(values, key)
+                end
+                return values
+            end
+            
+            local ChatTagType = {
+                VIP = true,
+                TRANSLATOR = true,
+                DEV = true,
+                ["AC MOD"] = true,
+                ["LEAD AC MOD"] = true,
+                BUILDER = true,
+                ["EMOTE ARTIST"] = true,
+                FAMOUS = true,
+                ["COMMUNITY MANAGER"] = true,
+                PATRON = true,
+            }
+            
+            local ChatTagMeta = {
+                VIP = {displayOrder = 1},
+                TRANSLATOR = {displayOrder = 2},
+                DEV = {displayOrder = 3},
+                ["AC MOD"] = {displayOrder = 4},
+                ["LEAD AC MOD"] = {displayOrder = 5},
+                BUILDER = {displayOrder = 6},
+                ["EMOTE ARTIST"] = {displayOrder = 7},
+                FAMOUS = {displayOrder = 8},
+                ["COMMUNITY MANAGER"] = {displayOrder = 9},
+                PATRON = {displayOrder = 10},
+            }
+            
+            local function getGamePrefixTags(plr)
+                local tagsFolder = plr:FindFirstChild("Tags")
+                if not tagsFolder then
+                    return ""
+                end
+                local types = tableValues(ChatTagType)
+                local function sortFunc(a, b)
+                    return (ChatTagMeta[a] and ChatTagMeta[a].displayOrder or 999) < (ChatTagMeta[b] and ChatTagMeta[b].displayOrder or 999)
+                end
+                table.sort(types, sortFunc)
+                local result = ""
+                for _, typeName in ipairs(types) do
+                    local bestTag = nil
+                    for _, tag in ipairs(tagsFolder:GetChildren()) do
+                        if tag.Name == tostring(typeName) and tag:IsA("StringValue") then
+                            local isBest = bestTag == nil
+                            if not isBest then
+                                local bestPri = bestTag:GetAttribute("TagPriority") or 0
+                                local thisPri = tag:GetAttribute("TagPriority") or 0
+                                isBest = bestPri < thisPri
+                            end
+                            if isBest then
+                                bestTag = tag
+                            end
+                        end
+                    end
+                    if bestTag then
+                        result = result .. bestTag.Value .. " "
+                    end
+                end
+                return result
+            end
+            
+            TextChatService.OnIncomingMessage = function(data)
+                TagRegister = shared.TagRegister or {}
+                local properties = Instance.new("TextChatMessageProperties")
+                local TextSource = data.TextSource
+                local PrefixText = data.PrefixText or ""
+                if TextSource then
+                    local plr = Players:GetPlayerByUserId(TextSource.UserId)
+                    if plr then
+                        local nameColor = plr:GetAttribute("ChatNameColor")
+                        if nameColor then
+                            local colorStr = richTextColor(nameColor)
+                            PrefixText = "<font color='" .. colorStr .. "'>" .. PrefixText .. "</font>"
+                        end
+                        local gameTags = getGamePrefixTags(plr)
+                        local customPrefix = ""
+                        if TagRegister[plr] then
+                            customPrefix = customPrefix .. TagRegister[plr]
+                        end
+                        local fullPrefix = customPrefix .. gameTags .. PrefixText
+                        properties.PrefixText = fullPrefix
+                    else
+                        properties.PrefixText = PrefixText
+                    end
+                end
+                properties.Text = data.Text
+                return properties
+            end
+        end
+    end)
+end)
+
+local function pload(fileName, isImportant, required)
+    fileName = tostring(fileName)
+    if string.find(fileName, "CustomModules") and string.find(fileName, "Voidware") then
+        fileName = string.gsub(fileName, "Voidware", "VW")
+    end        
+    if shared.VoidDev and shared.DebugMode then warn(fileName, isImportant, required, debug.traceback(fileName)) end
+    local res = vapeGithubRequest(fileName, isImportant)
+    local a = loadstring(res)
+    local suc, err = true, ""
+    if type(a) ~= "function" then suc = false; err = tostring(a) else if required then return a() else a() end end
+    if (not suc) then 
+        if isImportant then
+            if (not string.find(string.lower(err), "vape already injected")) and (not string.find(string.lower(err), "rise already injected")) then
+				warn("[".."Failure loading critical file! : "..baseDirectory..tostring(fileName).."]: "..tostring(debug.traceback(err)))
+            end
+        else
+            task.spawn(function()
+                repeat task.wait() until errorNotification
+                if not string.find(res, "404: Not Found") then 
+					errorNotification('Failure loading: '..baseDirectory..tostring(fileName), tostring(debug.traceback(err)), 30, 'alert')
+                end
+            end)
+        end
+    end
+end
+shared.pload = pload
+getgenv().pload = pload
+
+return loadstring(downloadFile('vape/main.lua'), 'main')()
